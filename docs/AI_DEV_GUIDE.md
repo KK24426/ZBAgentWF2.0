@@ -16,7 +16,7 @@
 
 ## AI 开始任务前
 
-AI 必须确认：
+AI 必须先按 [Agent Workflow](./operations/agent-workflow.md) 读取并 checkpoint 用户修改（如存在），再确认：
 
 1. 用户给出的原始需求和验收标准是什么；
 2. 目标模块及允许修改的文件是什么；
@@ -28,14 +28,15 @@ AI 必须确认：
 
 ## 默认实现路径
 
-1. 读取根目录和目标模块 `AGENTS.md`。
-2. 阅读用户提供的接口、示例和测试意图。
-3. 用简短说明确认修改范围和不涉及范围。
-4. 实现最小功能，不建立未被真实需求使用的抽象。
+1. 按 [Task Entry Points](./operations/task-entry-points.md) 读取根目录、目标模块规则和 `REQUIREMENTS.md`。
+2. 阅读用户修改后的接口、示例、契约和测试意图。
+3. 用简短说明确认修改范围、不涉及范围和分层验证计划。
+4. 完成 Plan Review，门禁通过后实现最小功能，不建立未被真实需求使用的抽象。
 5. 编写主路径、失败路径和回归测试。
-6. 执行模块测试和 `mvnw.cmd verify`。
-7. 交接实际改动、风险、验证结果和接口不足。
+6. 执行目标模块、直接调用者和全仓验证。
+7. 建立最终 staged snapshot 并完成 Result Review。
+8. 提交、推送并交接实际改动、风险、验证结果和接口不足。
 
 ## 停止与 Review
 
-遇到接口不足、边界变更、未明确副作用或规则冲突时，直接遵循根 `AGENTS.md`，不要在本文维护第二份条件清单。具体协作步骤见 [Agent Workflow](./operations/agent-workflow.md)。
+遇到接口不足、边界变更、未明确副作用或规则冲突时，直接遵循根 `AGENTS.md`，不要在本文维护第二份条件清单。所有程序修改均执行双阶段评审；具体步骤见 [Agent Workflow](./operations/agent-workflow.md)。

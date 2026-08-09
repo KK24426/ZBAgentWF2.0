@@ -1,6 +1,7 @@
 # ADR 0001：采用 Java 21 和 Maven
 
-- 状态：accepted
+- 状态：superseded
+- 替代决策：[ADR 0004：升级到 Java 26](./0004-java-26.md)
 - 日期：2026-08-09
 - 决策人：zebiao
 

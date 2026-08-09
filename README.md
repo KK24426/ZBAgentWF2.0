@@ -14,7 +14,7 @@ ZBAgentWF2.0 是 ZBAgentWF 的全新 Java 实现起点。项目采用“用户�
 
 ## 当前技术基线
 
-- Java 21
+- Java 26
 - Apache Maven 3.9.16
 - Maven Wrapper 3.3.4（only-script，不提交 Wrapper JAR）
 - 模块化单体
@@ -59,7 +59,7 @@ AI 负责：
 
 ## 开始使用
 
-本机需要 JDK 21。Maven 由 Wrapper 自动准备：
+本机需要 JDK 26。Maven 由 Wrapper 自动准备：
 
 ```powershell
 .\mvnw.cmd verify
@@ -77,6 +77,7 @@ AI 负责：
 ## 文档入口
 
 - [AI 协作快速入口](./docs/AI_DEV_GUIDE.md)
+- [任务阅读路由](./docs/operations/task-entry-points.md)
 - [架构总览](./docs/architecture/overview.md)
 - [模块边界](./docs/architecture/module-boundaries.md)
 - [公开端口索引](./docs/contracts/module-ports.md)

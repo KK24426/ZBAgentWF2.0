@@ -25,7 +25,7 @@ ZBAgentWF2.0 是一个重新开始的 Java 项目。当前阶段先建立用户�
 
 ## 技术基线
 
-- Java 21；
+- Java 26；
 - Maven 3.9.16 和 Maven Wrapper；
 - 单仓库、模块化单体；
 - 默认中文文档与注释；

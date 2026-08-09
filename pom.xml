@@ -4,7 +4,7 @@
   更新日期：2026-08-09
   做 成 者：zebiao
   版    本：v0.1
-  功能概要：定义 ZBAgentWF2.0 Java 21 Maven 聚合工程和统一质量基线。
+  功能概要：定义 ZBAgentWF2.0 Java 26 Maven 聚合工程和统一质量基线。
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -29,7 +29,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>26</maven.compiler.release>
         <maven.compiler.parameters>true</maven.compiler.parameters>
         <maven.compiler.plugin.version>3.14.1</maven.compiler.plugin.version>
         <maven.surefire.plugin.version>3.5.4</maven.surefire.plugin.version>
@@ -65,7 +65,7 @@
                         <configuration>
                             <rules>
                                 <requireJavaVersion>
-                                    <version>[21,22)</version>
+                                    <version>[26,27)</version>
                                 </requireJavaVersion>
                                 <requireMavenVersion>
                                     <version>[3.9.16]</version>

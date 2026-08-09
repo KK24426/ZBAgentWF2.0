@@ -8,8 +8,9 @@
 
 # Architecture Decision Records
 
-- [0001：采用 Java 21 和 Maven](./0001-java-maven.md)
+- [0001：采用 Java 21 和 Maven（已被 0004 替代）](./0001-java-maven.md)
 - [0002：用户拥有架构和公共接口决策权](./0002-human-owned-architecture.md)
 - [0003：按纵向业务链路小步开发](./0003-vertical-slice-development.md)
+- [0004：升级到 Java 26](./0004-java-26.md)
 
 新的长期技术选择使用 [TEMPLATE.md](./TEMPLATE.md) 记录。候选想法不写成 accepted；先标记 proposed 并由用户决定。
