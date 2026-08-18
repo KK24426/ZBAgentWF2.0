@@ -1,16 +1,16 @@
 <!--
  * 创建日期：2026-08-09
- * 更新日期：2026-08-09
+ * 更新日期：2026-08-19
  * 做 成 者：zebiao
- * 版    本：v0.1
- * 功能概要：介绍 ZBAgentWF2.0 的 Java 工程骨架、人机职责和开始开发方式。
+ * 版    本：v0.2
+ * 功能概要：介绍 ZBAgentWF2.0 的 Java 工程、CLI 入口、人机职责和开始开发方式。
  -->
 
 # ZBAgentWF2.0
 
 ZBAgentWF2.0 是 ZBAgentWF 的全新 Java 实现起点。项目采用“用户主导架构和接口，AI 实现已批准边界后的具体功能”的协作方式，使核心设计保持在用户掌握之中，同时利用 AI 完成实现、测试和重复性工程工作。
 
-当前仓库是空业务骨架，不包含旧 ZBAgentWF 业务代码，也没有实现数据库、Agent provider、进程协议或客户端。
+当前仓库已提供最小 CLI 进程入口，但仍是空业务骨架：不包含旧 ZBAgentWF 业务代码，也没有实现数据库、Agent provider 或客户端。
 
 ## 当前技术基线
 
@@ -34,9 +34,9 @@ apps/runtime-host
 - `domain`：领域对象、规则和状态机，由用户定义。
 - `application`：用例接口和出站端口，由用户定义。
 - `adapters`：AI 根据批准接口实现外部系统和基础设施接入。
-- `runtime-host`：未来进程入口和组合根，当前没有运行代码。
+- `runtime-host`：CLI 进程入口和未来组合根；当前只提供帮助与版本命令。
 
-四个模块现在只有构建文件、包边界和就近协作规则。`package-info.java` 不构成业务接口。
+三个业务模块现在只有构建文件、包边界和就近协作规则。`package-info.java` 不构成业务接口。
 
 ## 人机协作方式
 
@@ -64,6 +64,21 @@ AI 负责：
 ```powershell
 .\mvnw.cmd verify
 ```
+
+构建完成后的正式 CLI 分发物为：
+
+```text
+apps/runtime-host/target/zbagentwf-cli-0.1.0-SNAPSHOT.jar
+```
+
+可以直接调用内建命令：
+
+```powershell
+java -jar .\apps\runtime-host\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar help
+java -jar .\apps\runtime-host\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar version
+```
+
+CLI 使用 stdout 输出正常结果、stderr 输出错误，退出码 `0` 表示成功、`1` 表示功能执行失败、`2` 表示命令或参数错误。当前 JAR 是 CLI 分发物，不承诺作为 Maven 类库使用。
 
 开始第一个业务功能前，建议用户先完成：
 

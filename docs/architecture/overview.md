@@ -1,9 +1,9 @@
 <!--
  * 创建日期：2026-08-09
- * 更新日期：2026-08-09
+ * 更新日期：2026-08-19
  * 做 成 者：zebiao
- * 版    本：v0.1
- * 功能概要：记录 ZBAgentWF2.0 当前定位、技术基线和非目标。
+ * 版    本：v0.2
+ * 功能概要：记录 ZBAgentWF2.0 当前定位、CLI 基线和非目标。
  -->
 
 # Architecture Overview
@@ -21,7 +21,7 @@ ZBAgentWF2.0 是一个重新开始的 Java 项目。当前阶段先建立用户�
 | `modules/domain` | 空骨架 | 用户定义领域对象、规则和状态机。 |
 | `modules/application` | 空骨架 | 用户定义用例接口和出站端口。 |
 | `modules/adapters` | 空骨架 | AI 实现已批准端口的外部适配。 |
-| `apps/runtime-host` | 空骨架 | 用户决定 host 形式后建立组合根和入口。 |
+| `apps/runtime-host` | 最小 CLI | 提供帮助、版本命令和未来组合根。 |
 
 ## 技术基线
 
@@ -35,7 +35,7 @@ ZBAgentWF2.0 是一个重新开始的 Java 项目。当前阶段先建立用户�
 
 - 不迁移旧业务代码；
 - 不预设 Spring、数据库或 Agent SDK；
-- 不定义 API、stdio、IPC 或其它进程协议；
+- 不定义 HTTP、IPC 或业务级进程协议；当前只接受用户已批准的 CLI 命令参数；
 - 不重写或接入 Windows 客户端；
 - 不建立微服务、消息队列、部署平台或完整 Agent Harness；
 - 不一次性设计全部领域模型和接口。

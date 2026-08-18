@@ -1,9 +1,9 @@
 <!--
  * 创建日期：2026-08-09
- * 更新日期：2026-08-09
+ * 更新日期：2026-08-19
  * 做 成 者：zebiao
- * 版    本：v0.1
- * 功能概要：索引当前 Java 源文件职责。
+ * 版    本：v0.2
+ * 功能概要：索引当前 Java 源文件、CLI 入口和测试职责。
  -->
 
 # File Index
@@ -14,8 +14,11 @@
 | `modules/application/.../package-info.java` | 标记应用包边界 | 否 |
 | `modules/adapters/.../package-info.java` | 标记 adapter 包边界 | 否 |
 | `apps/runtime-host/.../package-info.java` | 标记组合根包边界 | 否 |
+| `apps/runtime-host/.../ZbAgentWfCli.java` | CLI 公开进程入口和进程退出 | 是，`main` 入口 |
+| `apps/runtime-host/.../CliApplication.java` | 内建命令解析、输出和退出码映射 | 否，包内实现 |
+| `apps/runtime-host/src/test/.../CliApplicationTest.java` | CLI 精确输出、退出码与异常脱敏测试 | 否 |
 
-当前没有业务源文件。用户添加接口或 AI 添加实现后，同步补充实际入口和测试位置。
+当前没有业务源文件；runtime-host 只实现最小 CLI 基线。用户添加接口或 AI 添加实现后，同步补充实际入口和测试位置。
 
 ## 规则与需求入口
 

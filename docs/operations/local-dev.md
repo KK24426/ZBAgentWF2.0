@@ -1,9 +1,9 @@
 <!--
  * 创建日期：2026-08-09
- * 更新日期：2026-08-09
+ * 更新日期：2026-08-19
  * 做 成 者：zebiao
- * 版    本：v0.1
- * 功能概要：说明 Java 26 Maven 工程的本地开发和验证命令。
+ * 版    本：v0.2
+ * 功能概要：说明 Java 26 Maven 工程、CLI 构建和验证命令。
  -->
 
 # Local Development
@@ -58,10 +58,23 @@ try {
 指定模块及其依赖：
 
 ```powershell
-.\mvnw.cmd -pl modules/application -am test
+.\mvnw.cmd -pl apps/runtime-host -am test
 ```
 
-当前没有业务测试；`verify` 主要确认 Java/Maven 版本、POM 聚合、模块依赖和源码编译。当前 reactor 预期为父工程加四个子模块，共 5/5 成功。新增功能后必须补充对应测试。
+`verify` 会运行 runtime-host CLI 单元测试并生成正式分发物：
+
+```text
+apps/runtime-host/target/zbagentwf-cli-0.1.0-SNAPSHOT.jar
+```
+
+实际 JAR smoke：
+
+```powershell
+java -jar .\apps\runtime-host\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar help
+java -jar .\apps\runtime-host\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar version
+```
+
+当前没有业务测试；reactor 仍为父工程加四个子模块，共 5/5。新增业务功能后必须补充对应测试。
 
 ## 环境边界
 
