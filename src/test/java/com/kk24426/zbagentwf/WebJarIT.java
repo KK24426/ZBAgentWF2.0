@@ -158,7 +158,8 @@ class WebJarIT {
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/tomcat-embed-core")));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/mysql-connector-j")));
             assertFalse(names.stream().anyMatch(n -> n.contains("CliApplication") || n.contains("ZbAgentWfCli")
-                    || n.contains("Fixture") || n.contains("MySqlIT") || n.contains("junit")));
+                    || n.contains("Fixture") || n.contains("MySqlIT") || n.contains("junit")
+                    || n.contains("AgentBeanTest") || n.contains("UserImplTest")));
         }
     }
 

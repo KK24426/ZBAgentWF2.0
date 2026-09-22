@@ -5,6 +5,15 @@
 启动入口初始化日志和 Spring Web，扫描 user/agent/common，持续运行。
 当前只有简单首页，不预建业务接口、表或业务操作；原 CLI 已移除。
 
+## 用户骨架与最小补充
+
+用户已提供 AgentBean、UserImpl、AgentBase、UserService 四个类型，目前不代表业务能力。
+AgentBean 保留 brand/name/ver 三个私有 String 属性，提供标准 getter/setter 和无参构造；默认 null，允许 null、空字符串及中文，原样存取、不校验、不设置默认值。
+UserImpl 经用户确认作为公共空父接口，用户接口通过 extends 继承；不新增业务方法。
+AgentBase 和 UserService 保留用户原始占位代码，不补行为、注解或继承关系。
+验收包括属性独立读写、边界值、父接口继承实现关系，以及既有 Spring 和真实 Web JAR 回归；测试样例不进入正式 JAR。
+此最小补充仅用于验证协作流程，不代表复杂业务接口、模型调用或数据库持久化已实现或验收。
+
 ## Web
 无参数启动服务，默认 127.0.0.1:8080；远程仅通过 SSH 隧道访问，不开放公网。
 当前固定资源 /、/index.html、/app.css、/favicon.svg，只接受 GET/HEAD。

@@ -1,6 +1,6 @@
 # 接口与配置
 
-暂无业务公开接口、DTO或schema。根包启动入口为 com.kk24426.zbagentwf.ZbAgentWfApplication。
+暂无带业务方法的公开接口或持久化 schema；用户已提供空父接口及 Agent 数据骨架，见[用户骨架契约](./user-ports.md)。根包启动入口为 com.kk24426.zbagentwf.ZbAgentWfApplication。
 正式调用为 java -jar target/zbagentwf-web-<version>.jar，无命令参数，持续运行。
 stderr包含日志、固定错误提示及脱敏异常链，stdout无业务输出。
 启动失败退出1、传入任意命令参数退出2且不回显；正常停止释放资源，不立即关闭刚启动的容器。

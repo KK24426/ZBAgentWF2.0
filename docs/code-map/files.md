@@ -15,7 +15,11 @@
 | `src/main/java/com/kk24426/zbagentwf/common/logging/SanitizingEncoder.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/common/logging/SecretRedactor.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/common/package-info.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/common/AgentBean.java` | Agent 数据骨架及属性访问 |
 | `src/main/java/com/kk24426/zbagentwf/user/package-info.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/user/AgentBase.java` | 用户抽象类占位，未定义能力 |
+| `src/main/java/com/kk24426/zbagentwf/user/UserImpl.java` | 用户接口的空父接口 |
+| `src/main/java/com/kk24426/zbagentwf/user/UserService.java` | 用户服务父类占位，未定义行为 |
 | `src/test/java/com/kk24426/zbagentwf/agent/web/WebRequestFilterTest.java` | 测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/WebJarIT.java` | 真实Web JAR测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/ContextTest.java` | 测试，不进入JAR |
@@ -24,6 +28,8 @@
 | `src/test/java/com/kk24426/zbagentwf/agent/persistence/mapper/ProbeMapper.java` | 测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/common/logging/LoggingTest.java` | 测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/user/InjectionFixture.java` | 测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/common/AgentBeanTest.java` | 属性契约测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/user/UserImplTest.java` | 父接口关系测试，不进入JAR |
 
 入口ZbAgentWfApplication负责Web初始化与生命周期；CLI类和测试已移除。
 静态首页资源为src/main/resources/static/index.html、app.css和favicon.svg。
