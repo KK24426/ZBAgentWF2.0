@@ -28,3 +28,5 @@
 - 新增独立 CLI Maven 模块：当前规模不足，且会改变用户掌握的模块结构，未采用。
 - 引入 Picocli 或 Spring Boot：内建命令过少，额外框架暂时没有收益，未采用。
 - 分发普通 thin JAR：会增加调用方组装 classpath 的负担，不符合单 JAR 调用目标，未采用。
+
+> 2026-09-22：多模块、无 Spring 和 Shade 分发相关内容已被 [ADR 0006](./0006-single-project-spring-mysql.md) 替代；本文件保留历史。Java 26 与 Maven Wrapper 3.9.16 基线继续有效。

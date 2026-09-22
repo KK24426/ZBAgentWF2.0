@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <statusListener class="com.kk24426.zbagentwf.common.logging.LogFailureMonitor"/>
+    <springProperty name="PROJECT_LEVEL" source="logging.level.com.kk24426.zbagentwf" defaultValue="DEBUG"/>
+    <springProperty name="ROOT_LEVEL" source="logging.level.root" defaultValue="INFO"/>
+    <property name="PATTERN" value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [runId=${zb.run-id:-unmanaged}] [pid=${PID:-unknown}] [%thread] %logger - %msg%n%ex{full}"/>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <encoder class="com.kk24426.zbagentwf.common.logging.SanitizingEncoder">
+            <charset>${zb.console-charset:-UTF-8}</charset><pattern>${PATTERN}</pattern>
+        </encoder>
+    </appender>
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${zb.log-file:-logs/unmanaged/application.log}</file>
+        <immediateFlush>true</immediateFlush>
+        <encoder class="com.kk24426.zbagentwf.common.logging.SanitizingEncoder">
+            <charset>UTF-8</charset><pattern>${PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${zb.log-file:-logs/unmanaged/application.log}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>${zb.log-max-size:-20MB}</maxFileSize>
+            <maxHistory>0</maxHistory>
+            <totalSizeCap>0</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+    <logger name="com.kk24426.zbagentwf" level="${PROJECT_LEVEL}"/>
+    <logger name="com.kk24426.zbagentwf.agent.persistence.mapper" level="INFO"/>
+    <root level="${ROOT_LEVEL}">
+        <appender-ref ref="CONSOLE"/><appender-ref ref="FILE"/>
+    </root>
+</configuration>

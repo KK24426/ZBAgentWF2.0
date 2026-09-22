@@ -21,3 +21,5 @@
 - 用户可以直接理解和维护核心代码；
 - AI 实现被限制在清晰的 Java 模块和接口之后；
 - 后续若更换 Java 版本、Maven 或引入框架，需要用户新决策。
+
+> 2026-09-22：多模块、无 Spring 和 Shade 分发相关内容已被 [ADR 0006](./0006-single-project-spring-mysql.md) 替代；本文件保留历史。Java 26 与 Maven Wrapper 3.9.16 基线继续有效。

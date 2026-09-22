@@ -8,7 +8,7 @@
 
 # AI Development Guide
 
-本文件是日常使用入口，不另行定义权限。用户所有权、AI 修改范围、停止条件和规则优先级以根目录及目标模块的 `AGENTS.md` 为唯一规范权威；本文不得用于放宽这些规则。
+本文件是日常使用入口，不另行定义权限。用户所有权、AI 修改范围、停止条件和规则优先级以根目录及目标包的 `AGENTS.md` 为唯一规范权威；本文不得用于放宽这些规则。
 
 ## 核心关系
 
@@ -19,7 +19,7 @@
 AI 必须先按 [Agent Workflow](./operations/agent-workflow.md) 读取并 checkpoint 用户修改（如存在），再确认：
 
 1. 用户给出的原始需求和验收标准是什么；
-2. 目标模块及允许修改的文件是什么；
+2. 目标包及允许修改的文件是什么；
 3. 所需公共接口是否已经由用户定义或明确授权 AI 修改；
 4. 是否涉及数据库、进程、网络、Agent、Git 或其它副作用；
 5. 最小验证命令是什么。
@@ -28,12 +28,12 @@ AI 必须先按 [Agent Workflow](./operations/agent-workflow.md) 读取并 check
 
 ## 默认实现路径
 
-1. 按 [Task Entry Points](./operations/task-entry-points.md) 读取根目录、目标模块规则和 `REQUIREMENTS.md`。
+1. 按 [Task Entry Points](./operations/task-entry-points.md) 读取根目录、目标包规则和根 `REQUIREMENTS.md`。
 2. 阅读用户修改后的接口、示例、契约和测试意图。
 3. 用简短说明确认修改范围、不涉及范围和分层验证计划。
 4. 完成 Plan Review，门禁通过后实现最小功能，不建立未被真实需求使用的抽象。
 5. 编写主路径、失败路径和回归测试。
-6. 执行目标模块、直接调用者和全仓验证。
+6. 执行目标包、直接调用者和全仓验证。
 7. 建立最终 staged snapshot 并完成 Result Review。
 8. 提交、推送并交接实际改动、风险、验证结果和接口不足。
 

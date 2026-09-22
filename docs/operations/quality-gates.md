@@ -34,7 +34,7 @@
 - 说明调用方、兼容性和迁移影响；
 - 同步公开出口、契约索引、架构和 code map；
 - 新增、移动、删除源码后更新 `docs/code-map/files.md`；
-- 模块 `REQUIREMENTS.md` 的当前范围、验收和待确认事项与事实一致。
+- 根 `REQUIREMENTS.md` 的当前范围、验收和待确认事项与事实一致。
 
 ## 数据和外部副作用
 
@@ -45,7 +45,7 @@
 
 ## 验证与 Result Review
 
-- 按目标模块、直接调用者、全仓分层验证；
+- 按目标包、直接调用者、全仓分层验证；
 - 最终 staged snapshot 通过 `git diff --cached --check`、敏感信息、禁止资产和非目标二进制检查；
 - review packet 记录 base/checkpoint SHA、staged 文件、staged diff hash 和指定 reviewer 集合；
 - 所有指定 reviewer `Accept`，汇总 `Can Commit/Push: Yes`；

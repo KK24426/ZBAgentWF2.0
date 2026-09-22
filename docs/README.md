@@ -15,7 +15,7 @@
 1. 新任务先读根目录 `AGENTS.md`。
 2. 按 [operations/task-entry-points.md](./operations/task-entry-points.md) 路由任务资料。
 3. 常规 AI 实现读 [AI_DEV_GUIDE.md](./AI_DEV_GUIDE.md)。
-4. 定位模块读 [code-map/modules.md](./code-map/modules.md)、目标模块 `AGENTS.md` 和 `REQUIREMENTS.md`。
+4. 定位模块读 [code-map/modules.md](./code-map/modules.md)、目标包 `AGENTS.md` 和 `REQUIREMENTS.md`。
 5. 涉及架构或依赖方向时读 [architecture/module-boundaries.md](./architecture/module-boundaries.md)。
 6. 涉及公共接口时先取得用户批准，再更新 [contracts/module-ports.md](./contracts/module-ports.md)。
 

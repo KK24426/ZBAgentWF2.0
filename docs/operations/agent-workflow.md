@@ -8,7 +8,7 @@
 
 # Agent Workflow
 
-本文是日常协作流程的详细权威。用户所有权、AI 修改权限、停止条件和规则优先级仍以根目录及目标模块的 `AGENTS.md` 为准；本文不得放宽这些门禁。
+本文是日常协作流程的详细权威。用户所有权、AI 修改权限、停止条件和规则优先级仍以根目录及目标包的 `AGENTS.md` 为准；本文不得放宽这些门禁。
 
 ## 标准流程
 
@@ -60,7 +60,7 @@ checkpoint 忠实保存用户状态，不代表构建绿色。用户正在调整
 - 公开接口、DTO、状态、错误语义和其它契约；
 - 工程流程、质量门禁、权限规则和模块边界。
 
-Plan Review 以用户 checkpoint commit、当前源码、就近规则、模块 `REQUIREMENTS.md` 和相关契约为事实输入。模板见 `docs/templates/review/PLAN_REVIEW.md`。只有汇总结论为 `Acceptance: Accept` 且 `Can Implement: Yes` 时才能写项目文件。
+Plan Review 以用户 checkpoint commit、当前源码、就近规则、根 `REQUIREMENTS.md` 和相关契约为事实输入。模板见 `docs/templates/review/PLAN_REVIEW.md`。只有汇总结论为 `Acceptance: Accept` 且 `Can Implement: Yes` 时才能写项目文件。
 
 ## 4. 实现与分层验证
 
@@ -70,9 +70,11 @@ bugfix 必须先检查报错点、同模块调用点、直接调用方、共享�
 
 验证顺序为：
 
-1. 目标模块测试；
+1. 目标包测试；
 2. 直接调用者测试；
-3. 仓库级 `mvnw.cmd verify`。
+3. 仓库级 `mvnw.cmd verify`（包括真实 JAR 测试）。
+
+`mysql-it` 为显式环境验收：只使用用户提供的本机专用测试库。未配置时普通 verify 明确跳过 MySQL IT；启用 `-Pmysql-it` 后缺配置必须失败。未完成真实 MySQL 验证必须在交接中列为未覆盖项，不等于框架代码验证失败，也不能声称持久化已验收。
 
 如果某一层不适用，应记录原因，不得把“未运行”写成“通过”。
 

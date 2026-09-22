@@ -1,0 +1,9 @@
+<configuration>
+    <appender name="TEST" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <encoder class="com.kk24426.zbagentwf.common.logging.SanitizingEncoder">
+            <charset>UTF-8</charset><pattern>%level %logger %msg%n%ex</pattern>
+        </encoder>
+    </appender>
+    <root level="OFF"><appender-ref ref="TEST"/></root>
+</configuration>

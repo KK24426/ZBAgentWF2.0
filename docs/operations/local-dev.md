@@ -1,81 +1,66 @@
-<!--
- * 创建日期：2026-08-09
- * 更新日期：2026-08-19
- * 做 成 者：zebiao
- * 版    本：v0.2
- * 功能概要：说明 Java 26 Maven 工程、CLI 构建和验证命令。
- -->
+# 本地开发
 
-# Local Development
+需要JDK26；Windows用mvnw.cmd，macOS/Linux用./mvnw（首次下载需要unzip和sha256sum或shasum）。
+Wrapper固定Maven3.9.16。依赖缓存不进入仓库。只在Windows完成实际运行验证。
 
-## 环境
-
-- JDK 26；
-- Windows 使用 `mvnw.cmd`；
-- macOS/Linux 使用 `./mvnw`，首次下载还需要 `unzip`，以及 `sha256sum` 或 `shasum`。
-
-Maven Wrapper 固定 Maven 3.9.16。首次执行会从 Maven Central 下载 Maven，下载内容进入用户 Maven 缓存，不进入仓库。
-
-需要隔离验证缓存时，必须同时隔离 Wrapper distribution 和 Maven artifact repository。`MAVEN_USER_HOME` 只控制 Wrapper distribution，不能替代 `-Dmaven.repo.local`：
-
+## 构建与启动
 ```powershell
-$systemTemp = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
-$verificationRoot = Join-Path $systemTemp ("zbagentwf2-verify-" + [guid]::NewGuid().ToString("N"))
-$resolvedRoot = [System.IO.Path]::GetFullPath($verificationRoot)
-$requiredPrefix = $systemTemp + [System.IO.Path]::DirectorySeparatorChar
-if (-not $resolvedRoot.StartsWith($requiredPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-    throw "临时验证目录超出系统临时目录边界：$resolvedRoot"
-}
-$hadMavenUserHome = Test-Path Env:MAVEN_USER_HOME
-$originalMavenUserHome = $env:MAVEN_USER_HOME
-
-try {
-    $env:MAVEN_USER_HOME = Join-Path $resolvedRoot "wrapper-home"
-    $artifactRepository = Join-Path $resolvedRoot "repository"
-    .\mvnw.cmd -V "-Dmaven.repo.local=$artifactRepository" verify
-} finally {
-    if ($hadMavenUserHome) {
-        $env:MAVEN_USER_HOME = $originalMavenUserHome
-    } else {
-        Remove-Item Env:MAVEN_USER_HOME -ErrorAction SilentlyContinue
-    }
-    if ((Test-Path -LiteralPath $resolvedRoot) -and
-        $resolvedRoot.StartsWith($requiredPrefix, [System.StringComparison]::OrdinalIgnoreCase) -and
-        [System.IO.Path]::GetFileName($resolvedRoot).StartsWith("zbagentwf2-verify-")) {
-        [System.IO.Directory]::Delete($resolvedRoot, $true)
-    }
-}
+.\mvnw.cmd clean verify
+java -jar .\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar help
+java -jar .\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar version
 ```
+verify运行单元测试与真实Boot JAR进程测试；MySQL专用库测试默认跳过。
+正式JAR为target/zbagentwf-cli-0.1.0-SNAPSHOT.jar，.jar.original不是正式分发。
+不会生成或分发旧apps/runtime-host产物。旧目录的ignored target是历史构建缓存。
 
-当前只在 Windows 上完成了 Wrapper 构建验证；macOS/Linux 的命令和前置条件已记录，但尚未完成对应环境的首次下载 smoke。
+隔离验证时同时设置MAVEN_USER_HOME（Wrapper缓存）及-Dmaven.repo.local（依赖缓存），
+二者使用任务专属临时目录；结束后恢复环境。不得清理整个用户.m2缓存。
 
-## 命令
+## Eclipse
+从工作区移除旧的父工程及四个子工程引用（不要勾选从磁盘删除内容），
+再通过 File > Import > Maven > Existing Maven Projects 选择仓库根目录。
+只导入根pom，选择JDK26，执行Maven Update Project。
+在根包ZbAgentWfCli上Run As > Java Application；无参数为help，生成日志并正常退出。
+IDE直接运行version因无Manifest版本而返回1；要验证版本请运行打包JAR。
+XML的Cannot find declaration错误应检查XML插件外部Schema下载设置；
+POM沿用Maven官方声明，不通过关闭所有XML校验解决。
+被忽略的旧.project/.classpath/.settings由用户按需清理，本轮不改写个人IDE元数据。
 
+## 日志
+文件：当前工作目录/logs/<runId>/application.log；UTF-8，默认项目DEBUG/框架INFO。
+目录优先级：JVM -Dzb.log-dir > ZB_LOG_DIR > logs。
+单文件20MB或跨日滚动压缩，不自动删除；多进程目录独立。
+可以在确认相关进程已结束后手工删除对应runId目录以释放空间，不删除仍在写入的目录。
+JVM -Dzb.log-max-size可调整滚动大小；日志级别用标准logging.level属性。
+stderr日志与固定错误提示统一跟随JVM System.err编码，文件日志始终UTF-8；CLI stdout沿用JVM流编码，
+程序捕获时可显式使用-Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8统一。
+异常链完整记录且已知敏感消息脱敏，不保证识别任意秘密；不要直接打印输入Bean、密码或SQL参数。
+
+## MySQL运行配置
+默认不连接数据库。只有开启mysql才加载连接池、Mapper和事务。
+通过环境变量提供：
+- SPRING_PROFILES_ACTIVE=mysql
+- SPRING_DATASOURCE_URL=jdbc:mysql://127.0.0.1:3306/YOUR_DATABASE
+- SPRING_DATASOURCE_USERNAME、SPRING_DATASOURCE_PASSWORD：自行在本地配置，不能提交。
+
+也可使用外部application-local.properties，激活mysql,local；仓库忽略该文件。
+CLI参数不作为Spring配置来源，不能用java -jar ... --spring.profiles.active=mysql代替环境变量或JVM -D。
+启用mysql时连通性检查会建立真实连接；帮助命令在mysql模式下也会验证数据库。
+不创建数据库/表，不执行初始化SQL或migration，不降级H2。
+Hikari最大5、空闲0、取连接超时5秒，驱动连接超时5秒、读取超时30秒。
+配置不足或连接失败退出1，检查对应runId日志。
+
+## MySQL专用库验证
+本机MySQL8.0服务应由用户准备为运行状态，事先创建zbagentwf_test，并给专用账号该库的建表、删表和CRUD权限。
+不使用root作为测试示例，不查找系统保存的密码，不自行操作现有业务库。
+测试只接受以下专用环境变量，不回退到SPRING_DATASOURCE：
+- ZB_TEST_DB_URL=jdbc:mysql://127.0.0.1:3306/zbagentwf_test
+- ZB_TEST_DB_USERNAME、ZB_TEST_DB_PASSWORD：在本地设置。
+
+URL仅允许localhost或127.0.0.1及可选端口，不能带URL参数、其它主机或其它库。
 ```powershell
-.\mvnw.cmd verify
+.\mvnw.cmd -Pmysql-it verify
 ```
-
-指定模块及其依赖：
-
-```powershell
-.\mvnw.cmd -pl apps/runtime-host -am test
-```
-
-`verify` 会运行 runtime-host CLI 单元测试并生成正式分发物：
-
-```text
-apps/runtime-host/target/zbagentwf-cli-0.1.0-SNAPSHOT.jar
-```
-
-实际 JAR smoke：
-
-```powershell
-java -jar .\apps\runtime-host\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar help
-java -jar .\apps\runtime-host\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar version
-```
-
-当前没有业务测试；reactor 仍为父工程加四个子模块，共 5/5。新增业务功能后必须补充对应测试。
-
-## 环境边界
-
-当前没有数据库、Agent provider、远程服务或部署环境。任何 migration、写库、远程调用和真实 Agent 执行前，必须先由用户确认目标与配置来源。
+启用该profile后缺配置必须失败。测试先校验catalog，再创建随机zb_it_表，验证CRUD、中文和事务回滚，
+结束只DROP本轮CREATE成功的测试表；不会DROP DATABASE。
+当前未提供专用库连接，真实MySQL读写验收待执行；不要将普通verify成功视为MySQL测试通过。

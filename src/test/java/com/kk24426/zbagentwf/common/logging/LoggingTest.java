@@ -1,0 +1,132 @@
+/*
+ * 创建日期：2026-09-22
+ * 更新日期：2026-09-22
+ * 做 成 者：zebiao
+ * 版    本：v0.1
+ * 功能概要：验证脱敏、完整异常链、目录隔离、滚动和日志故障。
+ */
+package com.kk24426.zbagentwf.common.logging;
+
+import static org.junit.jupiter.api.Assertions.*;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.LoggingEvent;
+import ch.qos.logback.core.rolling.RollingFileAppender;
+import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
+import ch.qos.logback.core.util.FileSize;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.status.ErrorStatus;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.zip.GZIPInputStream;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+class LoggingTest {
+    @TempDir Path temp;
+
+    @Test
+    void completeExceptionChainAndMessagesAreRedacted() {
+        LoggerContext context = new LoggerContext();
+        SanitizingEncoder encoder = encoder(context);
+        var cause = new IllegalArgumentException("password=hidden-password");
+        var failure = new IllegalStateException("token=hidden-token", cause);
+        failure.addSuppressed(new RuntimeException("username=hidden-user"));
+        var event = new LoggingEvent("test", context.getLogger("test"), Level.ERROR,
+                "中文诊断 Authorization: Bearer hidden-bearer", failure, null);
+        String text = new String(encoder.encode(event), StandardCharsets.UTF_8);
+        assertAll(
+                () -> assertTrue(text.contains("中文诊断")),
+                () -> assertTrue(text.contains("IllegalStateException")),
+                () -> assertTrue(text.contains("Caused by:")),
+                () -> assertTrue(text.contains("Suppressed:")),
+                () -> assertTrue(text.contains("LoggingTest.java")),
+                () -> assertFalse(text.contains("hidden-")),
+                () -> assertFalse(SecretRedactor.redact("jdbc:mysql://host/db?password=bad").contains("host/db")));
+        encoder.stop();
+        context.stop();
+    }
+
+    @Test
+    void createsUniqueRunDirectoriesAndRejectsFileAsRoot() throws Exception {
+        String previous = System.getProperty("zb.log-dir");
+        try {
+            System.setProperty("zb.log-dir", temp.toString());
+            Path first = RunLogging.prepare();
+            Path second = RunLogging.prepare();
+            assertNotEquals(first.getParent(), second.getParent());
+            assertTrue(Files.exists(first));
+            System.setProperty("zb.log-dir", first.toString());
+            assertThrows(java.io.IOException.class, RunLogging::prepare);
+        } finally {
+            if (previous == null) System.clearProperty("zb.log-dir"); else System.setProperty("zb.log-dir", previous);
+        }
+    }
+
+    @Test
+    void rollingArchivesAndFinalRecordSurviveStop() throws Exception {
+        LoggerContext context = new LoggerContext();
+        context.setName("rolling-test");
+        context.setMDCAdapter(new ch.qos.logback.classic.util.LogbackMDCAdapter());
+        context.start();
+        RollingFileAppender<ILoggingEvent> appender = new RollingFileAppender<>();
+        appender.setContext(context);
+        appender.setName("file");
+        Path file = temp.resolve("application.log");
+        appender.setFile(file.toString());
+        appender.setEncoder(encoder(context));
+        var policy = new SizeAndTimeBasedRollingPolicy<ILoggingEvent>();
+        policy.setContext(context);
+        policy.setParent(appender);
+        policy.setFileNamePattern(file + ".%d{yyyy-MM-dd}.%i.gz");
+        policy.setMaxFileSize(FileSize.valueOf("1KB"));
+        policy.setMaxHistory(0);
+        policy.start();
+        appender.setRollingPolicy(policy);
+        appender.start();
+        assertTrue(appender.isStarted());
+        var logger = context.getLogger("rolling");
+        logger.setLevel(Level.DEBUG);
+        logger.addAppender(appender);
+        for (int i = 0; i < 100; i++) logger.debug("中文 {}", "x".repeat(1024));
+        logger.info("FINAL-RECORD");
+        appender.stop();
+        context.stop();
+        assertTrue(Files.readString(file).contains("FINAL-RECORD"),
+                () -> context.getStatusManager().getCopyOfStatusList().toString());
+        try (var files = Files.list(temp)) {
+            var archives = files.filter(p -> p.toString().endsWith(".gz")).toList();
+            assertFalse(archives.isEmpty());
+            try (var input = new GZIPInputStream(Files.newInputStream(archives.getFirst()))) {
+                assertTrue(new String(input.readAllBytes(), StandardCharsets.UTF_8).contains("中文"));
+            }
+        }
+    }
+
+    @Test
+    void runtimeLoggingFailureIsObservable() {
+        LogFailureMonitor.reset();
+        var originalError = System.err;
+        var bytes = new java.io.ByteArrayOutputStream();
+        try (var error = new java.io.PrintStream(bytes, true, StandardCharsets.UTF_8)) {
+            System.setErr(error);
+            new LogFailureMonitor().addStatusEvent(new ErrorStatus("private failure text", this));
+            assertTrue(LogFailureMonitor.hasFailed());
+            assertTrue(bytes.toString(StandardCharsets.UTF_8).contains("日志系统故障"));
+            assertFalse(bytes.toString(StandardCharsets.UTF_8).contains("private failure text"));
+        } finally {
+            System.setErr(originalError);
+            LogFailureMonitor.reset();
+        }
+    }
+
+    private SanitizingEncoder encoder(LoggerContext context) {
+        SanitizingEncoder encoder = new SanitizingEncoder();
+        encoder.setContext(context);
+        encoder.setPattern("%level %msg%n%ex{full}");
+        encoder.setCharset(StandardCharsets.UTF_8);
+        encoder.start();
+        return encoder;
+    }
+}

@@ -1,33 +1,33 @@
-<!--
- * 创建日期：2026-08-09
- * 更新日期：2026-08-19
- * 做 成 者：zebiao
- * 版    本：v0.2
- * 功能概要：索引当前 Java 源文件、CLI 入口和测试职责。
- -->
+# 文件索引
 
-# File Index
+单工程：根pom负责构建，根REQUIREMENTS记录验收。以下均为实际Java源码。
 
-| 文件 | 职责 | 公开契约 |
-| --- | --- | --- |
-| `modules/domain/.../package-info.java` | 标记领域包边界 | 否 |
-| `modules/application/.../package-info.java` | 标记应用包边界 | 否 |
-| `modules/adapters/.../package-info.java` | 标记 adapter 包边界 | 否 |
-| `apps/runtime-host/.../package-info.java` | 标记组合根包边界 | 否 |
-| `apps/runtime-host/.../ZbAgentWfCli.java` | CLI 公开进程入口和进程退出 | 是，`main` 入口 |
-| `apps/runtime-host/.../CliApplication.java` | 内建命令解析、输出和退出码映射 | 否，包内实现 |
-| `apps/runtime-host/src/test/.../CliApplicationTest.java` | CLI 精确输出、退出码与异常脱敏测试 | 否 |
-
-当前没有业务源文件；runtime-host 只实现最小 CLI 基线。用户添加接口或 AI 添加实现后，同步补充实际入口和测试位置。
-
-## 规则与需求入口
-
-| 文件 | 职责 |
+| 文件 | 类型 |
 | --- | --- |
-| `AGENTS.md` | 仓库级用户所有权、AI 修改权限和硬门禁 |
-| `docs/operations/task-entry-points.md` | 按任务类型路由必读资料 |
-| `docs/operations/agent-workflow.md` | checkpoint、双阶段评审和自动 commit/push 流程 |
-| `docs/operations/quality-gates.md` | 质量门禁和最终报告要求 |
-| `docs/templates/review/PLAN_REVIEW.md` | Plan Review packet |
-| `docs/templates/review/RESULT_REVIEW.md` | 绑定 staged snapshot 的 Result Review packet |
-| `modules/*/REQUIREMENTS.md`、`apps/runtime-host/REQUIREMENTS.md` | 就近范围、验收和待确认事项台账 |
+| `src/main/java/com/kk24426/zbagentwf/CliApplication.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/ZbAgentWfCli.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/agent/package-info.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/agent/persistence/MySqlConfiguration.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/agent/persistence/SqlDiagnosticsInterceptor.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/agent/persistence/mapper/package-info.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/common/logging/LogFailureMonitor.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/common/logging/RunLogging.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/common/logging/SanitizingEncoder.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/common/logging/SecretRedactor.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/common/package-info.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/user/package-info.java` | 运行代码 |
+| `src/test/java/com/kk24426/zbagentwf/CliApplicationTest.java` | 测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/CliJarIT.java` | 测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/ContextTest.java` | 测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/MySqlIT.java` | 测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/agent/InjectionImplementation.java` | 测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/agent/persistence/mapper/ProbeMapper.java` | 测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/common/logging/LoggingTest.java` | 测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/user/InjectionFixture.java` | 测试，不进入JAR |
+
+入口ZbAgentWfCli负责初始化/退出，CliApplication负责命令。
+agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging负责日志路径、脱敏、故障可见性。
+测试包含跨包注入、日志滚动、真实JAR、显式MySQL专用库验收。package-info仅职责标记。
+
+规则入口：根AGENTS.md、三个包AGENTS.md、根REQUIREMENTS.md。
+流程入口：docs/operations/agent-workflow.md和docs/templates/review/。

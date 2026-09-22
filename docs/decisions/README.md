@@ -14,4 +14,6 @@
 - [0004：升级到 Java 26](./0004-java-26.md)
 - [0005：以纯 Java CLI 单 JAR 作为首个运行入口](./0005-cli-jar-distribution.md)
 
+- [0006：单工程、Spring Boot、日志与 MySQL 基础](./0006-single-project-spring-mysql.md)
+
 新的长期技术选择使用 [TEMPLATE.md](./TEMPLATE.md) 记录。候选想法不写成 accepted；先标记 proposed 并由用户决定。

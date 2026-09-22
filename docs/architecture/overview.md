@@ -1,43 +1,12 @@
-<!--
- * 创建日期：2026-08-09
- * 更新日期：2026-08-19
- * 做 成 者：zebiao
- * 版    本：v0.2
- * 功能概要：记录 ZBAgentWF2.0 当前定位、CLI 基线和非目标。
- -->
+# 架构总览
 
-# Architecture Overview
+单 Maven 工程，按包组织，不采用 Maven 子模块隔离。
+根包为 com.kk24426.zbagentwf，根启动类初始化日志与非 Web Spring 容器。
+user 放用户接口/编排，agent 放接口实现和持久化，common 放共享 Bean/工具。
+启动 -> 独立日志 -> Spring扫描/注入 -> CLI执行 -> 关闭容器/连接池 -> 结束日志 -> 退出。
 
-## 项目定位
-
-ZBAgentWF2.0 是一个重新开始的 Java 项目。当前阶段先建立用户能够直接掌握的模块和接口骨架，再按真实用户链路逐步实现功能。
-
-旧 ZBAgentWF 可以作为行为与经验参考，但本仓库不进行源码搬运、逐行翻译或隐式兼容。是否复用某项契约必须由用户逐项决定。
-
-## 当前组成
-
-| 模块 | 当前状态 | 职责 |
-| --- | --- | --- |
-| `modules/domain` | 空骨架 | 用户定义领域对象、规则和状态机。 |
-| `modules/application` | 空骨架 | 用户定义用例接口和出站端口。 |
-| `modules/adapters` | 空骨架 | AI 实现已批准端口的外部适配。 |
-| `apps/runtime-host` | 最小 CLI | 提供帮助、版本命令和未来组合根。 |
-
-## 技术基线
-
-- Java 26；
-- Maven 3.9.16 和 Maven Wrapper；
-- 单仓库、模块化单体；
-- 默认中文文档与注释；
-- 手工维护轻量 code map。
-
-## 当前不做
-
-- 不迁移旧业务代码；
-- 不预设 Spring、数据库或 Agent SDK；
-- 不定义 HTTP、IPC 或业务级进程协议；当前只接受用户已批准的 CLI 命令参数；
-- 不重写或接入 Windows 客户端；
-- 不建立微服务、消息队列、部署平台或完整 Agent Harness；
-- 不一次性设计全部领域模型和接口。
-
-首个业务阶段应由用户选择一条最小纵向链路，先定义领域、用例接口和验收示例，再让 AI 实现。
+Spring Boot 4.1.1；MyBatis Starter 4.1.0；Java26；Maven Wrapper3.9.16。
+未激活 mysql 时没有 DataSource；激活后验证配置和连接，失败退出1。
+目前仅框架能力，无生产业务类型、业务表或业务命令。
+旧项目不自动搬运；第一条业务链路仍由用户定义。
+决策依据见 [ADR0006](../decisions/0006-single-project-spring-mysql.md)。

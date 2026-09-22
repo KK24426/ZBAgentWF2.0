@@ -1,105 +1,41 @@
-<!--
- * 创建日期：2026-08-09
- * 更新日期：2026-08-19
- * 做 成 者：zebiao
- * 版    本：v0.2
- * 功能概要：介绍 ZBAgentWF2.0 的 Java 工程、CLI 入口、人机职责和开始开发方式。
- -->
-
 # ZBAgentWF2.0
 
-ZBAgentWF2.0 是 ZBAgentWF 的全新 Java 实现起点。项目采用“用户主导架构和接口，AI 实现已批准边界后的具体功能”的协作方式，使核心设计保持在用户掌握之中，同时利用 AI 完成实现、测试和重复性工程工作。
+这是一个实验性的 Java CLI 项目：你定义接口与业务，Agent 实现具体功能。
+一个 Maven 工程，使用包区分协作职责：
 
-当前仓库已提供最小 CLI 进程入口，但仍是空业务骨架：不包含旧 ZBAgentWF 业务代码，也没有实现数据库、Agent provider 或客户端。
+- `user`：你的接口、编排与手写业务代码。
+- `agent`：Agent 实现、MyBatis Mapper 和 SQL。
+- `common`：双方维护的 Bean、DTO 和工具。
 
-## 当前技术基线
+基线：Java 26、Maven Wrapper 3.9.16、Spring Boot 4.1.1、MyBatis Starter 4.1.0、MySQL Connector/J。
+运行 MySQL 尚需配置；没有生产业务表或业务保存功能。
 
-- Java 26
-- Apache Maven 3.9.16
-- Maven Wrapper 3.3.4（only-script，不提交 Wrapper JAR）
-- 模块化单体
-- 默认中文文档和注释
-
-本轮没有引入 Spring、数据库驱动、Agent SDK 或 UI 框架。这些选择由用户在真实需求出现后决定。
-
-## 模块
-
-```text
-apps/runtime-host
-  -> modules/adapters
-      -> modules/application
-          -> modules/domain
-```
-
-- `domain`：领域对象、规则和状态机，由用户定义。
-- `application`：用例接口和出站端口，由用户定义。
-- `adapters`：AI 根据批准接口实现外部系统和基础设施接入。
-- `runtime-host`：CLI 进程入口和未来组合根；当前只提供帮助与版本命令。
-
-三个业务模块现在只有构建文件、包边界和就近协作规则。`package-info.java` 不构成业务接口。
-
-## 人机协作方式
-
-用户负责：
-
-- 模块和依赖方向；
-- 公共接口与 DTO；
-- 状态机和核心规则；
-- 协议、配置、数据库 schema 和事务边界；
-- 关键技术选型与验收标准。
-
-AI 负责：
-
-- 已批准接口的具体实现；
-- adapter、数据访问和外部调用；
-- 单元测试、集成测试和回归验证；
-- 实现文档和影响范围说明。
-
-接口不足时，AI 必须先提出建议并等待用户决定，不能自行扩展公共契约。完整规则见 [AGENTS.md](./AGENTS.md) 和 [AI Development Guide](./docs/AI_DEV_GUIDE.md)。
-
-## 开始使用
-
-本机需要 JDK 26。Maven 由 Wrapper 自动准备：
-
+## 构建与运行
 ```powershell
-.\mvnw.cmd verify
+.\mvnw.cmd clean verify
+java -jar .\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar help
+java -jar .\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar version
 ```
 
-构建完成后的正式 CLI 分发物为：
+Eclipse 可直接运行根包的 `ZbAgentWfCli.main`，默认显示帮助、初始化 Spring 并记录日志。
+版本命令依赖打包 Manifest，IDE 直接运行 version 缺少 Manifest 时返回1，不伪造版本。
 
-```text
-apps/runtime-host/target/zbagentwf-cli-0.1.0-SNAPSHOT.jar
-```
+默认不连接数据库。stdout 输出结果，stderr 输出日志；退出码0成功、1失败、2参数错误。
+日志默认位于运行工作目录的 `logs/<runId>/application.log`；每次运行独立、文件UTF-8、20MB/日滚动，不自动清理。
+默认项目DEBUG、框架INFO；SQL参数不打印。每次日志目录故障可见，关闭前刷新。
 
-可以直接调用内建命令：
+## Spring 注入
+在 user 中定义接口，agent 中用 `@Service` 实现；你自己的调用类也标注 `@Component`，
+然后通过构造器注入接口。两个实现通过 `@Qualifier` 或 `@Primary` 选择。
+common 中 Bean 不必全部注册成 Spring Bean，普通数据对象可以直接创建。
 
-```powershell
-java -jar .\apps\runtime-host\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar help
-java -jar .\apps\runtime-host\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar version
-```
-
-CLI 使用 stdout 输出正常结果、stderr 输出错误，退出码 `0` 表示成功、`1` 表示功能执行失败、`2` 表示命令或参数错误。当前 JAR 是 CLI 分发物，不承诺作为 Maven 类库使用。
-
-开始第一个业务功能前，建议用户先完成：
-
-1. 在 `domain` 中定义最小领域对象和规则。
-2. 在 `application` 中定义一个真实用例接口及其所需端口。
-3. 给出输入、输出、失败语义和验收示例。
-4. 再让 AI 在 `adapters` 或 application 内部实现具体功能和测试。
-
-不要一次性设计完整平台。优先选择一条可以真实验证的纵向业务链路，小步扩展。
-
-## 文档入口
-
-- [AI 协作快速入口](./docs/AI_DEV_GUIDE.md)
-- [任务阅读路由](./docs/operations/task-entry-points.md)
-- [架构总览](./docs/architecture/overview.md)
-- [模块边界](./docs/architecture/module-boundaries.md)
-- [公开端口索引](./docs/contracts/module-ports.md)
-- [本地开发](./docs/operations/local-dev.md)
+## 开发入口
+- [协作规则](./AGENTS.md)、[当前需求](./REQUIREMENTS.md)
+- [本地开发、Eclipse、日志和 MySQL 配置](./docs/operations/local-dev.md)
+- [最小注入示例](./docs/operations/spring-example.md)
+- [包边界](./docs/architecture/module-boundaries.md)、[文件索引](./docs/code-map/files.md)
+- [契约与配置](./docs/contracts/module-ports.md)
 
 ## 许可证
-
-当前仓库的自有代码尚未选择开源许可证。公开可见不代表已经授予复制、修改或分发许可；许可证由用户后续决定。
-
-仓库包含 Apache Maven Wrapper 启动脚本，该第三方组件按 Apache License 2.0 分发，范围与通知见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) 和 [LICENSES/Apache-2.0.txt](./LICENSES/Apache-2.0.txt)。该第三方许可不适用于仓库自有代码。
+自有代码尚未选择开源许可证，公开可见不等于授予使用许可。
+Maven Wrapper 第三方通知见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) 和 [Apache-2.0](./LICENSES/Apache-2.0.txt)。
