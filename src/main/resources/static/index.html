@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ZBAgentWF 实验性工作台，用户定义业务，Agent 实现功能。">
+  <title>ZBAgentWF · 工作台</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="ZBAgentWF 首页"><span class="mark">ZB</span> AgentWF <span class="edition">2.0</span></a>
+    <nav aria-label="页面导航"><a href="#start">概览</a><a href="#structure">工程结构</a></nav>
+    <span class="environment">实验环境</span>
+  </header>
+  <main>
+    <section class="hero" id="start" aria-labelledby="title">
+      <div class="eyebrow"><span class="dot"></span> WEB WORKSPACE / 起点</div>
+      <h1 id="title">让想法，<br>从这里开始运行<span class="accent">。</span></h1>
+      <p class="intro">你定义接口与业务，Agent 完成具体实现。<br>一个简单、可掌握、逐步生长的开发工作台。</p>
+      <a class="primary" href="#structure">了解当前工程 <span aria-hidden="true">↗</span></a>
+      <div class="hero-note"><span>01 / FOUNDATION</span><p>服务首页已可访问。<br>业务操作将在接口确定后逐步接入。</p></div>
+    </section>
+    <section class="foundation" aria-labelledby="foundation-title">
+      <div class="section-heading"><h2 id="foundation-title">基础已经就位</h2><span>保持轻量，从真实需求出发</span></div>
+      <div class="cards">
+        <article class="card"><span class="number">01</span><h3>Web 服务</h3><p>Spring Boot 承载页面与后续接口，无需逐条输入业务命令。</p><span class="label">当前页面</span></article>
+        <article class="card"><span class="number">02</span><h3>运行日志</h3><p>按运行独立保存日志，用请求编号定位问题，保留脱敏异常链。</p><span class="label">诊断基础</span></article>
+        <article class="card"><span class="number">03</span><h3>数据持久化</h3><p>MyBatis / MySQL 按配置启用。业务表和保存流程由你定义。</p><span class="label neutral">尚无业务数据功能</span></article>
+      </div>
+    </section>
+    <section id="structure" class="structure" aria-labelledby="structure-title">
+      <div><div class="eyebrow">CLEAR OWNERSHIP</div><h2 id="structure-title">三个包，清晰协作。</h2><p>一个 Maven 工程，不增加多模块复杂度。</p></div>
+      <dl><div><dt>user<span>你的工作区</span></dt><dd>接口定义、业务编排与手写实现。</dd></div><div><dt>agent<span>Agent 实现区</span></dt><dd>在批准的边界内实现接口、页面适配和数据访问。</dd></div><div><dt>common<span>共同维护</span></dt><dd>Bean、DTO、工具与日志辅助。</dd></div></dl>
+    </section>
+    <aside class="next"><span class="next-icon" aria-hidden="true">＋</span><div><h2>下一步，由业务决定</h2><p>当前仅提供基础首页，不含任务执行、数据库编辑或后台管理入口。</p></div></aside>
+  </main>
+  <footer><span>ZBAgentWF 2.0</span><span>用户主导 · 小步实现 · 可验证</span></footer>
+</body>
+</html>

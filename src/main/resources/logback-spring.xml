@@ -3,7 +3,7 @@
     <statusListener class="com.kk24426.zbagentwf.common.logging.LogFailureMonitor"/>
     <springProperty name="PROJECT_LEVEL" source="logging.level.com.kk24426.zbagentwf" defaultValue="DEBUG"/>
     <springProperty name="ROOT_LEVEL" source="logging.level.root" defaultValue="INFO"/>
-    <property name="PATTERN" value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [runId=${zb.run-id:-unmanaged}] [pid=${PID:-unknown}] [%thread] %logger - %msg%n%ex{full}"/>
+    <property name="PATTERN" value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [runId=${zb.run-id:-unmanaged}] [requestId=%X{requestId:-none}] [pid=${PID:-unknown}] [%thread] %logger - %msg%n%ex{full}"/>
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <target>System.err</target>
         <encoder class="com.kk24426.zbagentwf.common.logging.SanitizingEncoder">

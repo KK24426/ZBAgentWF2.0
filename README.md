@@ -1,6 +1,6 @@
 # ZBAgentWF2.0
 
-这是一个实验性的 Java CLI 项目：你定义接口与业务，Agent 实现具体功能。
+这是一个实验性的 Java Web 项目：你定义接口与业务，Agent 实现具体功能。
 一个 Maven 工程，使用包区分协作职责：
 
 - `user`：你的接口、编排与手写业务代码。
@@ -8,21 +8,23 @@
 - `common`：双方维护的 Bean、DTO 和工具。
 
 基线：Java 26、Maven Wrapper 3.9.16、Spring Boot 4.1.1、MyBatis Starter 4.1.0、MySQL Connector/J。
-运行 MySQL 尚需配置；没有生产业务表或业务保存功能。
+默认无数据库，远程测试环境启用专用 MySQL；没有生产业务表或业务保存功能。
 
 ## 构建与运行
+
 ```powershell
 .\mvnw.cmd clean verify
-java -jar .\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar help
-java -jar .\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar version
+java -jar .\target\zbagentwf-web-0.1.0-SNAPSHOT.jar
 ```
 
-Eclipse 可直接运行根包的 `ZbAgentWfCli.main`，默认显示帮助、初始化 Spring 并记录日志。
-版本命令依赖打包 Manifest，IDE 直接运行 version 缺少 Manifest 时返回1，不伪造版本。
+浏览器打开 http://127.0.0.1:8080/。Eclipse 可直接运行根包的 `ZbAgentWfApplication.main`。
+进程持续运行，正常停止使用 Ctrl+C；CLI 及 help/version 已移除，不接受命令参数。
+默认仅监听本机，远程测试服务通过 SSH 隧道访问，见[远程测试环境](./docs/operations/remote-test.md)。
 
-默认不连接数据库。stdout 输出结果，stderr 输出日志；退出码0成功、1失败、2参数错误。
+默认不连接数据库；stderr 输出日志，不向 stdout 输出业务结果。启动失败退出1、传入命令参数退出2。
 日志默认位于运行工作目录的 `logs/<runId>/application.log`；每次运行独立、文件UTF-8、20MB/日滚动，不自动清理。
-默认项目DEBUG、框架INFO；SQL参数不打印。每次日志目录故障可见，关闭前刷新。
+默认项目DEBUG、框架INFO；请求日志包含 requestId、固定路由类别、状态和耗时，不打印原始路径、查询或 SQL 参数。
+启动日志故障时失败，运行期检测到日志故障后后续请求返回503；正常关闭时刷新。
 
 ## Spring 注入
 在 user 中定义接口，agent 中用 `@Service` 实现；你自己的调用类也标注 `@Component`，
@@ -30,6 +32,7 @@ Eclipse 可直接运行根包的 `ZbAgentWfCli.main`，默认显示帮助、初�
 common 中 Bean 不必全部注册成 Spring Bean，普通数据对象可以直接创建。
 
 ## 开发入口
+
 - [协作规则](./AGENTS.md)、[当前需求](./REQUIREMENTS.md)
 - [本地开发、Eclipse、日志和 MySQL 配置](./docs/operations/local-dev.md)
 - [最小注入示例](./docs/operations/spring-example.md)

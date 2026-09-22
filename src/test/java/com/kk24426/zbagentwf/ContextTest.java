@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-22
- * 更新日期：2026-09-22
+ * 更新日期：2026-09-23
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：验证容器默认无数据库、按接口注入和关闭资源。
@@ -19,9 +19,9 @@ import com.kk24426.zbagentwf.user.InjectionFixture;
 class ContextTest {
     @Test
     void rootScanInjectsAcrossPackagesAndDoesNotCreateDataSource() {
-        try (var context = new AnnotationConfigApplicationContext(ZbAgentWfCli.class)) {
+        try (var context = new AnnotationConfigApplicationContext(ZbAgentWfApplication.class)) {
             assertTrue(context.getBeansOfType(DataSource.class).isEmpty());
-            assertNotNull(context.getBean(CliApplication.class));
+            assertNotNull(context.getBean(com.kk24426.zbagentwf.agent.web.WebRequestFilter.class));
             assertEquals("injected", context.getBean(InjectionFixture.class).value());
         }
     }

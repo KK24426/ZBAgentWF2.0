@@ -4,8 +4,8 @@
 
 | 文件 | 类型 |
 | --- | --- |
-| `src/main/java/com/kk24426/zbagentwf/CliApplication.java` | 运行代码 |
-| `src/main/java/com/kk24426/zbagentwf/ZbAgentWfCli.java` | 运行代码 |
+| `src/main/java/com/kk24426/zbagentwf/ZbAgentWfApplication.java` | Web启动与生命周期 |
+| `src/main/java/com/kk24426/zbagentwf/agent/web/WebRequestFilter.java` | 请求保护与安全日志 |
 | `src/main/java/com/kk24426/zbagentwf/agent/package-info.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/agent/persistence/MySqlConfiguration.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/agent/persistence/SqlDiagnosticsInterceptor.java` | 运行代码 |
@@ -16,8 +16,8 @@
 | `src/main/java/com/kk24426/zbagentwf/common/logging/SecretRedactor.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/common/package-info.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/user/package-info.java` | 运行代码 |
-| `src/test/java/com/kk24426/zbagentwf/CliApplicationTest.java` | 测试，不进入JAR |
-| `src/test/java/com/kk24426/zbagentwf/CliJarIT.java` | 测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/agent/web/WebRequestFilterTest.java` | 测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/WebJarIT.java` | 真实Web JAR测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/ContextTest.java` | 测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/MySqlIT.java` | 测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/agent/InjectionImplementation.java` | 测试，不进入JAR |
@@ -25,7 +25,8 @@
 | `src/test/java/com/kk24426/zbagentwf/common/logging/LoggingTest.java` | 测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/user/InjectionFixture.java` | 测试，不进入JAR |
 
-入口ZbAgentWfCli负责初始化/退出，CliApplication负责命令。
+入口ZbAgentWfApplication负责Web初始化与生命周期；CLI类和测试已移除。
+静态首页资源为src/main/resources/static/index.html、app.css和favicon.svg。
 agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging负责日志路径、脱敏、故障可见性。
 测试包含跨包注入、日志滚动、真实JAR、显式MySQL专用库验收。package-info仅职责标记。
 

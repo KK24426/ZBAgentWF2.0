@@ -1,10 +1,10 @@
 # ADR 0005：以纯 Java CLI 单 JAR 作为首个运行入口
 
-- 状态：accepted（CLI 单 JAR 目标有效；工程结构、初始化和打包方案已被 ADR 0006 替代）
+- 状态：superseded（CLI由ADR0007替代；工程结构、初始化和打包方案由ADR0006替代）
 - 日期：2026-08-19
 - 决策人：zebiao
 
-> 当前适用范围（2026-09-23）：CLI 单 JAR 调用、业务边界由用户决定及不承诺 Maven 类库兼容的原则继续有效。旧 runtime-host/application 模块路径、无 Spring 初始化、Shade 产物和旧坐标不再适用，已由 [ADR 0006](./0006-single-project-spring-mysql.md) 替代。下文保留历史原文；当前入口、退出码和输出约定见[接口与配置](../contracts/module-ports.md)。
+> 当前适用范围（2026-09-23）：业务边界由用户决定及不承诺Maven类库兼容的原则保留。CLI入口由 [ADR0007](./0007-web-test-service.md) 替代；旧模块路径、无Spring初始化、Shade产物和旧坐标由 [ADR0006](./0006-single-project-spring-mysql.md) 替代。下文只保留历史原文；当前入口和配置见[接口与配置](../contracts/module-ports.md)。
 
 ## 背景
 

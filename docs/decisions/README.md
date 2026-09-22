@@ -12,9 +12,10 @@
 - [0002：用户拥有架构和公共接口决策权](./0002-human-owned-architecture.md)
 - [0003：按纵向业务链路小步开发](./0003-vertical-slice-development.md)
 - [0004：升级到 Java 26（版本基线有效，无框架部分已被 0006 替代）](./0004-java-26.md)
-- [0005：CLI 单 JAR 入口（交付目标有效，旧模块、初始化及 Shade 方案已被 0006 替代）](./0005-cli-jar-distribution.md)
+- [0005：CLI 单 JAR 入口（CLI由0007替代，旧模块、初始化及Shade由0006替代）](./0005-cli-jar-distribution.md)
 
 - [0006：单工程、Spring Boot、日志与 MySQL 基础](./0006-single-project-spring-mysql.md)
+- [0007：Web服务与远程专用测试环境](./0007-web-test-service.md)
 
 阅读历史 ADR 时先看顶部的当前适用范围；已被替代的正文只保留决策背景，不用于恢复旧架构。当前按包协作，不因历史“模块”措辞新建 Maven 子模块；用户权限仍以根 `AGENTS.md` 为准。
 

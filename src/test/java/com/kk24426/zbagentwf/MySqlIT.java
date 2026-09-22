@@ -1,9 +1,9 @@
 /*
  * 创建日期：2026-09-22
- * 更新日期：2026-09-22
+ * 更新日期：2026-09-23
  * 做 成 者：zebiao
  * 版    本：v0.1
- * 功能概要：仅在显式 mysql-it 模式对本机专用测试库验证真实 CRUD 和事务。
+ * 功能概要：仅在显式 mysql-it 模式经回环地址或已批准隧道验证专用测试库 CRUD 和事务。
  */
 package com.kk24426.zbagentwf;
 
@@ -31,7 +31,7 @@ class MySqlIT {
         String username = required("ZB_TEST_DB_USERNAME");
         String password = required("ZB_TEST_DB_PASSWORD");
         assertTrue(url.matches("jdbc:mysql://(?:127\\.0\\.0\\.1|localhost)(?::[0-9]{1,5})?/zbagentwf_test"),
-                "测试 URL 必须指向本机 zbagentwf_test，不能包含其它主机、库或 URL 参数。");
+                "测试 URL 必须指向回环地址 zbagentwf_test，不能包含其它主机、库或 URL 参数。");
         SecretRedactor.register(username);
         SecretRedactor.register(password);
         String table = "zb_it_" + UUID.randomUUID().toString().replace("-", "");

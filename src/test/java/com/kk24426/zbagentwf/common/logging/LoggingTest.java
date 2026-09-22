@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-22
- * 更新日期：2026-09-22
+ * 更新日期：2026-09-23
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：验证脱敏、完整异常链、目录隔离、滚动和日志故障。
@@ -25,6 +25,33 @@ import org.junit.jupiter.api.io.TempDir;
 
 class LoggingTest {
     @TempDir Path temp;
+
+    @Test
+    void protocolDiagnosticsKeepChainButNeverEchoRawRequestData() {
+        LoggerContext context = new LoggerContext();
+        context.setMDCAdapter(new ch.qos.logback.classic.util.LogbackMDCAdapter());
+        SanitizingEncoder encoder = encoder(context);
+        try {
+            var failure = new IllegalArgumentException("private-target",
+                    new IllegalStateException("private-query"));
+            failure.addSuppressed(new RuntimeException("private-header"));
+            for (String name : new String[]{"org.apache.coyote.http11.Http11Processor",
+                    "org.apache.tomcat.util.http.parser.Cookie"}) {
+                var event = new LoggingEvent("test", context.getLogger(name), Level.INFO,
+                        "private-method", failure, new Object[]{"private-argument"});
+                String text = new String(encoder.encode(event), StandardCharsets.UTF_8);
+                assertFalse(text.contains("private-"));
+                assertTrue(text.contains("HTTP 容器诊断"));
+                assertTrue(text.contains("IllegalArgumentException"));
+                assertTrue(text.contains("Caused by:"));
+                assertTrue(text.contains("Suppressed:"));
+                assertTrue(text.contains("LoggingTest.java"));
+            }
+        } finally {
+            encoder.stop();
+            context.stop();
+        }
+    }
 
     @Test
     void completeExceptionChainAndMessagesAreRedacted() {

@@ -1,6 +1,7 @@
 # ADR 0006：单工程、Spring Boot、日志与 MySQL 基础
 
 - 状态：accepted
+- 当前适用范围：单工程、Spring、日志和MyBatis基础保留；CLI生命周期、禁止Web和仅本机数据库环境部分由 [0007](./0007-web-test-service.md) 替代。
 - 日期：2026-09-22
 - 决策人：zebiao
 - 替代：0001/0004中的多模块、无框架部分；0005中的纯Java初始化和Shade分发部分。

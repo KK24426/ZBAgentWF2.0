@@ -27,7 +27,8 @@ public class MyWorkflow {
 }
 ```
 
-在已批准的CLI命令处理中注入或从容器取得MyWorkflow后调用execute。
+在后续获批准的Web控制器中通过构造器注入MyWorkflow，再由用户定义的业务操作调用execute。
+当前首页没有业务控制器或API；此示例不授权提前创建路由。
 不要仅靠构造函数自动执行业务。接口存在多个实现时标记@Primary或在注入处使用@Qualifier。
 new MyWorkflow(...)不触发Spring自动注入；自己new时应显式传依赖。
 事务@Transactional应放在用户确定的服务边界上，并通过Spring代理从其它Bean调用；同类自调用不产生事务代理。
