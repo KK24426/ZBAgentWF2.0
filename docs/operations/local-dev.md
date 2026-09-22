@@ -11,7 +11,8 @@ java -jar .\target\zbagentwf-cli-0.1.0-SNAPSHOT.jar version
 ```
 verify运行单元测试与真实Boot JAR进程测试；MySQL专用库测试默认跳过。
 正式JAR为target/zbagentwf-cli-0.1.0-SNAPSHOT.jar，.jar.original不是正式分发。
-不会生成或分发旧apps/runtime-host产物。旧目录的ignored target是历史构建缓存。
+不会生成或分发旧apps/runtime-host产物。旧apps和modules目录不再使用，
+当前源码统一位于根src目录，旧目录中的构建缓存和IDE配置不属于有效工程内容。
 
 隔离验证时同时设置MAVEN_USER_HOME（Wrapper缓存）及-Dmaven.repo.local（依赖缓存），
 二者使用任务专属临时目录；结束后恢复环境。不得清理整个用户.m2缓存。
@@ -24,7 +25,10 @@ verify运行单元测试与真实Boot JAR进程测试；MySQL专用库测试默�
 IDE直接运行version因无Manifest版本而返回1；要验证版本请运行打包JAR。
 XML的Cannot find declaration错误应检查XML插件外部Schema下载设置；
 POM沿用Maven官方声明，不通过关闭所有XML校验解决。
-被忽略的旧.project/.classpath/.settings由用户按需清理，本轮不改写个人IDE元数据。
+清理旧目录前应先移除Eclipse中的旧子工程引用，否则运行中的IDE可能重建旧.project文件和目录。
+根工程名称使用zbagentwf。Eclipse工作区可能仍缓存旧工程引用：先选中工程按F5刷新；
+如仍显示旧工程，按上述步骤移除引用后重新导入，再清理已核实仅含缓存和IDE元数据的旧目录。
+只保留根工程；本地IDE元数据仍不提交到Git，不直接修改Eclipse工作区.metadata。
 
 ## 日志
 文件：当前工作目录/logs/<runId>/application.log；UTF-8，默认项目DEBUG/框架INFO。
