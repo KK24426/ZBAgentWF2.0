@@ -31,4 +31,5 @@ public class MyWorkflow {
 不要仅靠构造函数自动执行业务。接口存在多个实现时标记@Primary或在注入处使用@Qualifier。
 new MyWorkflow(...)不触发Spring自动注入；自己new时应显式传依赖。
 事务@Transactional应放在用户确定的服务边界上，并通过Spring代理从其它Bean调用；同类自调用不产生事务代理。
-Mapper XML放resources/mapper，使用#{value}绑定值；动态标识符必须白名单，不能直接拼接外部输入。
+Mapper 接口放 `com.kk24426.zbagentwf.agent.persistence.mapper` 包并标注 `@Mapper`；XML 放 `src/main/resources/mapper`。当前只在 `mysql` profile 下注册 Mapper，依赖它的消费者也须按数据库启用条件组织。
+完整的注解、参数和 XML 对应写法见 [Mapper 示例](../../src/main/resources/mapper/README.md)。使用 `#{value}` 绑定值；动态标识符必须白名单，不能直接拼接外部输入。

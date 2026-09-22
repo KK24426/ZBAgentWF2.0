@@ -1,8 +1,10 @@
 # ADR 0005：以纯 Java CLI 单 JAR 作为首个运行入口
 
-- 状态：accepted
+- 状态：accepted（CLI 单 JAR 目标有效；工程结构、初始化和打包方案已被 ADR 0006 替代）
 - 日期：2026-08-19
 - 决策人：zebiao
+
+> 当前适用范围（2026-09-23）：CLI 单 JAR 调用、业务边界由用户决定及不承诺 Maven 类库兼容的原则继续有效。旧 runtime-host/application 模块路径、无 Spring 初始化、Shade 产物和旧坐标不再适用，已由 [ADR 0006](./0006-single-project-spring-mysql.md) 替代。下文保留历史原文；当前入口、退出码和输出约定见[接口与配置](../contracts/module-ports.md)。
 
 ## 背景
 
@@ -28,5 +30,3 @@
 - 新增独立 CLI Maven 模块：当前规模不足，且会改变用户掌握的模块结构，未采用。
 - 引入 Picocli 或 Spring Boot：内建命令过少，额外框架暂时没有收益，未采用。
 - 分发普通 thin JAR：会增加调用方组装 classpath 的负担，不符合单 JAR 调用目标，未采用。
-
-> 2026-09-22：多模块、无 Spring 和 Shade 分发相关内容已被 [ADR 0006](./0006-single-project-spring-mysql.md) 替代；本文件保留历史。Java 26 与 Maven Wrapper 3.9.16 基线继续有效。

@@ -18,7 +18,7 @@ stdout仅命令结果，stderr包含日志、固定错误提示及脱敏异常�
 | 测试库 | ZB_TEST_DB_URL、ZB_TEST_DB_USERNAME、ZB_TEST_DB_PASSWORD；无生产配置回退 |
 
 mysql模式不自动建库/建表/迁移；无模式时自动数据源配置显式排除。
-MyBatis Mapper由Spring注册；配置限制在agent.persistence.mapper，XML在资源mapper目录。
+MyBatis Mapper 仅在 mysql profile 下由 Spring 扫描注册；接口位于 com.kk24426.zbagentwf.agent.persistence.mapper 包及其子包且必须标注 @Mapper，XML 位于资源 mapper 目录。对应写法见 [Mapper 示例](../../src/main/resources/mapper/README.md)。
 数据源用户名密码不能为空，Hikari上限5、空闲0、取连接超时5秒、驱动读取超时30秒。
 日志同进程runId固定；异常类型/堆栈/cause/suppressed保留，消息已知敏感字段脱敏。
 文件日志使用UTF-8；控制台日志跟随System.err编码，与固定错误提示保持一致。

@@ -1,5 +1,7 @@
 # Plan Review Packet
 
+本文件是空白模板，不填写具体任务结果。Plan Review 通过前在任务对话中提供以下内容；通过后整理到 `tmp/reviews/<task-id>/plan-review.md`，保留各轮记录。保存与追溯规则见 [Agent Workflow](../../operations/agent-workflow.md)。
+
 ## Review 元数据
 
 - Review Type：Plan Review
@@ -15,14 +17,14 @@
 
 ## 用户已批准的设计
 
-列出模块、接口、状态机、协议、技术选择和 Git 自动化的明确批准记录。
+列出包职责、接口、状态机、协议、技术选择和 Git 自动化的明确批准记录；涉及 Maven 模块结构时单独说明。
 
 ## 实施方案
 
 - 修改范围：
 - 不涉及范围：
 - 预计文件：
-- 验证计划：目标模块 / 直接调用者 / 全仓
+- 验证计划：目标包 / 直接调用者 / 全仓
 - 数据、安全、环境和发布影响：
 
 ## Findings

@@ -1,9 +1,11 @@
 # ADR 0001：采用 Java 21 和 Maven
 
 - 状态：superseded
-- 替代决策：[ADR 0004：升级到 Java 26](./0004-java-26.md)
+- 替代决策：[ADR 0004：Java 26](./0004-java-26.md) 替代 Java 21；[ADR 0006](./0006-single-project-spring-mysql.md) 替代四模块和无 Spring 方案。Maven/Wrapper 基线继续有效。
 - 日期：2026-08-09
 - 决策人：zebiao
+
+> 当前适用范围（2026-09-23）：下文保留历史原文，不作为恢复 Java 21、四模块或无框架方案的依据。当前架构以 ADR 0006 为准。
 
 ## 背景
 
@@ -21,5 +23,3 @@
 - 用户可以直接理解和维护核心代码；
 - AI 实现被限制在清晰的 Java 模块和接口之后；
 - 后续若更换 Java 版本、Maven 或引入框架，需要用户新决策。
-
-> 2026-09-22：多模块、无 Spring 和 Shade 分发相关内容已被 [ADR 0006](./0006-single-project-spring-mysql.md) 替代；本文件保留历史。Java 26 与 Maven Wrapper 3.9.16 基线继续有效。

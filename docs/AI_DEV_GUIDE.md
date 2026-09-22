@@ -1,8 +1,8 @@
 <!--
  * 创建日期：2026-08-09
- * 更新日期：2026-08-09
+ * 更新日期：2026-09-23
  * 做 成 者：zebiao
- * 版    本：v0.1
+ * 版    本：v0.2
  * 功能概要：说明用户主导设计、AI 受控实现的最短开发路径。
  -->
 
@@ -16,7 +16,7 @@
 
 ## AI 开始任务前
 
-AI 必须先按 [Agent Workflow](./operations/agent-workflow.md) 读取并 checkpoint 用户修改（如存在），再确认：
+AI 必须先按 [Task Entry Points](./operations/task-entry-points.md) 读取根规则、就近规则和任务资料，判断只读或写入任务，再确认：
 
 1. 用户给出的原始需求和验收标准是什么；
 2. 目标包及允许修改的文件是什么；
@@ -25,6 +25,8 @@ AI 必须先按 [Agent Workflow](./operations/agent-workflow.md) 读取并 check
 5. 最小验证命令是什么。
 
 任一公共边界不明确时，按根 `AGENTS.md` 的硬门禁停止并向用户提交方案。
+
+只读问答、计划和审查只检查与报告，不自动 checkpoint、修改、提交或推送。已授权写任务按 [Agent Workflow](./operations/agent-workflow.md) 检查用户修改；存在用户修改时，先完成独立 checkpoint，再进入 Plan Review。
 
 ## 默认实现路径
 

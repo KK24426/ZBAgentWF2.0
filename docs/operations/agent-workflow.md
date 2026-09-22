@@ -1,8 +1,8 @@
 <!--
  * 创建日期：2026-08-09
- * 更新日期：2026-08-09
+ * 更新日期：2026-09-23
  * 做 成 者：zebiao
- * 版    本：v0.2
+ * 版    本：v0.3
  * 功能概要：定义用户修改 checkpoint、AI 实现、双阶段评审和自动提交推送流程。
  -->
 
@@ -13,9 +13,10 @@
 ## 标准流程
 
 ```text
-读取用户修改
+读取根规则、就近规则及任务资料，判断只读或写入任务
+  -> 只读任务：检查与报告，到此结束；以下仅适用于已授权写任务
+  -> 读取并理解用户修改、接口、根 REQUIREMENTS 和契约
   -> 用户修改 checkpoint commit/push（存在时）
-  -> 读取规则、接口、REQUIREMENTS 和契约
   -> Plan Review
   -> AI 实现与分层验证
   -> 建立并检查最终 staged snapshot
@@ -58,15 +59,24 @@ checkpoint 忠实保存用户状态，不代表构建绿色。用户正在调整
 - POM、构建、CI 和脚本；
 - 配置、schema 和 migration；
 - 公开接口、DTO、状态、错误语义和其它契约；
-- 工程流程、质量门禁、权限规则和模块边界。
+- 工程流程、质量门禁、权限规则和包职责边界。
 
 Plan Review 以用户 checkpoint commit、当前源码、就近规则、根 `REQUIREMENTS.md` 和相关契约为事实输入。模板见 `docs/templates/review/PLAN_REVIEW.md`。只有汇总结论为 `Acceptance: Accept` 且 `Can Implement: Yes` 时才能写项目文件。
+
+### 模板与任务评审记录
+
+- `docs/templates/review/` 是可复用空白模板，不得把某次任务的 hash、发现或结论填写到模板中。
+- Plan Review 通过前，在任务对话中提供计划 packet，由真实独立 reviewer 返回结论；不得为了创建评审记录提前写项目文件。
+- Plan Review 通过后，将计划及实际 reviewer 结论整理到 `tmp/reviews/<task-id>/plan-review.md`；Result Review 使用同目录的 `result-review.md`。`task-id` 使用日期加任务短名区分任务。
+- 两份记录均保留各轮输入、发现、修正和真实结论，追加新轮次，不覆盖旧轮次。Result 记录每轮对应的 staged diff hash、文件清单和验证证据。
+- `tmp/` 已被 Git 忽略：这些是本地辅助记录，不 stage、不强制加入提交，也不提供 Git 持久追溯。最终任务交接仍须报告评审轮次、结论及提交状态。
+- Result Review 的 hash 和结论写入本地任务记录，不写回已审 staged 文件，避免记录自身改变被审快照。忽略路径不是权限豁免；若实现修改了本地配置或其它忽略文件，也必须列入评审范围并单独核验。
 
 ## 4. 实现与分层验证
 
 AI 只实现用户已定义或批准边界后的具体功能。公开契约以当前真实 Java 源码和测试为最终事实；变更公开契约时同步公开出口、`docs/contracts/module-ports.md` 和相关文档。
 
-bugfix 必须先检查报错点、同模块调用点、直接调用方、共享状态、错误映射和回归路径，不能只修表面报错。
+bugfix 必须先检查报错点、同包调用点、直接调用方、共享状态、错误映射和回归路径，不能只修表面报错。
 
 验证顺序为：
 
@@ -90,7 +100,7 @@ bugfix 必须先检查报错点、同模块调用点、直接调用方、共享�
    git diff --cached --full-index --binary | git hash-object --stdin
    ```
 
-4. Result Review 必须直接审查该 staged snapshot，并在 `docs/templates/review/RESULT_REVIEW.md` 记录 hash。只有汇总结论为 `Acceptance: Accept` 且 `Can Commit/Push: Yes` 时才能提交。
+4. Result Review 必须直接审查该 staged snapshot，并在 `tmp/reviews/<task-id>/result-review.md` 记录 hash，字段参考空白模板 `docs/templates/review/RESULT_REVIEW.md`。只有汇总结论为 `Acceptance: Accept` 且 `Can Commit/Push: Yes` 时才能提交。
 5. commit 前重新核对 hash、文件清单和 `git status`。存在 unstaged/untracked 变化或任何差异时，原 Result Review 立即失效，必须重新验证和评审。
 6. commit 只包含已评审 staged snapshot。commit 后、push 前比较 commit 内容与已评审快照，防止 hook 或外部工具改变内容；不一致时停止。
 7. push 当前分支 upstream，随后核对本地与远端 commit，并确认工作区干净。
@@ -102,7 +112,7 @@ Result Review 前的 stage 只是建立可审查候选快照，不等于 commit/
 - 默认至少一个真实、独立的 reviewer；不得由实施者伪造独立结论。
 - 可以指定多个 reviewer。review packet 必须记录指定集合、每位 reviewer 的身份、轮次和结论；只有所有指定 reviewer 都 `Accept`，汇总门禁才通过。
 - P0/P1 阻塞；P2/P3 默认不阻塞，除非 reviewer 明确说明其构成真实阻塞的原因。
-- Plan Review 和 Result Review 各自最多三轮。reviewer 不可用、结论冲突，或三轮后仍有 P0/P1 时，停止并交给用户裁决。
+- Plan Review 和 Result Review 各自最多三轮，通过即可结束，不要求固定跑满三轮。reviewer 不可用、结论冲突，或三轮后仍有 P0/P1 时，停止并交给用户裁决。
 
 ## 7. 提交与推送停止条件
 

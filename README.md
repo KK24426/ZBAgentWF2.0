@@ -33,6 +33,7 @@ common 中 Bean 不必全部注册成 Spring Bean，普通数据对象可以直�
 - [协作规则](./AGENTS.md)、[当前需求](./REQUIREMENTS.md)
 - [本地开发、Eclipse、日志和 MySQL 配置](./docs/operations/local-dev.md)
 - [最小注入示例](./docs/operations/spring-example.md)
+- [Mapper 注解与 XML 对应示例](./src/main/resources/mapper/README.md)
 - [包边界](./docs/architecture/module-boundaries.md)、[文件索引](./docs/code-map/files.md)
 - [契约与配置](./docs/contracts/module-ports.md)
 
