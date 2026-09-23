@@ -9,6 +9,7 @@
 
 基线：Java 26、Maven Wrapper 3.9.16、Spring Boot 4.1.1、MyBatis Starter 4.1.0、MySQL Connector/J。
 默认无数据库，远程测试环境启用专用 MySQL；没有生产业务表或业务保存功能。
+首页提供单次请求输入与结果区；后端为 Controller → Service → Agent 接口骨架。真实 Agent 尚未接入，正式运行返回明确不可用提示；成功路径仅用测试替身验证，见[聊天契约](./docs/contracts/chat.md)。
 
 ## 构建与运行
 

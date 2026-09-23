@@ -1,19 +1,21 @@
 # 接口与配置
 
-暂无带业务方法的公开接口或持久化 schema；用户已提供空父接口及 Agent 数据骨架，见[用户骨架契约](./user-ports.md)。根包启动入口为 com.kk24426.zbagentwf.ZbAgentWfApplication。
+已提供[单次聊天骨架](./chat.md)，真实 Agent 与持久化 schema 尚未接入；原空父接口及数据骨架见[用户骨架契约](./user-ports.md)。根包启动入口为 com.kk24426.zbagentwf.ZbAgentWfApplication。
 正式调用为 java -jar target/zbagentwf-web-<version>.jar，无命令参数，持续运行。
 stderr包含日志、固定错误提示及脱敏异常链，stdout无业务输出。
 启动失败退出1、传入任意命令参数退出2且不回显；正常停止释放资源，不立即关闭刚启动的容器。
 
 ## HTTP入口
 
-仅GET/HEAD访问 /、/index.html、/app.css、/favicon.svg；其它方法405，未知路径404。
+GET/HEAD访问 /、/index.html、/app.css、/favicon.svg、/chat.js；POST /api/chat 见聊天契约。其余未批准路径/方法仍拒绝。
 错误体为固定文字，HEAD无响应体；每次请求返回服务端生成的X-Request-ID。
 页面包含CSP、nosniff、no-referrer保护，资源不依赖外部站点，禁用缓存。
 请求日志只含白名单方法、固定类别、状态和耗时；不记录原始URL/查询/正文。
 Tomcat协议组件的解析前诊断采用固定摘要，异常类型/堆栈/cause/suppressed保留、原始消息隐藏；解析前拒绝的请求没有应用requestId。
 运行期检测到日志故障后，后续请求503；恢复服务需解决日志故障并重启。
-当前无登录系统或业务API，默认回环监听；公网开放和业务路由另行批准。
+当前无登录系统，默认回环监听；本轮仅批准单次聊天骨架API，公网开放和其它业务路由另行批准。
+
+聊天请求内Spring诊断及聊天异常隐藏消息原文并保留完整调用链；无请求上下文的聊天组件异常也适用，普通启动/数据库日志不受影响。
 
 ## 配置入口
 | 配置 | 来源与默认 |

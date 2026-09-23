@@ -1,8 +1,8 @@
 /*
  * 创建日期：2026-09-23
- * 更新日期：2026-09-23
+ * 更新日期：2026-09-24
  * 做 成 者：zebiao
- * 版    本：v0.1
+ * 版    本：v0.2
  * 功能概要：通过真实 JAR 进程验证常驻 Web、静态页面、失败路径和资源隔离。
  */
 package com.kk24426.zbagentwf;
@@ -66,10 +66,23 @@ class WebJarIT {
                 assertEquals(200, home.statusCode());
                 assertTrue(home.body().contains("三个包，清晰协作"));
                 assertTrue(home.body().contains("lang=\"zh-CN\""));
+                for (String element : List.of("chat-form", "chat-message", "chat-send", "chat-result")) {
+                    assertTrue(home.body().contains("id=\"" + element + "\""));
+                }
                 assertTrue(home.headers().firstValue("Content-Security-Policy").orElseThrow().contains("frame-ancestors 'none'"));
+                assertTrue(home.headers().firstValue("Content-Security-Policy").orElseThrow().contains("script-src 'self'"));
+                assertTrue(home.headers().firstValue("Content-Security-Policy").orElseThrow().contains("connect-src 'self'"));
                 assertTrue(home.headers().firstValue("X-Request-ID").isPresent());
                 assertEquals(200, get(client, port, "/app.css").statusCode());
                 assertEquals(200, get(client, port, "/favicon.svg").statusCode());
+                var script = get(client, port, "/chat.js");
+                assertEquals(200, script.statusCode());
+                assertTrue(script.body().contains("/api/chat"));
+                var scriptHead = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/chat.js"))
+                        .timeout(Duration.ofSeconds(5)).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(),
+                        HttpResponse.BodyHandlers.ofString());
+                assertEquals(200, scriptHead.statusCode());
+                assertEquals("", scriptHead.body());
                 var notFound = get(client, port, "/unknown-private?token=private-query");
                 assertEquals(404, notFound.statusCode());
                 assertFalse(notFound.body().contains("unknown-private"));
@@ -93,6 +106,46 @@ class WebJarIT {
             assertFalse(log.contains("private-query"));
             assertFalse(log.contains("PRIVATE-METHOD"));
             assertEquals("", Files.readString(server.directory.resolve("stdout.txt")));
+        }
+    }
+
+    @Test
+    void productionChatIsUnavailableAndInvalidRequestsStayPrivate() throws Exception {
+        try (Pending server = start(Map.of())) {
+            int port = awaitReady(server);
+            try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build()) {
+                var unavailable = chat(client, port, "application/json", "{\"message\":\"普通隐私输入\"}");
+                assertEquals(503, unavailable.statusCode());
+                assertEquals("Agent 尚未接入，暂时无法生成回复。", unavailable.body());
+                assertTrue(unavailable.headers().firstValue("X-Request-ID").isPresent());
+                for (String body : List.of("", "null", "{}", "{\"message\":null}", "{\"message\":123}",
+                        "{\"message\":true}", "{\"message\":\" \\n\"}", "{\"message\":普通隐私标记}",
+                        "{\"message\":\"" + "a".repeat(4001) + "\"}")) {
+                    var invalid = chat(client, port, "application/json", body);
+                    assertEquals(400, invalid.statusCode());
+                    assertEquals("请求无效：message 必须是非空白字符串，且长度不能超过 4000。", invalid.body());
+                }
+                var media = chat(client, port, "text/plain", "普通隐私输入");
+                assertEquals(415, media.statusCode());
+                assertEquals("仅支持 JSON 请求。", media.body());
+                var method = get(client, port, "/api/chat");
+                assertEquals(405, method.statusCode());
+                assertEquals("POST", method.headers().firstValue("Allow").orElseThrow());
+                var head = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/chat"))
+                        .timeout(Duration.ofSeconds(5)).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(),
+                        HttpResponse.BodyHandlers.ofString());
+                assertEquals(405, head.statusCode());
+                assertEquals("", head.body());
+            }
+            for (String output : List.of(server.error(), readLog(server.directory))) {
+                assertFalse(output.contains("普通隐私"));
+                assertTrue(output.contains("AgentUnavailableException"));
+                assertTrue(output.contains("HttpMessageNotReadableException"));
+                assertTrue(output.contains("ChatController.java"));
+                assertTrue(output.contains("Caused by:"));
+            }
+            assertTrue(readLog(server.directory).contains("method=POST route=CHAT"));
+            assertTrue(server.process.isAlive());
         }
     }
 
@@ -155,12 +208,22 @@ class WebJarIT {
                     archive.getManifest().getMainAttributes().getValue("Start-Class"));
             var names = archive.stream().map(java.util.zip.ZipEntry::getName).toList();
             assertTrue(names.contains("BOOT-INF/classes/static/index.html"));
+            assertTrue(names.contains("BOOT-INF/classes/static/chat.js"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.class"));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/tomcat-embed-core")));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/mysql-connector-j")));
             assertFalse(names.stream().anyMatch(n -> n.contains("CliApplication") || n.contains("ZbAgentWfCli")
                     || n.contains("Fixture") || n.contains("MySqlIT") || n.contains("junit")
-                    || n.contains("AgentBeanTest") || n.contains("UserImplTest")));
+                    || n.contains("AgentBeanTest") || n.contains("UserImplTest")
+                    || n.contains("ChatAgentFixture") || n.contains("ChatControllerTest") || n.contains("ChatServiceTest")));
         }
+    }
+
+    private HttpResponse<String> chat(HttpClient client, int port, String contentType, String body) throws Exception {
+        return client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/chat"))
+                        .timeout(Duration.ofSeconds(5)).header("Content-Type", contentType)
+                        .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)).build(),
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
     }
 
     private HttpResponse<String> get(HttpClient client, int port, String path) throws Exception {

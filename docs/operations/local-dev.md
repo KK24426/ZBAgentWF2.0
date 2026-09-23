@@ -10,7 +10,7 @@ Wrapper固定Maven3.9.16。依赖缓存不进入仓库。本地使用Windows，�
 java -jar .\target\zbagentwf-web-0.1.0-SNAPSHOT.jar
 ```
 verify运行单元测试与真实Boot JAR进程测试；MySQL专用库测试默认跳过。
-浏览器访问 http://127.0.0.1:8080/，使用Ctrl+C正常停止。默认只监听回环地址。
+浏览器访问 http://127.0.0.1:8080/，首页可输入请求并发送；当前正式Agent为未接入占位，显示503提示。成功链路仅在测试中由替身验证，替身不随JAR发布。使用Ctrl+C正常停止。默认只监听回环地址。
 正式JAR为target/zbagentwf-web-0.1.0-SNAPSHOT.jar，.jar.original不是正式分发。
 不会生成或分发旧apps/runtime-host产物。旧apps和modules目录不再使用，
 当前源码统一位于根src目录，旧目录中的构建缓存和IDE配置不属于有效工程内容。

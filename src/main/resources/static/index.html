@@ -7,11 +7,12 @@
   <title>ZBAgentWF · 工作台</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/app.css">
+  <script src="/chat.js" defer></script>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/" aria-label="ZBAgentWF 首页"><span class="mark">ZB</span> AgentWF <span class="edition">2.0</span></a>
-    <nav aria-label="页面导航"><a href="#start">概览</a><a href="#structure">工程结构</a></nav>
+    <nav aria-label="页面导航"><a href="#chat">发送请求</a><a href="#structure">工程结构</a></nav>
     <span class="environment">实验环境</span>
   </header>
   <main>
@@ -19,8 +20,23 @@
       <div class="eyebrow"><span class="dot"></span> WEB WORKSPACE / 起点</div>
       <h1 id="title">让想法，<br>从这里开始运行<span class="accent">。</span></h1>
       <p class="intro">你定义接口与业务，Agent 完成具体实现。<br>一个简单、可掌握、逐步生长的开发工作台。</p>
-      <a class="primary" href="#structure">了解当前工程 <span aria-hidden="true">↗</span></a>
-      <div class="hero-note"><span>01 / FOUNDATION</span><p>服务首页已可访问。<br>业务操作将在接口确定后逐步接入。</p></div>
+      <a class="primary" href="#chat">开始一次请求 <span aria-hidden="true">↗</span></a>
+      <div class="hero-note"><span>01 / FOUNDATION</span><p>请求入口已就绪。<br>真实 Agent 尚未接入。</p></div>
+    </section>
+    <section class="chat" id="chat" aria-labelledby="chat-title">
+      <div class="section-heading"><h2 id="chat-title">向 Agent 发送请求</h2><span class="label neutral">调用骨架 · 尚未接入真实 Agent</span></div>
+      <p class="chat-intro">写下你的请求，查看本次调用的结果。当前会提示 Agent 尚未接入，不会生成模拟回答。</p>
+      <form id="chat-form">
+        <label for="chat-message">你的请求</label>
+        <textarea id="chat-message" name="message" rows="5" maxlength="4000" required aria-describedby="chat-hint" placeholder="例如：请帮我整理今天的工作计划。"></textarea>
+        <div class="chat-actions"><span id="chat-hint">最多 4000 字符 · 每次单独发送 · 不保存会话</span><button id="chat-send" type="submit" disabled>发送请求 <span aria-hidden="true">↗</span></button></div>
+      </form>
+      <div class="chat-result" id="chat-result" role="status" aria-live="polite" aria-atomic="true">
+        <span class="result-label" id="chat-status">等待输入</span>
+        <pre id="chat-reply">发送后，结果会显示在这里。</pre>
+        <small id="chat-request-id"></small>
+      </div>
+      <noscript><p>请启用 JavaScript 后发送请求。</p></noscript>
     </section>
     <section class="foundation" aria-labelledby="foundation-title">
       <div class="section-heading"><h2 id="foundation-title">基础已经就位</h2><span>保持轻量，从真实需求出发</span></div>
@@ -34,7 +50,7 @@
       <div><div class="eyebrow">CLEAR OWNERSHIP</div><h2 id="structure-title">三个包，清晰协作。</h2><p>一个 Maven 工程，不增加多模块复杂度。</p></div>
       <dl><div><dt>user<span>你的工作区</span></dt><dd>接口定义、业务编排与手写实现。</dd></div><div><dt>agent<span>Agent 实现区</span></dt><dd>在批准的边界内实现接口、页面适配和数据访问。</dd></div><div><dt>common<span>共同维护</span></dt><dd>Bean、DTO、工具与日志辅助。</dd></div></dl>
     </section>
-    <aside class="next"><span class="next-icon" aria-hidden="true">＋</span><div><h2>下一步，由业务决定</h2><p>当前仅提供基础首页，不含任务执行、数据库编辑或后台管理入口。</p></div></aside>
+    <aside class="next"><span class="next-icon" aria-hidden="true">＋</span><div><h2>下一步，由业务决定</h2><p>请求页面和调用骨架已就绪。真实 Agent 接入、会话历史及业务存储将在后续定义。</p></div></aside>
   </main>
   <footer><span>ZBAgentWF 2.0</span><span>用户主导 · 小步实现 · 可验证</span></footer>
 </body>
