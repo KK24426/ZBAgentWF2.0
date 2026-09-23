@@ -1,6 +1,6 @@
 # Plan Review Packet
 
-本文件是空白模板，不填写具体任务结果。Plan Review 通过前在任务对话中提供以下内容；通过后整理到 `tmp/reviews/<task-id>/plan-review.md`，保留各轮记录。保存与追溯规则见 [Agent Workflow](../../operations/agent-workflow.md)。
+本文件是空白模板，不填写具体任务结果。Plan Review 通过前在任务对话中提供以下内容；通过后整理到 `tmp/reviews/<task-id>/plan-review.md`，保留各轮记录。保存与追溯规则见 [审核技能](../SKILL.md)。
 
 ## Review 元数据
 

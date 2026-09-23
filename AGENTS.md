@@ -1,8 +1,8 @@
 <!--
  * 创建日期：2026-08-09
- * 更新日期：2026-09-23
+ * 更新日期：2026-09-24
  * 做 成 者：zebiao
- * 版    本：v0.5
+ * 版    本：v0.6
  * 功能概要：定义 ZBAgentWF2.0 中用户主导架构、AI 受控实现的仓库级协作规则。
  -->
 
@@ -31,7 +31,7 @@ ZBAgentWF2.0 是一个由用户亲自掌握架构和公共接口、由 AI 在已
 
 用户已授权：Agent 可以在具体任务范围内编写技术性 Mapper 接口和 SQL，并补充、调整 common 中的 Bean 与工具；涉及用户业务接口、字段语义、schema 或事务边界变化时，必须先说明影响并取得确认。不得借通用类调整绕过业务边界。
 
-本文是用户所有权与 AI 修改权限的唯一规范权威。`docs/AI_DEV_GUIDE.md` 和 `docs/operations/agent-workflow.md` 只提供使用入口与流程说明；内容不一致时以本文为准，且不得据此放宽本文门禁。
+本文是用户所有权与 AI 修改权限的唯一规范权威。项目 skills 只提供执行方法与流程说明；内容不一致时以本文为准，且不得据此放宽本文门禁。
 
 ## AI 默认可执行范围
 
@@ -56,23 +56,26 @@ ZBAgentWF2.0 是一个由用户亲自掌握架构和公共接口、由 AI 在已
 - Spring 负责组件扫描与接口注入。Mapper 位于 `agent.persistence.mapper`，XML 位于资源目录 `mapper/`。
 - 不预建业务接口、业务表或通用 CRUD 基类。生产 schema 和事务边界仍由用户决定。
 
-## 开发流程
+## 任务路由与强制门禁
 
-1. 先按 `docs/operations/task-entry-points.md` 读取根规则、就近规则、根 REQUIREMENTS 台账和任务相关文档，判断任务是只读审查还是已授权写入；只读任务不进入 checkpoint、提交或推送流程。
-2. 在任何 AI 写入前检查并理解用户修改；详细 checkpoint、评审、验证和提交顺序以 `docs/operations/agent-workflow.md` 为准。
-3. 确认用户是否已经定义接口、验收条件和允许修改范围，说明修改范围、不涉及范围和验证计划。
-4. 完成 Plan Review；门禁未通过时不得修改项目文件。
-5. 只实现已批准边界后的具体功能，按“目标包、直接调用者、全仓”分层验证。
-6. 建立最终 staged snapshot，完成 Result Review；门禁未通过时不得 commit 或 push。
-7. 提交并推送已评审快照，说明实际修改、验证结果、风险、未覆盖事项和 Git 状态。
+所有任务先读根规则、目标目录就近规则和根 `REQUIREMENTS.md`（唯一需求台账，不新建包级副本），再读任务相关源码、测试及事实文档；真实代码和 Maven 配置是最终依据。只读问答、计划和 review-only 任务不进入写入、checkpoint、提交或推送流程。
 
-所有程序修改都必须进行 Plan Review 和 Result Review，包括 Java 源码、POM、构建/CI/脚本、配置、schema、migration、公开契约，以及工程流程、质量门禁和包职责边界。Plan Review 与 Result Review 各自最多三轮，通过即可结束，不要求固定跑满三轮；评审定义和阻断语义以 `docs/operations/agent-workflow.md` 为准。
+- 开发、修复、测试以及工程流程修改必须读取 [zb-development](.agents/skills/zb-development/SKILL.md)。只读计划也可读取，但不得执行写入阶段。
+- Plan Review、Result Review 和独立只读审查必须读取 [zb-review](.agents/skills/zb-review/SKILL.md)。
+- 资料按任务选读：架构看 architecture、code-map 和相关 ADR；契约看 contracts 与公开源码；构建看 POM、Wrapper 和 local-dev；数据及外部副作用看 asset-policy、相关契约和目标包规则。开发 skill 提供详细路由。
+- skill 未自动发现时直接读取上述文件；必需文件缺失时停止，不得跳过门禁。任务边界无法确定时请用户裁决，不以新增抽象、包或模块掩盖。
+
+主 Agent 负责协调、返工及全部 Git 写操作。顺序为：理解用户修改 → 用户 checkpoint（存在时）→ Plan Review → 实现与分层验证 → 最终 staged snapshot → Result Review → commit/push 与交接。
+
+所有程序修改均须双阶段评审，包括 Java、POM、构建/CI/脚本、配置、schema、migration、公开契约、工程流程、质量门禁、权限规则及包职责边界。至少一个真实独立 reviewer，不得由实施者切换 skill 冒充独立审核；多个指定 reviewer 必须全部 Accept。Plan 的 `Acceptance: Accept` 且 `Can Implement: Yes` 才能修改项目文件；Result 的 `Acceptance: Accept` 且 `Can Commit/Push: Yes` 才能提交推送。
+
+两个阶段各最多三轮，通过即结束；P0/P1 阻塞，P2/P3 默认不阻塞，除非 reviewer 说明真实阻塞原因。reviewer 不可用、结论冲突或三轮后仍有 P0/P1 时停止并交用户裁决。Result 必须审最终 staged snapshot；评审后快照、文件清单或工作区变化使原结论失效，须重新验证评审。
 
 ## 用户修改优先与版本追溯
 
 - 每个 AI 写任务开始时，必须读取 unstaged、staged、untracked、rename 和 delete 状态，重点理解用户对接口、DTO、状态、错误语义、构建和契约文档的修改。
 - 不得格式化、回退、覆盖或夹带修改用户文件。无法安全区分归属时停止并请用户确认。
-- 存在用户修改时，先按 `docs/operations/agent-workflow.md` 完成敏感信息检查、独立 checkpoint commit 和 push；没有用户修改时不得制造空提交。
+- 存在用户修改时，先按 [Git 流程](.agents/skills/zb-development/references/git-workflow.md) 完成敏感信息检查、独立 checkpoint commit 和 push；没有用户修改时不得制造空提交。
 - AI 修改与用户 checkpoint 必须使用不同 commit。AI 修改仅在验证和 Result Review 通过后提交、推送。
 
 ## 环境和关键副作用
@@ -82,35 +85,10 @@ ZBAgentWF2.0 是一个由用户亲自掌握架构和公共接口、由 AI 在已
 - migration、写库、远程调用、真实 Agent 执行、文件写入、进程启动、commit、push 和部署必须显式说明目标。
 - 不得把 token、API key、password、证书、私钥、账号或隐私材料写入仓库、日志、测试快照或文档。
 - 外部进程必须使用结构化 `command + args + stdin`，不得暴露任意 shell 字符串入口。
-- 本仓库已获用户授权：满足 `docs/operations/agent-workflow.md` 的 checkpoint 或已评审实现条件时，自动 commit 并 push 当前分支 upstream；不得自动创建 PR、force push、改写历史、merge 或 rebase。
+- 本仓库已获用户授权：满足 [Git 流程](.agents/skills/zb-development/references/git-workflow.md) 的 checkpoint 或已评审实现条件时，自动 commit 并 push 当前分支 upstream；不得自动创建 PR、force push、改写历史、merge 或 rebase。
 
-## 代码和注释
+## 执行规范与交接
 
-新增 Java 文件使用以下文件头，并补充准确职责：
+编码、注释、异常、文档同步和报告要求由开发 skill 维护，审核 skill 核验；不因拆分而豁免。共享能力只在第二个真实消费者出现或用户明确批准后提取；不得借此扩展包或模块边界。
 
-```java
-/*
- * 创建日期：
- * 更新日期：
- * 做 成 者：zebiao
- * 版    本：
- * 功能概要：
- */
-```
-
-公共类型、关键分支、状态机、安全判断和副作用边界需要中文说明；简单代码不堆砌低价值注释。通用异常处理、网络、文件和数据访问能力应保留扩展空间；只有出现第二个真实消费者或用户明确批准后才提取共享能力，本仓库已有 common 包，不新增 common Maven 模块。
-
-错误和异常不得被吞掉。适用时保留来源、所属包或组件、阶段、业务 ID、退出码、超时/取消状态和可脱敏摘要；不要求与进程无关的领域错误携带无关字段。
-
-## 文档同步
-
-- 包职责、Maven 模块结构或依赖方向变化：更新 `docs/architecture/` 和 `docs/code-map/`。
-- 用户创建公共接口后：建立或更新目标包对应的公开契约文档，并同步 `docs/contracts/module-ports.md`。
-- 新增、移动或删除源码文件：同步更新 `docs/code-map/files.md`；包职责或验证入口变化时同步更新 `docs/code-map/modules.md`。
-- 构建、环境或验证命令变化：更新 `docs/operations/`。
-- 长期技术决定：记录 ADR。
-- 未决定内容必须写成“待用户确认”，不得写成当前事实。
-
-## 结果交接
-
-高风险或跨职责范围修改使用完整最终报告，至少包含结果、影响范围、用户决策依据、验证命令与结果、Plan/Result Review、风险、未覆盖事项、偏离记录，以及 commit/push 状态。普通修改可以简洁交接，但仍须报告验证、评审、commit、push 和剩余风险。
+提交停止条件：敏感或禁止资产、文件范围不明、验证失败（已记录的用户 checkpoint 预期失败除外）、评审未通过、remote/upstream 不明或远端冲突、无法隔离用户修改、commit 内容偏离已审快照。不得自动创建 PR、发布或部署，除非用户另行明确要求。

@@ -37,4 +37,4 @@ agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging�
 测试包含跨包注入、日志滚动、真实JAR、显式MySQL专用库验收。package-info仅职责标记。
 
 规则入口：根AGENTS.md、三个包AGENTS.md、根REQUIREMENTS.md。
-流程入口：docs/operations/agent-workflow.md和docs/templates/review/。
+流程入口：[开发技能](../../.agents/skills/zb-development/SKILL.md)与[审核技能](../../.agents/skills/zb-review/SKILL.md)；审核模板随审核技能维护。

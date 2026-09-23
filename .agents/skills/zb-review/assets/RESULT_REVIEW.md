@@ -1,6 +1,6 @@
 # Result Review Packet
 
-本文件是空白模板，不填写具体任务结果。复制字段到 `tmp/reviews/<task-id>/result-review.md`，追加每轮记录；hash 和结论不得写回已审 staged 文件。保存与追溯规则见 [Agent Workflow](../../operations/agent-workflow.md)。
+本文件是空白模板，不填写具体任务结果。复制字段到 `tmp/reviews/<task-id>/result-review.md`，追加每轮记录；hash 和结论不得写回已审 staged 文件。保存与追溯规则见 [审核技能](../SKILL.md)。
 
 ## Review 元数据
 
