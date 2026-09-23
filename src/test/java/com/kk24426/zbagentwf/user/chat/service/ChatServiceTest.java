@@ -2,13 +2,14 @@
  * 创建日期：2026-09-24
  * 更新日期：2026-09-24
  * 做 成 者：zebiao
- * 版    本：v0.1
+ * 版    本：v0.2
  * 功能概要：验证聊天服务输入边界、原样委派与生产未接入行为。
  */
 package com.kk24426.zbagentwf.user.chat.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import com.kk24426.zbagentwf.agent.chat.AgentChatImpl;
+import com.kk24426.zbagentwf.common.exception.AgentUnavailableException;
 import org.junit.jupiter.api.Test;
 
 class ChatServiceTest {

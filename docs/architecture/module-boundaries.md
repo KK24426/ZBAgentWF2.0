@@ -7,7 +7,7 @@
 | 根包 | main、Web启动初始化、生命周期 |
 | user | 用户编写的接口、编排、部分实现；已授权的user.chat Controller/Service及AgentChat调用契约 |
 | agent | Agent实现，含agent.chat占位实现、Web请求保护与日志、persistence配置、Mapper与SQL诊断 |
-| common | 共享Bean、DTO、工具与日志辅助 |
+| common | 共享Bean、DTO、工具、日志辅助，以及common.exception中的Agent不可用异常 |
 
 这些是协作边界，不强制字节码依赖隔离。通过用户接口注入实现。
 Agent 可补充技术Mapper和任务所需工具；业务接口、schema、核心规则和事务边界必须由用户定义或批准。

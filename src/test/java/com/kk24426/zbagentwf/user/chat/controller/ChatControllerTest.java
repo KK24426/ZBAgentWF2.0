@@ -2,7 +2,7 @@
  * 创建日期：2026-09-24
  * 更新日期：2026-09-24
  * 做 成 者：zebiao
- * 版    本：v0.1
+ * 版    本：v0.2
  * 功能概要：通过真实 Controller 和 Service 加测试替身验证聊天 HTTP 契约。
  */
 package com.kk24426.zbagentwf.user.chat.controller;
@@ -17,8 +17,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.OutputStreamAppender;
 import com.kk24426.zbagentwf.agent.web.WebRequestFilter;
 import com.kk24426.zbagentwf.common.chat.ChatRequest;
+import com.kk24426.zbagentwf.common.exception.AgentUnavailableException;
 import com.kk24426.zbagentwf.common.logging.SanitizingEncoder;
-import com.kk24426.zbagentwf.user.chat.service.AgentUnavailableException;
 import com.kk24426.zbagentwf.user.chat.service.ChatAgentFixture;
 import com.kk24426.zbagentwf.user.chat.service.ChatService;
 import java.io.ByteArrayOutputStream;

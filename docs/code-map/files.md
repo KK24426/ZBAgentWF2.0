@@ -23,7 +23,7 @@
 | `src/main/java/com/kk24426/zbagentwf/user/chat/controller/ChatController.java` | 聊天HTTP入口与固定错误映射 |
 | `src/main/java/com/kk24426/zbagentwf/user/chat/service/ChatService.java` | 用户侧请求校验与Agent调用编排 |
 | `src/main/java/com/kk24426/zbagentwf/user/chat/service/AgentChat.java` | 单次Agent调用公共接口 |
-| `src/main/java/com/kk24426/zbagentwf/user/chat/service/AgentUnavailableException.java` | Agent未接入的公开失败语义 |
+| `src/main/java/com/kk24426/zbagentwf/common/exception/AgentUnavailableException.java` | Agent实现与调用层共用的不可用异常 |
 | `src/main/java/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.java` | 正式Agent占位实现，明确不可用 |
 | `src/main/java/com/kk24426/zbagentwf/common/chat/ChatRequest.java` | 聊天请求与字段类型绑定 |
 | `src/main/java/com/kk24426/zbagentwf/common/chat/ChatResponse.java` | 聊天回复数据载体 |

@@ -2,14 +2,14 @@
  * 创建日期：2026-09-24
  * 更新日期：2026-09-24
  * 做 成 者：zebiao
- * 版    本：v0.1
+ * 版    本：v0.2
  * 功能概要：接收单次聊天请求、调用用户服务并返回安全的结果或固定错误。
  */
 package com.kk24426.zbagentwf.user.chat.controller;
 
 import com.kk24426.zbagentwf.common.chat.ChatRequest;
 import com.kk24426.zbagentwf.common.chat.ChatResponse;
-import com.kk24426.zbagentwf.user.chat.service.AgentUnavailableException;
+import com.kk24426.zbagentwf.common.exception.AgentUnavailableException;
 import com.kk24426.zbagentwf.user.chat.service.ChatService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

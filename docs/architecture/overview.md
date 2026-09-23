@@ -2,7 +2,7 @@
 
 单 Maven 工程，按包组织，不采用 Maven 子模块隔离。
 根包为 com.kk24426.zbagentwf，根启动类初始化日志与 Spring Web 容器。
-user 放用户接口/编排，agent 放接口实现和持久化，common 放共享 Bean/工具。
+user 放用户接口/编排，agent 放接口实现和持久化，common 放共享 Bean/工具及跨包使用的技术异常。
 启动 -> 独立日志 -> Spring扫描/注入 -> 内嵌Tomcat持续处理HTTP -> 停止信号 -> 优雅关闭容器/连接池和日志。
 
 Spring Boot 4.1.1；MyBatis Starter 4.1.0；Java26；Maven Wrapper3.9.16。

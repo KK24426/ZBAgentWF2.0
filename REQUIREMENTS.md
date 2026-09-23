@@ -24,6 +24,7 @@ stdout 不输出业务结果，stderr 为错误及运行诊断，异常保留脱
 
 ## 单次聊天骨架
 user.chat.controller.ChatController 接收请求；user.chat.service.ChatService 继承 UserService，调用 AgentChat（继承 UserImpl）；agent.chat.AgentChatImpl 继承 AgentBase 实现接口。原父类/父接口及 AgentBean 保持不变。
+AgentUnavailableException 位于 common.exception，由 Agent 实现抛出、Controller 捕获并映射为503。
 POST /api/chat 接收 application/json 的 message 字符串，非空白、长度不超过4000个Java UTF-16代码单元；有效内容原样传递。成功返回200及JSON reply字符串；输入/JSON错误400、媒体类型不支持415、方法不支持405；未接入503，内部故障500，错误正文不包含输入或异常细节。
 正式实现只明确报告 Agent 尚未接入；测试替身仅存在于测试源码，不打入正式JAR。验收包括 Controller → Service → 替身返回的成功链路，以及生产占位的503；不得把替身验证声称为真实模型验收。
 首页提供输入框、发送按钮、发送中状态、结果/错误区和请求编号；重复提交被阻止、完成后恢复按钮，返回文本不作为HTML执行。不保存会话、不增加数据库/外部调用/模型配置。

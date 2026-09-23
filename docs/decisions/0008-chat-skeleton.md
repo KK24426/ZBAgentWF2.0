@@ -8,6 +8,8 @@
 
 采用user.chat保存入口与编排/调用契约，agent.chat实现该契约，common.chat保存最小数据载体；保留user/agent/common协作边界及原父类/接口，仍是单Maven工程。当前不访问数据库，因此不创建DAO。
 
+2026-09-24补充：用户要求具体Agent不可用异常移出user包。AgentUnavailableException置于common.exception，供实现层抛出、Controller捕获，避免Controller依赖agent实现包；保持错误行为，仅调整Java类型归属，不建立额外父异常体系。
+
 真实Agent未接入时明确返回不可用；测试替身仅在测试源码中验证成功链路，不引入演示回复生产模式。真实provider、执行协议、会话、权限及持久化留待后续用户决定。
 
 相比立即接入模型或建立通用聊天平台，本次保留最小可验证调用链；代价是正常启动页面尚不能生成真实回答。既有静态访问面仅扩展为同源脚本与单个已批准接口，其它范围维持。
