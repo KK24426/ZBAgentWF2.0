@@ -1,8 +1,8 @@
 /*
  * 创建日期：2026-09-22
- * 更新日期：2026-09-24
+ * 更新日期：2026-09-25
  * 做 成 者：zebiao
- * 版    本：v0.2
+ * 版    本：v0.3
  * 功能概要：验证脱敏、完整异常链、目录隔离、滚动和日志故障。
  */
 package com.kk24426.zbagentwf.common.logging;
@@ -36,10 +36,12 @@ class LoggingTest {
             failure.addSuppressed(new RuntimeException("普通隐私附加"));
             for (String logger : new String[]{"com.kk24426.zbagentwf.user.chat.service.ChatService",
                     "com.kk24426.zbagentwf.agent.chat.AgentChatImpl", "org.springframework.web.Binding",
+                    "com.kk24426.zbagentwf.agent.codex.CodexClient",
+                    "com.kk24426.zbagentwf.agent.project.ProjectUserifImpl",
                     "com.kk24426.zbagentwf.agent.web.WebRequestFilter"}) {
                 var event = new LoggingEvent("test", context.getLogger(logger), Level.ERROR,
                         "普通隐私消息", failure, null);
-                event.setMDCPropertyMap(logger.contains(".chat.") ? java.util.Map.of()
+                event.setMDCPropertyMap(logger.contains(".chat.") || logger.contains(".codex.") || logger.contains(".project.") ? java.util.Map.of()
                         : java.util.Map.of("route", "CHAT"));
                 String output = new String(encoder.encode(event), StandardCharsets.UTF_8);
                 assertFalse(output.contains("普通隐私"));

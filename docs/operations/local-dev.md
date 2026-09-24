@@ -79,3 +79,26 @@ URL仅允许localhost或127.0.0.1及可选端口，不能带URL参数、其它�
 启用该profile后缺配置必须失败。测试先校验catalog，再创建随机zb_it_表，验证CRUD、中文和事务回滚，
 结束只DROP本轮CREATE成功的测试表；不会DROP DATABASE。
 不要将普通verify成功视为MySQL测试通过；实际远程验收情况以对应任务交接为准。
+
+
+## 显式调用 Codex 与项目实现
+
+应用本身的 CLI 已移除；agent.codex 调用的外部 Codex CLI 是另一层能力。当前实现尚未装配到 Spring 或网页，模型列表来源和默认选择待确认。Java 调用方可以显式组合以下具体类：
+
+```java
+var client = new CodexClient(Path.of("PATH_TO_NATIVE_CODEX_EXECUTABLE"),
+        "YOUR_CODEX_MODEL_SELECTOR", Duration.ofMinutes(30));
+var model = new AgentBean(); // 填写已选择模型的元数据，不能把 CLI 安装版本放入 ver
+try (var executor = new CodexAgentExec(model, client)) {
+    var projects = new ProjectUserifImpl(projectSettings,
+            new CodexRequirementPlanner(client), executor);
+    Project project = projects.newProject("用户项目描述");
+    // 先检查规划结果，需要执行时再显式调用。
+    projects.execTask(project, project.getRequirements());
+}
+```
+
+client/executor/planner 位于 com.kk24426.zbagentwf.agent.codex，项目实现位于 agent.project，Bean 位于 common。projectSettings 使用启动时初始化的 ProjectSettings，或由组合代码提供规范化的绝对根目录。路径和模型值必须替换为调用方实际选择的内容，程序不自动决定。
+Windows 传原生 codex.exe，不能传 npm 的 codex.cmd/codex.ps1 包装脚本或含参数的 shell 字符串。调用方准备已安装、已登录的 CLI，程序保留用户 CLI 配置与规则，不管理登录、不读取或复制凭据。本阶段适配依据本机 CLI 0.144.1 exec 参数，升级后仍需运行协议及实际账号验收。
+newProject 创建 root/UUID 并发起只读规划；execTask 才启动 workspace-write 执行。需确认则结束本次执行，调用者补充相关内容并重置 PENDING 后再调用。每次诊断至多 64 KiB，总量随完成次数增长，必须 close 释放；长驻装配前另定总量策略，诊断不可直接公开或写日志。
+测试仅调用真实 Java fixture 子进程，不消耗模型额度；尚未完成真实 Codex 账号和模型验收，fixture 不进入正式 JAR。完整 mvnw.cmd verify 继续验证 Web/JAR，MySQL 仍独立启用。

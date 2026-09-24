@@ -53,6 +53,17 @@
 | `src/test/java/com/kk24426/zbagentwf/common/project/bean/ProjectModelTest.java` | 多层包含、独立列表与属性契约 |
 | `src/test/java/com/kk24426/zbagentwf/user/agent/userif/AgentExecContractTest.java` | 测试替身的项目传递、执行标识及回调关联 |
 | `src/test/java/com/kk24426/zbagentwf/ProjectConfigurationTest.java` | 必填目录、规范化、错误与无建目录副作用 |
+| `src/main/java/com/kk24426/zbagentwf/agent/codex/CodexAgentExec.java` | Codex 执行、规划或项目具体实现，显式构造组合 |
+| `src/main/java/com/kk24426/zbagentwf/agent/codex/CodexClient.java` | Codex 执行、规划或项目具体实现，显式构造组合 |
+| `src/main/java/com/kk24426/zbagentwf/agent/codex/CodexJson.java` | Codex 执行、规划或项目具体实现，显式构造组合 |
+| `src/main/java/com/kk24426/zbagentwf/agent/codex/CodexRequirementPlanner.java` | Codex 执行、规划或项目具体实现，显式构造组合 |
+| `src/main/java/com/kk24426/zbagentwf/agent/codex/CodexSchemas.java` | Codex 执行、规划或项目具体实现，显式构造组合 |
+| `src/main/java/com/kk24426/zbagentwf/agent/project/ProjectUserifImpl.java` | Codex 执行、规划或项目具体实现，显式构造组合 |
+| `src/test/java/com/kk24426/zbagentwf/agent/codex/CodexAgentExecTest.java` | Codex/项目实现验证，测试类不进入 JAR |
+| `src/test/java/com/kk24426/zbagentwf/agent/codex/CodexFixtureSupport.java` | Codex/项目实现验证，测试类不进入 JAR |
+| `src/test/java/com/kk24426/zbagentwf/agent/codex/CodexRequirementPlannerTest.java` | Codex/项目实现验证，测试类不进入 JAR |
+| `src/test/java/com/kk24426/zbagentwf/agent/codex/FakeCodexFixture.java` | Codex/项目实现验证，测试类不进入 JAR |
+| `src/test/java/com/kk24426/zbagentwf/agent/project/ProjectUserifImplTest.java` | Codex/项目实现验证，测试类不进入 JAR |
 
 入口ZbAgentWfApplication负责Web初始化与生命周期；CLI类和测试已移除。
 ProjectConfiguration通过application.properties导入启动工作目录下的config/project.properties；config/project.properties.example仅为入仓示例，真实配置不入仓。

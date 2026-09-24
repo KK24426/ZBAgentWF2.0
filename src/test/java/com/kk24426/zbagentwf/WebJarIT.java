@@ -210,6 +210,8 @@ class WebJarIT {
             assertTrue(names.contains("BOOT-INF/classes/static/index.html"));
             assertTrue(names.contains("BOOT-INF/classes/static/chat.js"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/CodexAgentExec.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/project/ProjectUserifImpl.class"));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/tomcat-embed-core")));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/mysql-connector-j")));
             assertFalse(names.stream().anyMatch(n -> n.contains("CliApplication") || n.contains("ZbAgentWfCli")
@@ -217,6 +219,7 @@ class WebJarIT {
                     || n.contains("AgentBeanTest") || n.contains("UserInterfaceTest")
                     || n.contains("ProjectModelTest") || n.contains("AgentExecContractTest")
                     || n.contains("ProjectConfigurationTest")
+                    || n.contains("CodexAgentExecTest") || n.contains("CodexRequirementPlannerTest") || n.contains("ProjectUserifImplTest")
                     || n.contains("ChatAgentFixture") || n.contains("ChatControllerTest") || n.contains("ChatServiceTest")));
         }
     }

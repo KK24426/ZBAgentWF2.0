@@ -12,10 +12,10 @@ import com.kk24426.zbagentwf.common.project.bean.Requirement;
 import com.kk24426.zbagentwf.user.UserInterface;
 import java.util.List;
 
-/** 项目包含多条需求，需求包含多个 Task；当前仅定义契约，不创建目录或调度任务。 */
+/** 项目包含多条需求，需求包含多个 Task；具体实现位于 agent.project。 */
 public abstract class ProjectUserif implements UserInterface {
     /**
-     * 根据用户输入建立项目；后续实现使用全局根目录并确定项目自己的工作目录。
+     * 根据用户输入建立 UUID 项目目录，并生成首批需求。
      *
      * @param content 用户对项目的描述
      * @return 包含项目标识、工作目录和需求列表的项目对象
@@ -27,7 +27,7 @@ public abstract class ProjectUserif implements UserInterface {
      *
      * @param project 需求归属的项目
      * @param content 用户需求
-     * @return 属于该项目的需求及 Task 列表；本轮不实现列表增删或规划逻辑
+     * @return 本次新增的需求及 Task 列表；生成成功后追加到项目
      */
     public abstract List<Requirement> createRequirements(Project project, String content);
 

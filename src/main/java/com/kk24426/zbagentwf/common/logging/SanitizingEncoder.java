@@ -1,8 +1,8 @@
 /*
  * 创建日期：2026-09-22
- * 更新日期：2026-09-24
+ * 更新日期：2026-09-25
  * 做 成 者：zebiao
- * 版    本：v0.3
+ * 版    本：v0.4
  * 功能概要：对消息和异常完整渲染结果统一脱敏后编码。
  */
 package com.kk24426.zbagentwf.common.logging;
@@ -29,7 +29,10 @@ public class SanitizingEncoder extends PatternLayoutEncoder {
         // 聊天异常和 Spring 绑定诊断可能含任意自然语言输入，不能仅按凭据关键词脱敏。
         boolean chatDiagnostic = (chatRoute || chatComponent) && event.getThrowableProxy() != null
                 || chatRoute && logger.startsWith("org.springframework.");
-        if (protocol || chatDiagnostic) {
+        boolean agentDiagnostic = event.getThrowableProxy() != null
+                && (logger.startsWith("com.kk24426.zbagentwf.agent.codex.")
+                    || logger.startsWith("com.kk24426.zbagentwf.agent.project."));
+        if (protocol || chatDiagnostic || agentDiagnostic) {
             IThrowableProxy safeThrowable = wrap(event.getThrowableProxy());
             LoggingEvent safe = new LoggingEvent() {
                 @Override public IThrowableProxy getThrowableProxy() { return safeThrowable; }
@@ -41,7 +44,7 @@ public class SanitizingEncoder extends PatternLayoutEncoder {
             safe.setMDCPropertyMap(event.getMDCPropertyMap());
             safe.setLoggerContextRemoteView(event.getLoggerContextVO());
             safe.setMessage(protocol ? "HTTP 容器诊断：原始协议内容已隐藏。"
-                    : "聊天请求诊断：原始内容已隐藏。");
+                    : agentDiagnostic ? "Agent 组件诊断：原始内容已隐藏。" : "聊天请求诊断：原始内容已隐藏。");
             event = safe;
         }
         return SecretRedactor.redact(getLayout().doLayout(event)).getBytes(getCharset());

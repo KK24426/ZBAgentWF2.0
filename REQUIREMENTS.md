@@ -3,11 +3,11 @@
 ## 当前范围
 单 Maven JAR 工程；Java 26、Spring Boot 4.1.1、MyBatis Starter 4.1.0。
 启动入口初始化日志、读取必填项目根目录配置并启动 Spring Web，扫描 user/agent/common，持续运行。
-当前有简单首页及单次聊天调用骨架；真实 Agent、业务表和持久化尚未接入；原 CLI 已移除。
+当前有简单首页及单次聊天调用骨架；另有可显式组合的 Codex 执行与项目实现。模型发现及 Spring 模型装配待确认，网页聊天仍未接入；业务表和持久化未实现，原应用 CLI 已移除。
 
 ## 用户骨架与最小补充
 
-用户已提供 AgentBean、UserInterface、AgentBase、UserService 及项目/执行契约，目前不代表真实 Agent 业务能力。
+用户已提供 AgentBean、UserInterface、AgentBase、UserService 及项目/执行契约；实现进度见下文，真实模型账号验收仍未运行。
 AgentBean 保留 brand/name/ver 三个私有 String 属性，提供标准 getter/setter 和无参构造；默认 null，允许 null、空字符串及中文，原样存取、不校验、不设置默认值。
 UserInterface 是由 UserImpl 更名的公共空父接口，用户接口通过 extends 继承；不新增业务方法。
 AgentBase 位于 user.agent.userif，保留用户定义的本机工具发现、查询和刷新抽象方法；不实现缓存或扫描。UserService 保留原占位行为。
@@ -19,19 +19,28 @@ AgentBase 位于 user.agent.userif，保留用户定义的本机工具发现、�
 Project 包含多条 Requirement，每条 Requirement 包含多个 RequirementTask，均为独立普通 Java Bean；无父对象反向引用、数据库外键或自动业务校验。
 Project 保存 projectId、Path workingDirectory、requirements；Requirement 保存 userContent、agentUnderstanding、acceptanceCriteria、tasks、userConfirmMsg。
 两个列表默认各实例独立的空列表，setter 原样赋值。RequirementTask 保存 id、content、acceptanceCriteria、status、result；默认 PENDING。
-TaskStatus 为 PENDING、RUNNING、SUCCEEDED、FAILED、NEEDS_CONFIRMATION，仅定义状态值，不实现状态转换。
+TaskStatus 为 PENDING、RUNNING、SUCCEEDED、FAILED、NEEDS_CONFIRMATION，普通 Bean 不自动转换状态；项目实现按下述执行规则更新。
 规划任务 id 与单次执行 taskId 区分；AgentExecResult 保存 taskId、success、errorMessage、Long tokenCount、summary、confirmationRequired、String confirmationMessage。token 数未知时 null。
 AgentExec 保存 final 模型引用并提供 protected getter；exec(Project, content, memory, callback) 异步受理后返回 String 执行标识，最终 onCompleted 回调一次；提交失败同步抛 RejectedExecutionException 且不回调。getStderr(taskId) 按执行读取诊断。
 成功 success=true、confirmationRequired=false；普通失败两者 false；需要确认 success=false、confirmationRequired=true，本次执行结束，答复后重新提交取得新标识。不增加暂停恢复或取消接口。
 ProjectUserif 的 newProject(content) 返回 Project，createRequirements(project, content) 返回需求列表，execTask(project, requirements) 等待底层结束并返回带 Task 状态和结果的需求列表；列表参数选定项目内的执行范围。
-本轮仅补契约和数据载体，不创建业务目录，不实现需求规划、列表增删、任务调度或真实 CLI 调用。测试替身只验证类型与结果关联。
+用户进一步批准先接入 Codex：newProject 使用 UUID，目录为 root/UUID，创建后规划首批需求；createRequirements 完整规划成功后追加，返回本次新增列表。execTask 按所选需求和 Task 顺序串行，只执行 PENDING；遇到新产生或既有的失败/待确认 Task 都立即返回，其余 PENDING 保持不变。重试由调用者补充确认相关内容并手动重置 PENDING，新执行标识替换单次结果，规划 id 不变；提交前快照旧确认问题、失败原因及摘要，以便新会话理解答复。
+
+## Codex 与项目具体实现阶段
+
+agent.codex.CodexAgentExec 实现 AgentExec，CodexRequirementPlanner 负责只读规划，agent.project.ProjectUserifImpl 实现 ProjectUserif。CodexClient 是两者共享的 Codex 专用进程适配器；显式构造参数为本机原生可执行文件路径、模型 selector 和正值超时，不擅自映射 AgentBean 三字段。用户新增 AgentExec implements UserInterface 已单独 checkpoint。
+模型列表来源尚待选择。本阶段不添加模型外部配置、不自动选默认模型、不注册这些业务组件为 Spring Bean；它们可由 Java 调用方显式组合调用。AgentBase 仍为抽象契约，不能把本阶段当作所有接口或真实模型验收已完成。
+执行通过结构化 command/args/stdin，Codex exec JSONL 和输出 schema 双重校验；任务 workspace-write，规划 read-only，保留 CLI 原有配置和规则，不使用危险绕过权限的选项。需确认通过结构化最终结果表达，本次执行结束；权限或工具错误不能冒充成功。
+执行器最多四个同时受理的执行，不排队，满或已关闭同步拒绝。每个已受理调用最终回调一次；并行消费管道，超时/关闭回收进程和已观察到的后代。stdout 上限 8 MiB；每次 stderr 至多保留 64 KiB 并标明截断、脱敏，不写原文日志。未知执行标识返回 null；诊断仅内存存储到 close，实例必须由调用者关闭，总量仍随已完成次数增长，长驻装配前需要确定总量/淘汰策略。
+项目方法在执行前检查目录归属、需求和 Task 归属；规划失败不追加部分数据。新项目失败仅尝试删除本次创建且仍为空的目录，不递归清理。数据保留在内存，未增加 Git 操作、数据库或 HTTP 路由。
+验收使用真实本地 Java fixture 子进程测试协议、超时、管道、回调、关闭及项目行为，fixture 不进入正式 JAR；没有访问真实模型账号，不能视为 Codex 账号可用性或端到端模型验收。完整 verify 继续覆盖 Web/JAR，MySQL 仍显式单独启用。
 
 ## 项目根目录配置
 
 Spring 启动时读取 config/project.properties 中的 zb.project.root；支持 ZB_PROJECT_ROOT 环境变量及 JVM -Dzb.project.root 覆盖，无默认值。
 必须显式配置；缺失、空白、格式非法或已存在但不是目录时启动失败退出1。允许目录尚不存在；相对路径按启动工作目录解析并规范化为绝对路径，不创建目录。
 文件入口相对启动工作目录；示例 config/project.properties.example 入仓，真实配置忽略。标准覆盖顺序 JVM 属性 > 环境变量 > 配置文件。
-ProjectConfiguration 在根包初始化只读 ProjectSettings；未来业务创建项目时使用此根目录，项目自己的目录保存到 Project.workingDirectory。
+ProjectConfiguration 在根包初始化只读 ProjectSettings；ProjectUserifImpl.newProject 在业务调用时使用此根目录创建项目，项目自己的目录保存到 Project.workingDirectory。
 验收覆盖配置加载与覆盖、错误路径、路径规范化、初始化不创建目录，以及现有 Web/JAR 回归。
 
 ## Web
@@ -68,6 +77,6 @@ mysql-it 仅接受回环地址 zbagentwf_test 和独立环境变量，可经 SSH
 缺配置时显式测试失败；普通构建跳过该环境测试。
 
 ## 待用户提供
-真实 Agent provider、调用配置及协议；后续业务表结构、事务边界及会话功能；
+AgentBase 模型列表来源、默认模型配置与 Spring 装配、诊断缓存总量策略及真实 Codex 验收；后续业务表结构、事务边界及会话功能；
 生产环境与权限模型（当前仅批准远程测试环境、专用测试库和受限账号）；
 日志历史保留策略若需要自动清理，由后续任务定义。

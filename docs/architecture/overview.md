@@ -9,7 +9,7 @@ Spring Boot 4.1.1；MyBatis Starter 4.1.0；Java26；Maven Wrapper3.9.16。
 未激活 mysql 时没有 DataSource；激活后验证配置和连接，失败退出1。
 当前首页包含单次聊天入口：ChatController -> ChatService -> AgentChat -> agent.chat.AgentChatImpl。正式实现明确尚未接入；成功路径由测试替身验证，无业务表或真实Agent执行。
 ProjectConfiguration 在根包初始化只读 ProjectSettings；zb.project.root 必填，初始化只读配置及目录元数据，不创建目录。
-common.project.bean 保存 Project→Requirement→RequirementTask 的一对多数据结构；user.project.userif 和 user.agent.userif 保存用户批准的项目与异步执行声明，目前无业务实现。AgentChatImpl 仅实现 AgentChat，不继承 AgentBase。
+common.project.bean 保存 Project→Requirement→RequirementTask；user.project.userif 和 user.agent.userif 保存用户接口。agent.codex 提供 CodexClient、CodexAgentExec 和只读规划器，agent.project.ProjectUserifImpl 实现项目操作和串行执行。目前显式构造组合，AgentBase 模型来源及 Spring 模型装配待确认；未验收真实模型。AgentChatImpl 仅实现 AgentChat，不继承 AgentBase，网页仍未接入。
 WebRequestFilter限制固定资源和/api/chat POST、记录安全请求摘要；后续路由仍须按批准契约同步调整。
 远程测试服务与专用MySQL库部署在同一已批准服务器，Web只绑定回环地址，通过SSH隧道访问。
 旧项目不自动搬运；后续真实Agent调用、会话、数据存储仍由用户定义。
