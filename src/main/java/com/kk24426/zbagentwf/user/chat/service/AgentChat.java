@@ -8,10 +8,10 @@
 package com.kk24426.zbagentwf.user.chat.service;
 
 import com.kk24426.zbagentwf.common.exception.AgentUnavailableException;
-import com.kk24426.zbagentwf.user.UserImpl;
+import com.kk24426.zbagentwf.user.UserInterface;
 
 /** 单次同步调用；真实 provider、会话和流式协议由后续任务确定。 */
-public interface AgentChat extends UserImpl {
-    /** 接收已经校验且未经改写的消息；未接入时抛出 {@link AgentUnavailableException}。 */
-    String reply(String message);
+public interface AgentChat extends UserInterface {
+	/** 接收已经校验且未经改写的消息；未接入时抛出 {@link AgentUnavailableException}。 */
+	String reply(String message);
 }

@@ -13,21 +13,21 @@ import org.junit.jupiter.api.Test;
 class UserImplTest {
     @Test
     void parentIsAnInterfaceWithoutDeclaredMethods() {
-        assertTrue(UserImpl.class.isInterface());
-        assertEquals(0, UserImpl.class.getDeclaredMethods().length);
+        assertTrue(UserInterface.class.isInterface());
+        assertEquals(0, UserInterface.class.getDeclaredMethods().length);
     }
 
     @Test
     void implementationCanBeUsedThroughChildAndParentInterfaces() {
         ChildPort child = new ChildImplementation();
-        UserImpl parent = child;
+        UserInterface parent = child;
         assertSame(child, parent);
-        assertInstanceOf(UserImpl.class, child);
-        assertTrue(UserImpl.class.isAssignableFrom(ChildPort.class));
+        assertInstanceOf(UserInterface.class, child);
+        assertTrue(UserInterface.class.isAssignableFrom(ChildPort.class));
     }
 
     // 只验证 Java 类型关系，不注册 Spring Bean，不代表已实现的业务接口。
-    private interface ChildPort extends UserImpl {
+    private interface ChildPort extends UserInterface {
     }
 
     private static class ChildImplementation implements ChildPort {

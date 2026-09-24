@@ -8,5 +8,5 @@
 package com.kk24426.zbagentwf.user;
 
 /** 用户接口通过 extends 继承此父接口；名称沿用用户约定，不代表具体实现类。 */
-public interface UserImpl {
+public interface UserInterface {
 }

@@ -8,7 +8,7 @@
 package com.kk24426.zbagentwf.agent.chat;
 
 import com.kk24426.zbagentwf.common.exception.AgentUnavailableException;
-import com.kk24426.zbagentwf.user.AgentBase;
+import com.kk24426.zbagentwf.user.agent.userif.AgentBase;
 import com.kk24426.zbagentwf.user.chat.service.AgentChat;
 import org.springframework.stereotype.Component;
 
