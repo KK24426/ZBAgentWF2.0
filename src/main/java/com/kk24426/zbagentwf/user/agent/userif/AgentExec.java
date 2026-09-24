@@ -9,10 +9,12 @@ package com.kk24426.zbagentwf.user.agent.userif;
 
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import com.kk24426.zbagentwf.common.project.bean.Project;
+import com.kk24426.zbagentwf.user.UserInterface;
+
 import java.util.concurrent.RejectedExecutionException;
 
 /** 用户定义的执行契约；当前无 CLI、线程调度或外部调用实现。 */
-public abstract class AgentExec {
+public abstract class AgentExec implements UserInterface{
     private final AgentBean agent;
 
     public AgentExec(AgentBean agent) {
