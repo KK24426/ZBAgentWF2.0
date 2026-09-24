@@ -1,0 +1,7 @@
+# 复制到应用启动工作目录下的 config/project.properties。
+# 必须显式配置 zb.project.root，没有默认值。
+# Windows 路径推荐正斜线；文件遵循标准 Java properties 转义规则。
+# 下列值只是占位符，替换为实际路径后再取消注释：
+# zb.project.root=PATH_TO_PROJECT_ROOT
+# 相对路径按应用启动工作目录解析。
+# 初始化只校验配置，不创建项目目录。

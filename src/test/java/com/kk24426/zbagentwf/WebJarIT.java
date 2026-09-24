@@ -1,8 +1,8 @@
 /*
  * 创建日期：2026-09-23
- * 更新日期：2026-09-24
+ * 更新日期：2026-09-25
  * 做 成 者：zebiao
- * 版    本：v0.2
+ * 版    本：v0.3
  * 功能概要：通过真实 JAR 进程验证常驻 Web、静态页面、失败路径和资源隔离。
  */
 package com.kk24426.zbagentwf;
@@ -214,8 +214,65 @@ class WebJarIT {
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/mysql-connector-j")));
             assertFalse(names.stream().anyMatch(n -> n.contains("CliApplication") || n.contains("ZbAgentWfCli")
                     || n.contains("Fixture") || n.contains("MySqlIT") || n.contains("junit")
-                    || n.contains("AgentBeanTest") || n.contains("UserImplTest")
+                    || n.contains("AgentBeanTest") || n.contains("UserInterfaceTest")
+                    || n.contains("ProjectModelTest") || n.contains("AgentExecContractTest")
+                    || n.contains("ProjectConfigurationTest")
                     || n.contains("ChatAgentFixture") || n.contains("ChatControllerTest") || n.contains("ChatServiceTest")));
+        }
+    }
+
+    @Test
+    void projectConfigurationFileLoadsWithoutCreatingItsRelativeDirectory() throws Exception {
+        String relative = "项目配置/child/../root";
+        try (Pending server = startConfigured(Map.of(), Map.of(), relative)) {
+            awaitReady(server);
+            assertFalse(Files.exists(server.directory.resolve("项目配置")));
+            assertEquals("", Files.readString(server.directory.resolve("stdout.txt")));
+        }
+    }
+
+    @Test
+    void missingBlankMalformedAndNonDirectoryProjectRootsFailStartup() throws Exception {
+        Path file = Files.writeString(temp.resolve("root-is-a-file"), "fixture");
+        for (String root : new String[]{null, "", " ", "private-config-value" + (char) 0, file.toString()}) {
+            try (Pending server = startConfigured(Map.of(), Map.of(), root)) {
+                assertExit(server, 1);
+                String log = readLog(server.directory);
+                assertTrue(log.contains("zb.project.root"));
+                assertTrue(log.contains("Web 服务启动失败"));
+                assertFalse(log.contains("Web 服务就绪"));
+                assertFalse(log.contains("private-config-value"));
+                assertFalse(server.error().contains("private-config-value"));
+                assertEquals("", Files.readString(server.directory.resolve("stdout.txt")));
+            }
+        }
+    }
+
+    @Test
+    void environmentOverridesFileAndJvmOverridesEnvironment() throws Exception {
+        // 环境变量能单独提供必填配置，也能覆盖一个无效的文件值。
+        Path invalid = Files.writeString(temp.resolve("invalid-file-root"), "fixture");
+        try (Pending server = startConfigured(Map.of(), Map.of("ZB_PROJECT_ROOT", "env-projects"), null)) {
+            awaitReady(server);
+            assertFalse(Files.exists(server.directory.resolve("env-projects")));
+        }
+        try (Pending server = startConfigured(Map.of(), Map.of("ZB_PROJECT_ROOT", "env-projects"), invalid.toString())) {
+            awaitReady(server);
+        }
+        // 空环境变量不能偷偷回退到合法文件值。
+        try (Pending server = startConfigured(Map.of(), Map.of("ZB_PROJECT_ROOT", ""), "file-projects")) {
+            assertExit(server, 1);
+            assertTrue(readLog(server.directory).contains("必须显式配置非空的 zb.project.root"));
+        }
+        try (Pending server = startConfigured(Map.of("zb.project.root", "jvm-projects"),
+                Map.of("ZB_PROJECT_ROOT", ""), invalid.toString())) {
+            awaitReady(server);
+            assertFalse(Files.exists(server.directory.resolve("jvm-projects")));
+        }
+        // JVM 中的空值优先，不能回退到合法环境变量或文件值。
+        try (Pending server = startConfigured(Map.of("zb.project.root", ""),
+                Map.of("ZB_PROJECT_ROOT", "env-projects"), "file-projects")) {
+            assertExit(server, 1);
         }
     }
 
@@ -232,7 +289,20 @@ class WebJarIT {
     }
 
     private Pending start(Map<String, String> properties, String... arguments) throws Exception {
+        return startConfigured(properties, Map.of(), "projects", arguments);
+    }
+
+    private Pending startConfigured(Map<String, String> properties, Map<String, String> environment,
+                                    String fileRoot, String... arguments) throws Exception {
         Path directory = Files.createTempDirectory(temp, "web-");
+        if (fileRoot != null) {
+            Path config = Files.createDirectory(directory.resolve("config")).resolve("project.properties");
+            var values = new Properties();
+            values.setProperty("zb.project.root", fileRoot);
+            try (var output = Files.newOutputStream(config)) {
+                values.store(output, "isolated project configuration");
+            }
+        }
         List<String> command = new ArrayList<>();
         command.add(Path.of(System.getProperty("java.home"), "bin",
                 System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java").toString());
@@ -247,6 +317,7 @@ class WebJarIT {
         builder.environment().keySet().removeIf(k -> k.startsWith("SPRING_") || k.startsWith("ZB_")
                 || k.startsWith("SERVER_") || k.startsWith("LOGGING_")
                 || Set.of("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS").contains(k));
+        builder.environment().putAll(environment);
         builder.redirectOutput(directory.resolve("stdout.txt").toFile());
         builder.redirectError(directory.resolve("stderr.txt").toFile());
         return new Pending(builder.start(), directory);

@@ -7,13 +7,14 @@
 
 - 服务器任务目录：`$HOME/zbagentwf-test`，仅当前部署用户可访问。
 - `releases/<SHA256>.jar`：上传后核对校验值的Web产物；不覆盖其它项目。
-- `runtime.env`：权限600，保存mysql profile、数据源环境变量、SERVER_ADDRESS=127.0.0.1、SERVER_PORT=8080、ZB_LOG_DIR=/app/logs；内容不进入日志或Git。
+- `runtime.env`：权限600，保存mysql profile、数据源环境变量、SERVER_ADDRESS=127.0.0.1、SERVER_PORT=8080、ZB_LOG_DIR=/app/logs，以及必填的 ZB_PROJECT_ROOT；内容不进入日志或Git。
 - `logs/<runId>/application.log`：持久日志，自动滚动但不自动删除；监控磁盘空间并由用户决定保留策略。
 - 容器名`zbagentwf-web-test`；Java26官方镜像固定digest；非root、内存512MB、CPU1核、只读根文件系统、临时/tmp、只读JAR挂载及单独可写logs。
 - 使用host网络但Web显式绑定127.0.0.1:8080；不映射公网端口。数据库仍使用服务器的回环3306。
 - 重启策略unless-stopped；Spring关闭窗口20秒，容器停止窗口30秒。
 
 当前运行的是测试服务，无登录保护。未来开放外网、配置TLS/代理/鉴权、业务schema或migration，需另行批准。
+采用新增项目配置契约的版本时，部署前必须将 ZB_PROJECT_ROOT 设置为明确的容器内项目根目录；缺失或非法会启动失败。初始化只读取配置，不创建目录。本次代码修改不执行部署，也不新增目录挂载或写权限；实际项目目录创建留待后续任务。
 
 ## 从开发机访问
 

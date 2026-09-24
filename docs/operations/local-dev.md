@@ -7,9 +7,15 @@ Wrapper固定Maven3.9.16。依赖缓存不进入仓库。本地使用Windows，�
 
 ```powershell
 .\mvnw.cmd clean verify
+$env:ZB_PROJECT_ROOT = 'PATH_TO_PROJECT_ROOT' # 先替换为实际根目录
 java -jar .\target\zbagentwf-web-0.1.0-SNAPSHOT.jar
 ```
 verify运行单元测试与真实Boot JAR进程测试；MySQL专用库测试默认跳过。
+项目根目录必须显式配置，没有默认目录。配置缺失、空白、格式非法或已存在非目录时启动失败退出1。
+可以使用上面的环境变量，或复制 [config/project.properties.example](../../config/project.properties.example) 为启动工作目录下的 config/project.properties，填写 zb.project.root；真实文件不提交。
+JVM -Dzb.project.root 优先于 ZB_PROJECT_ROOT，再优先于文件值；空覆盖值不会回退到低优先级配置。应用仍不接受 --zb.project.root 等命令参数。
+相对路径按启动工作目录解析并规范化为绝对路径；允许目录不存在，但初始化不创建它，也不会创建业务项目。全局根目录与 Project.workingDirectory 中的单个项目目录区分。
+properties 文件使用标准 Java 转义；Windows 推荐正斜线，中文路径可写 Unicode 转义，避免反斜线被解释为转义字符。
 浏览器访问 http://127.0.0.1:8080/，首页可输入请求并发送；当前正式Agent为未接入占位，显示503提示。成功链路仅在测试中由替身验证，替身不随JAR发布。使用Ctrl+C正常停止。默认只监听回环地址。
 正式JAR为target/zbagentwf-web-0.1.0-SNAPSHOT.jar，.jar.original不是正式分发。
 不会生成或分发旧apps/runtime-host产物。旧apps和modules目录不再使用，
@@ -22,7 +28,7 @@ verify运行单元测试与真实Boot JAR进程测试；MySQL专用库测试默�
 从工作区移除旧的父工程及四个子工程引用（不要勾选从磁盘删除内容），
 再通过 File > Import > Maven > Existing Maven Projects 选择仓库根目录。
 只导入根pom，选择JDK26，执行Maven Update Project。
-在根包ZbAgentWfApplication上Run As > Java Application，不传入Program arguments；启动后持续运行。
+在根包ZbAgentWfApplication上Run As > Java Application，不传入Program arguments；在运行环境配置 ZB_PROJECT_ROOT，或使用运行工作目录下的 config/project.properties；启动后持续运行。
 CLI及help/version已移除。Eclipse强制Terminate可能不触发优雅关闭；验证正常停机请用终端Ctrl+C或远程容器stop。
 XML的Cannot find declaration错误应检查XML插件外部Schema下载设置；
 POM沿用Maven官方声明，不通过关闭所有XML校验解决。

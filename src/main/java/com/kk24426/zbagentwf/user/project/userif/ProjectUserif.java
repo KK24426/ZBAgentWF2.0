@@ -1,37 +1,42 @@
+/*
+ * 创建日期：2026-09-25
+ * 更新日期：2026-09-25
+ * 做 成 者：zebiao
+ * 版    本：v0.1
+ * 功能概要：定义项目创建、项目内需求规划与任务结果汇总的契约。
+ */
 package com.kk24426.zbagentwf.user.project.userif;
 
-import java.util.List;
-
+import com.kk24426.zbagentwf.common.project.bean.Project;
 import com.kk24426.zbagentwf.common.project.bean.Requirement;
 import com.kk24426.zbagentwf.user.UserInterface;
+import java.util.List;
 
-/**
- * 提供项目功能相关能力类
- * 
- */
+/** 项目包含多条需求，需求包含多个 Task；当前仅定义契约，不创建目录或调度任务。 */
 public abstract class ProjectUserif implements UserInterface {
+    /**
+     * 根据用户输入建立项目；后续实现使用全局根目录并确定项目自己的工作目录。
+     *
+     * @param content 用户对项目的描述
+     * @return 包含项目标识、工作目录和需求列表的项目对象
+     */
+    public abstract Project newProject(String content);
 
-	/**
-	 * 根据用户的输入去新建项目
-	 * 
-	 * @param content
-	 */
-	public abstract void newProject(String content);
+    /**
+     * 将用户需求规划为项目内的需求列表，每条需求包含可执行 Task。
+     *
+     * @param project 需求归属的项目
+     * @param content 用户需求
+     * @return 属于该项目的需求及 Task 列表；本轮不实现列表增删或规划逻辑
+     */
+    public abstract List<Requirement> createRequirements(Project project, String content);
 
-	/**
-	 * 根据用户的需求执行需求规划，把大需求拆分成最适合Agent执行的Task。<br/>
-	 * 当需求过大的时候，可以把大需求拆分成小需求，然后再拆成子Task。
-	 * 
-	 * @param content 用户需求
-	 * @return
-	 */
-	public abstract List<Requirement> createrRequirement(String content);
-
-	/**
-	 * 执行用户需求，并把所有task的状态返回
-	 * 
-	 * @param requirements
-	 */
-	public abstract List<Requirement> execTask(List<Requirement> requirements);
-
+    /**
+     * 等待底层异步执行结束后汇总结果；需要确认同样代表该次底层执行已结束。
+     *
+     * @param project 本次执行所属项目及工作目录
+     * @param requirements 从该项目中选定的本次需求范围，其中 Task 均属于对应需求
+     * @return 带有 Task 状态和执行结果的需求列表，不是异步批次标识
+     */
+    public abstract List<Requirement> execTask(Project project, List<Requirement> requirements);
 }

@@ -8,12 +8,12 @@
 | --- | --- |
 | user.chat.controller.ChatController | HTTP请求/响应及固定错误映射 |
 | user.chat.service.ChatService extends UserService | 校验本次请求并通过构造注入的AgentChat委派 |
-| user.chat.service.AgentChat extends UserImpl | String reply(String message)，接收原始有效文本并返回回复 |
+| user.chat.service.AgentChat extends UserInterface | String reply(String message)，接收原始有效文本并返回回复 |
 | common.exception.AgentUnavailableException | Agent实现与调用层共享的技术异常；Agent尚未接入或不可用，映射503 |
-| agent.chat.AgentChatImpl extends AgentBase | 正式占位实现，仅明确不可用，不产生模拟成功 |
+| agent.chat.AgentChatImpl implements AgentChat | 正式占位实现，仅明确不可用，不继承 AgentBase |
 | common.chat.ChatRequest / ChatResponse | 不可变请求message与响应reply载体，不注册为Spring组件 |
 
-UserService、UserImpl、AgentBase、AgentBean 原有定义不变。接口实现可以在测试中注入替换；测试成功不代表真实 Agent 已接入。技术性类不代表授权扩展业务字段或模型调用协议。
+UserService 保留原占位行为。2026-09-25 按用户批准将父接口更名为 UserInterface，并纠正 AgentChatImpl 对 AgentBase 的继承；聊天当前不调用新的 AgentExec。接口实现可以在测试中注入替换；测试成功不代表真实 Agent 已接入。
 
 2026-09-24按用户要求，将AgentUnavailableException从user服务包移到common.exception；Java调用方需更新import，不保留旧包兼容类。异常继承、无参构造、固定文案和HTTP 503映射不变，不新增父异常体系。
 

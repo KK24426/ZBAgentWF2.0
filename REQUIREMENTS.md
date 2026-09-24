@@ -2,20 +2,40 @@
 
 ## 当前范围
 单 Maven JAR 工程；Java 26、Spring Boot 4.1.1、MyBatis Starter 4.1.0。
-启动入口初始化日志和 Spring Web，扫描 user/agent/common，持续运行。
+启动入口初始化日志、读取必填项目根目录配置并启动 Spring Web，扫描 user/agent/common，持续运行。
 当前有简单首页及单次聊天调用骨架；真实 Agent、业务表和持久化尚未接入；原 CLI 已移除。
 
 ## 用户骨架与最小补充
 
-用户已提供 AgentBean、UserImpl、AgentBase、UserService 四个类型，目前不代表业务能力。
+用户已提供 AgentBean、UserInterface、AgentBase、UserService 及项目/执行契约，目前不代表真实 Agent 业务能力。
 AgentBean 保留 brand/name/ver 三个私有 String 属性，提供标准 getter/setter 和无参构造；默认 null，允许 null、空字符串及中文，原样存取、不校验、不设置默认值。
-UserImpl 经用户确认作为公共空父接口，用户接口通过 extends 继承；不新增业务方法。
-AgentBase 和 UserService 保留用户原始占位代码，不补行为、注解或继承关系。
+UserInterface 是由 UserImpl 更名的公共空父接口，用户接口通过 extends 继承；不新增业务方法。
+AgentBase 位于 user.agent.userif，保留用户定义的本机工具发现、查询和刷新抽象方法；不实现缓存或扫描。UserService 保留原占位行为。
 验收包括属性独立读写、边界值、父接口继承实现关系，以及既有 Spring 和真实 Web JAR 回归；测试样例不进入正式 JAR。
 此最小补充仅用于验证协作流程，不代表复杂业务接口、模型调用或数据库持久化已实现或验收。
 
+## 项目、需求与 Task
+
+Project 包含多条 Requirement，每条 Requirement 包含多个 RequirementTask，均为独立普通 Java Bean；无父对象反向引用、数据库外键或自动业务校验。
+Project 保存 projectId、Path workingDirectory、requirements；Requirement 保存 userContent、agentUnderstanding、acceptanceCriteria、tasks、userConfirmMsg。
+两个列表默认各实例独立的空列表，setter 原样赋值。RequirementTask 保存 id、content、acceptanceCriteria、status、result；默认 PENDING。
+TaskStatus 为 PENDING、RUNNING、SUCCEEDED、FAILED、NEEDS_CONFIRMATION，仅定义状态值，不实现状态转换。
+规划任务 id 与单次执行 taskId 区分；AgentExecResult 保存 taskId、success、errorMessage、Long tokenCount、summary、confirmationRequired、String confirmationMessage。token 数未知时 null。
+AgentExec 保存 final 模型引用并提供 protected getter；exec(Project, content, memory, callback) 异步受理后返回 String 执行标识，最终 onCompleted 回调一次；提交失败同步抛 RejectedExecutionException 且不回调。getStderr(taskId) 按执行读取诊断。
+成功 success=true、confirmationRequired=false；普通失败两者 false；需要确认 success=false、confirmationRequired=true，本次执行结束，答复后重新提交取得新标识。不增加暂停恢复或取消接口。
+ProjectUserif 的 newProject(content) 返回 Project，createRequirements(project, content) 返回需求列表，execTask(project, requirements) 等待底层结束并返回带 Task 状态和结果的需求列表；列表参数选定项目内的执行范围。
+本轮仅补契约和数据载体，不创建业务目录，不实现需求规划、列表增删、任务调度或真实 CLI 调用。测试替身只验证类型与结果关联。
+
+## 项目根目录配置
+
+Spring 启动时读取 config/project.properties 中的 zb.project.root；支持 ZB_PROJECT_ROOT 环境变量及 JVM -Dzb.project.root 覆盖，无默认值。
+必须显式配置；缺失、空白、格式非法或已存在但不是目录时启动失败退出1。允许目录尚不存在；相对路径按启动工作目录解析并规范化为绝对路径，不创建目录。
+文件入口相对启动工作目录；示例 config/project.properties.example 入仓，真实配置忽略。标准覆盖顺序 JVM 属性 > 环境变量 > 配置文件。
+ProjectConfiguration 在根包初始化只读 ProjectSettings；未来业务创建项目时使用此根目录，项目自己的目录保存到 Project.workingDirectory。
+验收覆盖配置加载与覆盖、错误路径、路径规范化、初始化不创建目录，以及现有 Web/JAR 回归。
+
 ## Web
-无参数启动服务，默认 127.0.0.1:8080；远程仅通过 SSH 隧道访问，不开放公网。
+显式提供项目根目录后无参数启动服务，默认 127.0.0.1:8080；远程仅通过 SSH 隧道访问，不开放公网。
 固定资源 /、/index.html、/app.css、/favicon.svg、/chat.js 接受 GET/HEAD；/api/chat 仅接受 POST。
 未批准的路径/方法继续拒绝；聊天错误响应为固定文字，不暴露异常或原始输入。
 stdout 不输出业务结果，stderr 为错误及运行诊断，异常保留脱敏后的完整调用链。
@@ -23,7 +43,7 @@ stdout 不输出业务结果，stderr 为错误及运行诊断，异常保留脱
 正式产物 target/zbagentwf-web-0.1.0-SNAPSHOT.jar；不承诺 Maven 类库兼容。
 
 ## 单次聊天骨架
-user.chat.controller.ChatController 接收请求；user.chat.service.ChatService 继承 UserService，调用 AgentChat（继承 UserImpl）；agent.chat.AgentChatImpl 继承 AgentBase 实现接口。原父类/父接口及 AgentBean 保持不变。
+user.chat.controller.ChatController 接收请求；user.chat.service.ChatService 继承 UserService，调用 AgentChat（继承 UserInterface）；agent.chat.AgentChatImpl 仅实现 AgentChat，不继承 AgentBase。聊天仍为未接入占位，不调用新的执行契约。
 AgentUnavailableException 位于 common.exception，由 Agent 实现抛出、Controller 捕获并映射为503。
 POST /api/chat 接收 application/json 的 message 字符串，非空白、长度不超过4000个Java UTF-16代码单元；有效内容原样传递。成功返回200及JSON reply字符串；输入/JSON错误400、媒体类型不支持415、方法不支持405；未接入503，内部故障500，错误正文不包含输入或异常细节。
 正式实现只明确报告 Agent 尚未接入；测试替身仅存在于测试源码，不打入正式JAR。验收包括 Controller → Service → 替身返回的成功链路，以及生产占位的503；不得把替身验证声称为真实模型验收。

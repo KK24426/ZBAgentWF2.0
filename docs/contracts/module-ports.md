@@ -1,6 +1,7 @@
 # 接口与配置
 
 已提供[单次聊天骨架](./chat.md)，真实 Agent 与持久化 schema 尚未接入；原空父接口及数据骨架见[用户骨架契约](./user-ports.md)。根包启动入口为 com.kk24426.zbagentwf.ZbAgentWfApplication。
+项目包含需求、需求包含 Task 的实体及执行声明见[项目与执行契约](./project-agent.md)，当前只实现项目根目录配置读取，未执行真实 Agent。
 聊天调用的共享技术异常为 common.exception.AgentUnavailableException，供实现层与调用层共同引用。
 正式调用为 java -jar target/zbagentwf-web-<version>.jar，无命令参数，持续运行。
 stderr包含日志、固定错误提示及脱敏异常链，stdout无业务输出。
@@ -22,6 +23,7 @@ Tomcat协议组件的解析前诊断采用固定摘要，异常类型/堆栈/cau
 | 配置 | 来源与默认 |
 | --- | --- |
 | Spring属性 | 标准外部配置、环境变量、JVM -D；不接受命令参数配置 |
+| 项目根目录 | zb.project.root，启动工作目录下 config/project.properties；支持 ZB_PROJECT_ROOT 和 JVM -Dzb.project.root 覆盖，无默认值且必须显式配置 |
 | Web监听 | server.address=127.0.0.1、server.port=8080；环境变量SERVER_ADDRESS、SERVER_PORT |
 | 关闭窗口 | server.shutdown=graceful、spring.lifecycle.timeout-per-shutdown-phase=20s |
 | mysql开关 | spring.profiles.active=mysql 或 SPRING_PROFILES_ACTIVE=mysql；默认关闭 |
@@ -32,11 +34,12 @@ Tomcat协议组件的解析前诊断采用固定摘要，异常类型/堆栈/cau
 | 测试库 | ZB_TEST_DB_URL、ZB_TEST_DB_USERNAME、ZB_TEST_DB_PASSWORD；无生产配置回退 |
 
 mysql模式不自动建库/建表/迁移；无模式时自动数据源配置显式排除。
+项目根目录缺失、空白、格式非法或已存在非目录时启动失败；相对路径按启动工作目录规范化为绝对路径，允许不存在且初始化不创建目录。优先级 JVM > 环境变量 > 文件，空覆盖值也会失败。
 MyBatis Mapper 仅在 mysql profile 下由 Spring 扫描注册；接口位于 com.kk24426.zbagentwf.agent.persistence.mapper 包及其子包且必须标注 @Mapper，XML 位于资源 mapper 目录。对应写法见 [Mapper 示例](../../src/main/resources/mapper/README.md)。
 数据源用户名密码不能为空，Hikari上限5、空闲0、取连接超时5秒、驱动读取超时30秒。
 日志同进程runId固定；异常类型/堆栈/cause/suppressed保留，消息已知敏感字段脱敏。
 文件日志使用UTF-8；控制台日志跟随System.err编码，与固定错误提示保持一致。
 MyBatis原生日志关闭，诊断拦截器只记录statement ID、操作、耗时、结果和异常；不输出参数和SQL文本。
 
-ZbAgentWfApplication、WebRequestFilter、common.logging公开类型和MySqlConfiguration属于已批准的技术基础能力，不构成用户业务接口。
+ZbAgentWfApplication、ProjectConfiguration、ProjectSettings、WebRequestFilter、common.logging公开类型和MySqlConfiguration属于已批准的技术基础能力，不构成用户业务接口。
 后续用户业务接口、DTO、schema、事务变化在本文同步索引，不能由文档先发明契约。

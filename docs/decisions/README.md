@@ -17,6 +17,7 @@
 - [0006：单工程、Spring Boot、日志与 MySQL 基础](./0006-single-project-spring-mysql.md)
 - [0007：Web服务与远程专用测试环境](./0007-web-test-service.md)
 - [0008：单次聊天功能切片与测试替身边界](./0008-chat-skeleton.md)
+- [0009：项目数据归属、执行声明与必填根目录](./0009-project-contracts.md)
 
 阅读历史 ADR 时先看顶部的当前适用范围；已被替代的正文只保留决策背景，不用于恢复旧架构。当前按包协作，不因历史“模块”措辞新建 Maven 子模块；用户权限仍以根 `AGENTS.md` 为准。
 

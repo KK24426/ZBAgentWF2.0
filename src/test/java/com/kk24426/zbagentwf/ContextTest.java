@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-22
- * 更新日期：2026-09-23
+ * 更新日期：2026-09-25
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：验证容器默认无数据库、按接口注入和关闭资源。
@@ -9,7 +9,11 @@ package com.kk24426.zbagentwf;
 
 import static org.junit.jupiter.api.Assertions.*;
 import javax.sql.DataSource;
+import java.nio.file.Path;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.core.env.MapPropertySource;
 import org.springframework.context.annotation.*;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.beans.factory.UnsatisfiedDependencyException;
@@ -17,9 +21,15 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import com.kk24426.zbagentwf.user.InjectionFixture;
 
 class ContextTest {
+    @TempDir Path temp;
+
     @Test
     void rootScanInjectsAcrossPackagesAndDoesNotCreateDataSource() {
-        try (var context = new AnnotationConfigApplicationContext(ZbAgentWfApplication.class)) {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("project-test",
+                    Map.of("zb.project.root", temp.resolve("projects").toString())));
+            context.register(ZbAgentWfApplication.class);
+            context.refresh();
             assertTrue(context.getBeansOfType(DataSource.class).isEmpty());
             assertNotNull(context.getBean(com.kk24426.zbagentwf.agent.web.WebRequestFilter.class));
             assertEquals("injected", context.getBean(InjectionFixture.class).value());

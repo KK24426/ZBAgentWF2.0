@@ -4,13 +4,13 @@
 
 ## user 包
 
-- `UserImpl`：公共空父接口，用户编写的接口通过 `extends UserImpl` 继承。保留用户命名，当前没有业务方法，也不自动注册为 Spring Bean。
-- `AgentBase`：用户定义的抽象类占位，本轮保持原样，基础能力方法待用户定义。
+- `UserInterface`：由 UserImpl 更名的公共空父接口，没有业务方法，也不自动注册为 Spring Bean。
+- `user.agent.userif.AgentBase`：用户定义的本机 Agent 发现、查询和刷新抽象契约，implements UserInterface；当前不实现扫描或缓存。聊天实现不继承此类型。
 - `UserService`：用户定义的服务父类占位，本轮保持原样，没有业务行为或 Spring 注解。
 
-UserImpl 原先为普通类，用户已明确批准将其改为父接口。类转接口通常存在源码和二进制兼容性差异；本次仓库检索没有调用方，项目不承诺 Maven 类库兼容。未来不应以 `new UserImpl()` 或类继承方式使用它。
+用户已批准 UserImpl 更名、AgentBase 和 AgentBean 移包，以及[项目与执行契约](./project-agent.md)的字段和方法补齐。调用方需迁移类型名、import 和方法签名，不保留旧类型兼容层；项目不承诺 Maven 类库兼容。
 
-## common.AgentBean
+## common.agent.bean.AgentBean
 
 普通可变数据对象，保留公共无参构造，不注册为 Spring Bean，不执行模型调用或持久化。
 
@@ -25,5 +25,5 @@ UserImpl 原先为普通类，用户已明确批准将其改为父接口。类�
 
 ## 验证边界
 
-AgentBeanTest 覆盖属性契约，UserImplTest 仅用测试内子接口和实现类验证 Java 类型关系；这些样例不进入正式 JAR，不构成新的业务契约。
-现有 ContextTest 是 Spring 扫描与注入回归；目前没有真实业务调用方，因此不能把它视为业务链路验收。
+AgentBeanTest 覆盖属性契约，UserInterfaceTest 用测试内子接口和实现类验证 Java 类型关系；这些样例不进入正式 JAR。
+ContextTest 在显式提供项目根目录后验证 Spring 扫描与注入，不构成真实 Agent 业务链路验收。

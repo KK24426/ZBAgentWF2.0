@@ -10,15 +10,19 @@
 基线：Java 26、Maven Wrapper 3.9.16、Spring Boot 4.1.1、MyBatis Starter 4.1.0、MySQL Connector/J。
 默认无数据库，远程测试环境启用专用 MySQL；没有生产业务表或业务保存功能。
 首页提供单次请求输入与结果区；后端为 Controller → Service → Agent 接口骨架。真实 Agent 尚未接入，正式运行返回明确不可用提示；成功路径仅用测试替身验证，见[聊天契约](./docs/contracts/chat.md)。
+已补齐“项目 → 需求 → Task”的数据包含关系和执行接口，见[项目与执行契约](./docs/contracts/project-agent.md)；当前不执行任务或创建业务项目目录。
 
 ## 构建与运行
 
 ```powershell
 .\mvnw.cmd clean verify
+# 先将占位符替换成实际项目根目录；也可使用外部配置文件。
+$env:ZB_PROJECT_ROOT = 'PATH_TO_PROJECT_ROOT'
 java -jar .\target\zbagentwf-web-0.1.0-SNAPSHOT.jar
 ```
 
 浏览器打开 http://127.0.0.1:8080/。Eclipse 可直接运行根包的 `ZbAgentWfApplication.main`。
+项目根目录必须显式配置；缺失或非法时启动失败。也可将[配置示例](./config/project.properties.example)复制为启动工作目录下的 config/project.properties 并填写 zb.project.root；真实配置不入仓，初始化不创建目录。
 进程持续运行，正常停止使用 Ctrl+C；CLI 及 help/version 已移除，不接受命令参数。
 默认仅监听本机，远程测试服务通过 SSH 隧道访问，见[远程测试环境](./docs/operations/remote-test.md)。
 
