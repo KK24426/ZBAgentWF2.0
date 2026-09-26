@@ -66,8 +66,28 @@ class AgentConfigurationTest {
         runner().withPropertyValues(asArguments(duplicates)).run(context -> assertNotNull(context.getStartupFailure()));
     }
 
+    @Test
+    void roleMappingIsOptionalAndDoesNotRestrictWhichModelFillsTheRole() {
+        runner().withPropertyValues("zb.agent-roles.planning.brand=provider", "zb.agent-roles.planning.name=shared",
+                "zb.agent-roles.planning.ver=one", "zb.agent-roles.development.brand=provider")
+                .run(context -> {
+                    assertNull(context.getStartupFailure());
+                    var roles = context.getBean(com.kk24426.zbagentwf.agent.registry.RoleAgentResolver.class);
+                    var planning = roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum.planning);
+                    assertEquals("shared", planning.getName()); assertEquals("one", planning.getVer());
+                    assertEquals("fixture-planning-规则", planning.getRolePrompt().getPrompt());
+                    assertThrows(com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException.class,
+                            () -> roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum.development));
+                    assertThrows(com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException.class,
+                            () -> roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum.review));
+                    assertFalse(Files.exists(temp.resolve("projects")));
+                });
+    }
+
     private ApplicationContextRunner runner() {
         return new ApplicationContextRunner().withUserConfiguration(ProjectConfiguration.class, AgentConfiguration.class)
+                .withBean("testPrompts", com.kk24426.zbagentwf.agent.prompt.PromptCatalog.class,
+                        () -> com.kk24426.zbagentwf.agent.codex.CodexFixtureSupport.prompts(temp), bd -> bd.setPrimary(true))
                 .withPropertyValues("zb.project.root=" + temp.resolve("projects"));
     }
 

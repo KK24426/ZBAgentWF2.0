@@ -8,6 +8,9 @@
 package com.kk24426.zbagentwf.agent.project;
 
 import com.kk24426.zbagentwf.agent.registry.AgentRequirementPlanner;
+import com.kk24426.zbagentwf.agent.registry.RoleAgentResolver;
+import com.kk24426.zbagentwf.agent.AgentExecutorImpl;
+import com.kk24426.zbagentwf.common.memory.MemoryStore;
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
 import com.kk24426.zbagentwf.common.project.bean.*;
@@ -29,21 +32,25 @@ public final class ProjectUserifImpl extends ProjectDomain {
     private final ProjectSettings settings;
     private final AgentRequirementPlanner planner;
     private final AgentExecFactory factory;
+    private final MemoryStore memory;
+    private final RoleAgentResolver roles;
     private final Map<Path, ProjectLock> locks = new HashMap<>();
 
-    public ProjectUserifImpl(ProjectSettings settings, AgentExecFactory factory, AgentRequirementPlanner planner) {
+    public ProjectUserifImpl(ProjectSettings settings, AgentExecFactory factory, AgentRequirementPlanner planner, MemoryStore memory, RoleAgentResolver roles) {
         this.settings = Objects.requireNonNull(settings);
         this.planner = Objects.requireNonNull(planner);
         this.factory = Objects.requireNonNull(factory);
+        this.memory = Objects.requireNonNull(memory);
+        this.roles = Objects.requireNonNull(roles);
     }
 
     @Override
     public Project newProject(String content, AgentBean planningAgent, AgentBean developmentAgent, AgentBean reviewAgent) {
         requireContent(content);
         // 三个模型全部解析成功后才产生项目目录等外部副作用。
-        AgentExecutor planning = Objects.requireNonNull(factory.getExecutor(planningAgent));
-        AgentExecutor development = Objects.requireNonNull(factory.getExecutor(developmentAgent));
-        AgentExecutor review = Objects.requireNonNull(factory.getExecutor(reviewAgent));
+        AgentExecutor planning = Objects.requireNonNull(factory.getExecutor(roles.bind(planningAgent, AgentTypeEnum.planning)));
+        AgentExecutor development = Objects.requireNonNull(factory.getExecutor(roles.bind(developmentAgent, AgentTypeEnum.development)));
+        AgentExecutor review = Objects.requireNonNull(factory.getExecutor(roles.bind(reviewAgent, AgentTypeEnum.review)));
         Path created = null;
         try {
             Path root = settings.getRootDirectory();
@@ -57,6 +64,7 @@ public final class ProjectUserifImpl extends ProjectDomain {
             created = Files.createDirectory(root.resolve(project.getProjectId()));
             project.setWorkingDirectory(created.toAbsolutePath().normalize());
             createRequirements(project, content);
+            memory.put("project", project.getProjectId(), project);
             return project;
         } catch (IOException | RuntimeException failure) {
             if (created != null) {
@@ -64,83 +72,114 @@ public final class ProjectUserifImpl extends ProjectDomain {
                 try { Files.delete(created); }
                 catch (IOException cleanup) { failure.addSuppressed(cleanup); }
             }
+            // 受理额度或配置尚未就绪仍是可辨识的未受理失败，不能包装成内部错误。
+            if (failure instanceof RejectedExecutionException rejected) throw rejected;
+            if (failure instanceof com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException unavailable) throw unavailable;
             throw new IllegalStateException("项目创建失败。", failure);
+        }
+    }
+
+    @Override protected AgentBean getAgent(AgentTypeEnum role) { return roles.defaultFor(role); }
+
+    @Override public Project getProject(String projectId) {
+        Project project = memory.get("project", projectId, Project.class)
+                .orElseThrow(() -> new IllegalArgumentException("项目不存在或服务已经重启。"));
+        if (!projectId.equals(project.getProjectId())) throw new IllegalStateException("项目标识在登记后被修改。");
+        return project;
+    }
+
+    @Override public void addProjectPrompt(String projectId, String content) {
+        requireContent(content);
+        Project project = getProject(projectId);
+        synchronized (project) {
+            try (var ignored = lock(directory(project))) {
+                var previous = project.getProjectPrompt();
+                String text = previous == null ? null : previous.getPrompt();
+                project.setProjectPrompt(AgentExecutorImpl.prompt(text == null || text.isBlank() ? content : text + "\n" + content));
+            }
         }
     }
 
     @Override
     public List<Requirement> createRequirements(Project project, String content) {
-        requireContent(content);
-        Path directory = directory(project);
-        try (var ignored = lock(directory)) {
-            // 锁覆盖规划到列表替换的整个过程，避免同目录并发追加时各自覆盖对方的新增需求。
-            List<Requirement> existing = Objects.requireNonNull(project.getRequirements(), "项目需求列表不能为空。");
-            List<Requirement> added = planner.plan(project, content);
-            // 用新的可修改列表整体替换，兼容 Bean setter 接收的不可变列表，避免部分追加。
-            var combined = new ArrayList<>(existing);
-            combined.addAll(added);
-            project.setRequirements(combined);
-            return new ArrayList<>(added);
+        if (project == null) throw new IllegalArgumentException("项目不能为空。");
+        synchronized (project) {
+            requireContent(content);
+            Path directory = directory(project);
+            try (var ignored = lock(directory)) {
+                // 锁覆盖规划到列表替换的整个过程，避免同目录并发追加时各自覆盖对方的新增需求。
+                List<Requirement> existing = Objects.requireNonNull(project.getRequirements(), "项目需求列表不能为空。");
+                List<Requirement> added = planner.plan(project, content);
+                // 用新的可修改列表整体替换，兼容 Bean setter 接收的不可变列表，避免部分追加。
+                var combined = new ArrayList<>(existing);
+                combined.addAll(added);
+                project.setRequirements(combined);
+                return new ArrayList<>(added);
+            }
         }
     }
 
     @Override
-    public List<Requirement> execTask(Project project, List<Requirement> requirements) {
-        Path directory = directory(project);
-        try (var ignored = lock(directory)) {
-            // 本批固定使用开始时绑定的开发执行器；审核角色不会在任务执行后被隐式调用。
-            AgentExecutor executor = project.getDevelopmentAgent();
-            if (executor == null) throw new IllegalArgumentException("项目未绑定开发 Agent。");
-            List<Requirement> selected = validateSelection(project, requirements);
-            boolean interrupted = false;
-            try {
-                for (Requirement requirement : selected) {
-                    for (RequirementTask task : requirement.getTasks()) {
-                        if (Thread.currentThread().isInterrupted()) return selected;
-                        // 既有失败或待确认也会挡住后续任务；只有调用方显式重置 PENDING 才算重试。
-                        if (task.getStatus() == TaskStatus.FAILED || task.getStatus() == TaskStatus.NEEDS_CONFIRMATION) return selected;
-                        if (task.getStatus() != TaskStatus.PENDING) continue;
-                        var completion = new CompletableFuture<AgentExecResult>();
-                        AgentExecResult previous = task.getResult();
-                        // 重试是新会话；先保存原确认问题/失败原因和新答复，再清除当前结果。
-                        String context = memory(requirement);
-                        task.setResult(null);
-                        task.setStatus(TaskStatus.RUNNING);
-                        String id;
-                        try {
-                            id = executor.exec(project, task.getContent() + "\n验收标准：\n"
-                                    + Objects.toString(task.getAcceptanceCriteria(), ""), context, completion::complete);
-                        } catch (RejectedExecutionException failure) {
-                            // 未受理不会回调；恢复提交前的结果，避免 Task 永远停留在 RUNNING。
-                            task.setStatus(TaskStatus.PENDING);
-                            task.setResult(previous);
-                            throw failure;
+    public List<Requirement> execTask(Project project) {
+        if (project == null) throw new IllegalArgumentException("项目不能为空。");
+        synchronized (project) {
+            List<Requirement> requirements = project.getRequirements();
+            Path directory = directory(project);
+            try (var ignored = lock(directory)) {
+                // 本批固定使用开始时绑定的开发执行器；审核角色不会在任务执行后被隐式调用。
+                AgentExecutor executor = project.getDevelopmentAgent();
+                if (executor == null) throw new IllegalArgumentException("项目未绑定开发 Agent。");
+                List<Requirement> selected = validateSelection(project, requirements);
+                boolean interrupted = false;
+                try {
+                    for (Requirement requirement : selected) {
+                        for (RequirementTask task : requirement.getTasks()) {
+                            if (Thread.currentThread().isInterrupted()) return selected;
+                            // 既有失败或待确认也会挡住后续任务；只有调用方显式重置 PENDING 才算重试。
+                            if (task.getStatus() == TaskStatus.FAILED || task.getStatus() == TaskStatus.NEEDS_CONFIRMATION) return selected;
+                            if (task.getStatus() != TaskStatus.PENDING) continue;
+                            var completion = new CompletableFuture<AgentExecResult>();
+                            AgentExecResult previous = task.getResult();
+                            // 重试是新会话；先保存原确认问题/失败原因和新答复，再清除当前结果。
+                            String context = memory(requirement);
+                            task.setResult(null);
+                            task.setStatus(TaskStatus.RUNNING);
+                            String id;
+                            try {
+                                id = executor.exec(project, task.getContent() + "\n验收标准：\n"
+                                        + Objects.toString(task.getAcceptanceCriteria(), ""), context, completion::complete);
+                            } catch (RejectedExecutionException failure) {
+                                // 未受理不会回调；恢复提交前的结果，避免 Task 永远停留在 RUNNING。
+                                task.setStatus(TaskStatus.PENDING);
+                                task.setResult(previous);
+                                throw failure;
+                            }
+                            AgentExecResult result;
+                            // 当前契约没有取消操作。调用方中断后仍须等已受理执行结束并落下结果，
+                            // 随后停止本批并恢复中断标志，不能留下后台修改与前台状态脱节的 Task。
+                            while (true) {
+                                try { result = completion.get(); break; }
+                                catch (InterruptedException failure) { interrupted = true; }
+                                catch (ExecutionException failure) { throw new IllegalStateException("等待执行结果失败。", failure); }
+                            }
+                            // 回调可能来自其它实现或替身；标识不匹配、互斥状态冲突时统一记为失败。
+                            if (result == null || !Objects.equals(id, result.getTaskId())
+                                    || result.isSuccess() && result.isConfirmationRequired()) {
+                                result = new AgentExecResult();
+                                result.setTaskId(id);
+                                result.setErrorMessage("底层执行结果违反回调契约。");
+                            }
+                            task.setResult(result);
+                            // 待确认也是本次执行的终态，等待用户补充后重新提交，不在这里暂停底层会话。
+                            task.setStatus(result.isConfirmationRequired() ? TaskStatus.NEEDS_CONFIRMATION
+                                    : result.isSuccess() ? TaskStatus.SUCCEEDED : TaskStatus.FAILED);
+                            if (interrupted || task.getStatus() != TaskStatus.SUCCEEDED) return selected;
                         }
-                        AgentExecResult result;
-                        // 当前契约没有取消操作。调用方中断后仍须等已受理执行结束并落下结果，
-                        // 随后停止本批并恢复中断标志，不能留下后台修改与前台状态脱节的 Task。
-                        while (true) {
-                            try { result = completion.get(); break; }
-                            catch (InterruptedException failure) { interrupted = true; }
-                            catch (ExecutionException failure) { throw new IllegalStateException("等待执行结果失败。", failure); }
-                        }
-                        // 回调可能来自其它实现或替身；标识不匹配、互斥状态冲突时统一记为失败。
-                        if (result == null || !Objects.equals(id, result.getTaskId())
-                                || result.isSuccess() && result.isConfirmationRequired()) {
-                            result = new AgentExecResult();
-                            result.setTaskId(id);
-                            result.setErrorMessage("底层执行结果违反回调契约。");
-                        }
-                        task.setResult(result);
-                        // 待确认也是本次执行的终态，等待用户补充后重新提交，不在这里暂停底层会话。
-                        task.setStatus(result.isConfirmationRequired() ? TaskStatus.NEEDS_CONFIRMATION
-                                : result.isSuccess() ? TaskStatus.SUCCEEDED : TaskStatus.FAILED);
-                        if (interrupted || task.getStatus() != TaskStatus.SUCCEEDED) return selected;
                     }
+                    return selected;
+                } finally {
+                    if (interrupted) Thread.currentThread().interrupt();
                 }
-                return selected;
-            } finally {
-                if (interrupted) Thread.currentThread().interrupt();
             }
         }
     }

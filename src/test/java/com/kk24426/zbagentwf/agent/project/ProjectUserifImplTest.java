@@ -28,7 +28,7 @@ class ProjectUserifImplTest {
 
     @Test
     void newProjectsUseUniqueDirectoriesAndPlanInitialRequirements() throws Exception {
-        var rawPlanner = new CodexRequirementPlanner(CodexFixtureSupport.client("success"));
+        var rawPlanner = CodexFixtureSupport.planner(CodexFixtureSupport.client("success"));
         var planner = mock(AgentRequirementPlanner.class);
         when(planner.plan(any(), anyString())).thenAnswer(call ->
                 rawPlanner.plan(((Project) call.getArgument(0)).getWorkingDirectory(), call.getArgument(1)));
@@ -74,15 +74,15 @@ class ProjectUserifImplTest {
     }
 
     @Test
-    void executesInSelectionOrderWaitsAndStopsOnConfirmationThenRetriesWithNewExecutionId() throws Exception {
+    void executesInProjectOrderWaitsAndStopsOnConfirmationThenRetriesWithNewExecutionId() throws Exception {
         Project project = existing();
         var first = requirement("a", "b");
         var second = requirement("c");
-        project.getRequirements().addAll(List.of(first, second));
+        project.getRequirements().addAll(List.of(second, first));
         var executor = new ManualExecutor();
         var service = service(mock(AgentRequirementPlanner.class), executor);
         try (var callers = Executors.newVirtualThreadPerTaskExecutor()) {
-            Future<List<Requirement>> call = callers.submit(() -> service.execTask(project, List.of(second, first)));
+            Future<List<Requirement>> call = callers.submit(() -> service.execTask(project));
             Invocation c = executor.next();
             assertTrue(c.content().startsWith("c"));
             assertEquals(TaskStatus.RUNNING, second.getTasks().getFirst().getStatus());
@@ -95,13 +95,13 @@ class ProjectUserifImplTest {
             assertEquals(TaskStatus.NEEDS_CONFIRMATION, first.getTasks().getFirst().getStatus());
             assertEquals(TaskStatus.PENDING, first.getTasks().get(1).getStatus());
             assertTrue(executor.calls.isEmpty());
-            assertEquals(List.of(second, first), service.execTask(project, List.of(second, first)));
+            assertEquals(List.of(second, first), service.execTask(project));
             assertTrue(executor.calls.isEmpty(), "未确认不能跳过原 Task 继续执行");
 
             String planningId = first.getTasks().getFirst().getId();
             first.setUserConfirmMsg("同意");
             first.getTasks().getFirst().setStatus(TaskStatus.PENDING);
-            Future<List<Requirement>> retry = callers.submit(() -> service.execTask(project, List.of(first)));
+            Future<List<Requirement>> retry = callers.submit(() -> service.execTask(project));
             Invocation repeated = executor.next();
             assertNotEquals(a.id(), repeated.id());
             assertTrue(repeated.memory().contains("同意"));
@@ -129,21 +129,21 @@ class ProjectUserifImplTest {
         var executor = new ManualExecutor();
         var service = service(mock(AgentRequirementPlanner.class), executor);
         executor.reject = true;
-        assertThrows(RejectedExecutionException.class, () -> service.execTask(project, List.of(requirement)));
+        assertThrows(RejectedExecutionException.class, () -> service.execTask(project));
         assertEquals(TaskStatus.PENDING, requirement.getTasks().getFirst().getStatus());
         assertNull(requirement.getTasks().getFirst().getResult());
         executor.reject = false;
         try (var callers = Executors.newVirtualThreadPerTaskExecutor()) {
-            var call = callers.submit(() -> service.execTask(project, List.of(requirement)));
+            var call = callers.submit(() -> service.execTask(project));
             executor.next().complete(false, false);
             call.get(5, TimeUnit.SECONDS);
             assertEquals(TaskStatus.FAILED, requirement.getTasks().getFirst().getStatus());
             assertEquals(TaskStatus.PENDING, requirement.getTasks().get(1).getStatus());
             assertTrue(executor.calls.isEmpty());
-            assertEquals(List.of(requirement), service.execTask(project, List.of(requirement)));
+            assertEquals(List.of(requirement), service.execTask(project));
             assertTrue(executor.calls.isEmpty(), "未重置失败 Task 不能继续执行");
             requirement.getTasks().getFirst().setStatus(TaskStatus.PENDING);
-            var retry = callers.submit(() -> service.execTask(project, List.of(requirement)));
+            var retry = callers.submit(() -> service.execTask(project));
             Invocation next = executor.next();
             assertTrue(next.memory().contains("fixture failure"));
             next.complete(true, false);
@@ -159,14 +159,18 @@ class ProjectUserifImplTest {
         project.getRequirements().add(requirement);
         var executor = new ManualExecutor();
         var service = service(mock(AgentRequirementPlanner.class), executor);
-        assertThrows(IllegalArgumentException.class, () -> service.execTask(project, List.of(requirement("foreign"))));
-        assertThrows(IllegalArgumentException.class, () -> service.execTask(project, List.of(requirement, requirement)));
+        requirement.getTasks().getFirst().setContent(" ");
+        assertThrows(IllegalArgumentException.class, () -> service.execTask(project));
+        requirement.getTasks().getFirst().setContent("a");
+        project.getRequirements().add(requirement);
+        assertThrows(IllegalArgumentException.class, () -> service.execTask(project));
+        project.getRequirements().removeLast();
         var duplicateOwner = new Requirement();
         duplicateOwner.getTasks().add(requirement.getTasks().getFirst());
         project.getRequirements().add(duplicateOwner);
-        assertThrows(IllegalArgumentException.class, () -> service.execTask(project, List.of(requirement)));
+        assertThrows(IllegalArgumentException.class, () -> service.execTask(project));
         project.setWorkingDirectory(Files.createDirectory(temp.resolve("outside")));
-        assertThrows(IllegalArgumentException.class, () -> service.execTask(project, List.of(requirement)));
+        assertThrows(IllegalArgumentException.class, () -> service.execTask(project));
         assertTrue(executor.calls.isEmpty());
     }
 
@@ -179,7 +183,7 @@ class ProjectUserifImplTest {
         var service = service(mock(AgentRequirementPlanner.class), executor);
         var finished = new CompletableFuture<Boolean>();
         Thread caller = Thread.ofVirtual().start(() -> {
-            service.execTask(project, List.of(requirement));
+            service.execTask(project);
             finished.complete(Thread.currentThread().isInterrupted());
         });
         Invocation invocation = executor.next();
@@ -194,7 +198,8 @@ class ProjectUserifImplTest {
 
     private ProjectUserifImpl service(AgentRequirementPlanner planner, AgentExecutor executor) {
         existingProjects.forEach(project -> project.setDevelopmentAgent(executor));
-        return new ProjectUserifImpl(new ProjectSettings(temp.resolve("projects")), ignored -> executor, planner);
+        return new ProjectUserifImpl(new ProjectSettings(temp.resolve("projects")), ignored -> executor, planner, new com.kk24426.zbagentwf.common.memory.MemoryStore(),
+                new com.kk24426.zbagentwf.agent.registry.RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp)));
     }
 
     @Test
@@ -248,6 +253,8 @@ class ProjectUserifImplTest {
         final BlockingQueue<Invocation> calls = new LinkedBlockingQueue<>();
         boolean reject;
         ManualExecutor() { super(new AgentBean()); }
+        @Override protected Prompt getDefluatPrompt() { return com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-default"); }
+        @Override protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-security"); }
         @Override public String exec(Project project, String content, String memory, AgentExecCallback callback) {
             if (reject) throw new RejectedExecutionException("fixture");
             String id = UUID.randomUUID().toString();

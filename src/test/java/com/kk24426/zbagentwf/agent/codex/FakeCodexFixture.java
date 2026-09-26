@@ -42,6 +42,7 @@ public class FakeCodexFixture {
         if (scenario.equals("flood")) System.err.print("password=fixture-secret\n" + "诊断".repeat(70000));
         else System.err.print("fixture diagnostic token=fixture-secret\n");
         String prompt = new String(System.in.readAllBytes(), StandardCharsets.UTF_8);
+        Files.writeString(Path.of("prompt-input.txt"), prompt, StandardCharsets.UTF_8);
         if (scenario.equals("auth-failure")) {
             System.err.println("fixture authentication failed token=fixture-secret");
             System.exit(7);

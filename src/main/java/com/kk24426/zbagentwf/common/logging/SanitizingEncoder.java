@@ -24,9 +24,11 @@ public class SanitizingEncoder extends PatternLayoutEncoder {
         String logger = event.getLoggerName();
         boolean protocol = logger.startsWith("org.apache.coyote.")
                 || logger.startsWith("org.apache.tomcat.util.http.");
-        boolean chatRoute = "CHAT".equals(event.getMDCPropertyMap().get("route"));
+        boolean projectRoute = "PROJECT".equals(event.getMDCPropertyMap().get("route"));
+        boolean chatRoute = "CHAT".equals(event.getMDCPropertyMap().get("route")) || projectRoute;
         boolean chatComponent = logger.startsWith("com.kk24426.zbagentwf.user.chat.")
-                || logger.startsWith("com.kk24426.zbagentwf.agent.chat.");
+                || logger.startsWith("com.kk24426.zbagentwf.agent.chat.")
+                || logger.startsWith("com.kk24426.zbagentwf.user.project.");
         // 聊天异常和 Spring 绑定诊断可能含任意自然语言输入，不能仅按凭据关键词脱敏。
         boolean chatDiagnostic = (chatRoute || chatComponent) && event.getThrowableProxy() != null
                 || chatRoute && logger.startsWith("org.springframework.");
@@ -36,7 +38,8 @@ public class SanitizingEncoder extends PatternLayoutEncoder {
                 && (logger.startsWith("com.kk24426.zbagentwf.agent.codex.")
                     || logger.startsWith("com.kk24426.zbagentwf.agent.registry.")
                     || logger.startsWith("com.kk24426.zbagentwf.agent.runtime.")
-                    || logger.startsWith("com.kk24426.zbagentwf.agent.project."));
+                    || logger.startsWith("com.kk24426.zbagentwf.agent.project.")
+                    || logger.startsWith("com.kk24426.zbagentwf.agent.prompt."));
         if (protocol || chatDiagnostic || agentDiagnostic) {
             // 构造独立安全事件，避免修改日志框架共享的原事件；保留定位所需时间、级别与 MDC。
             IThrowableProxy safeThrowable = wrap(event.getThrowableProxy());
@@ -50,7 +53,8 @@ public class SanitizingEncoder extends PatternLayoutEncoder {
             safe.setMDCPropertyMap(event.getMDCPropertyMap());
             safe.setLoggerContextRemoteView(event.getLoggerContextVO());
             safe.setMessage(protocol ? "HTTP 容器诊断：原始协议内容已隐藏。"
-                    : agentDiagnostic ? "Agent 组件诊断：原始内容已隐藏。" : "聊天请求诊断：原始内容已隐藏。");
+                    : agentDiagnostic ? "Agent 组件诊断：原始内容已隐藏。" : projectRoute || logger.startsWith("com.kk24426.zbagentwf.user.project.")
+                            ? "项目请求诊断：原始内容已隐藏。" : "聊天请求诊断：原始内容已隐藏。");
             event = safe;
         }
         // 最后对整个渲染结果再脱敏，覆盖格式化消息及异常链，不能只处理原始 message 模板。

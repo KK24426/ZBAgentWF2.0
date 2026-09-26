@@ -8,7 +8,7 @@ Project → List<Requirement> → List<RequirementTask>，均是独立 Java 类�
 
 | 类型 | 字段 |
 | --- | --- |
-| Project | String projectId、Path workingDirectory、List<Requirement> requirements；AgentExecutor planningAgent/developmentAgent/reviewAgent |
+| Project | String projectId、Path workingDirectory、List<Requirement> requirements；AgentExecutor planningAgent/developmentAgent/reviewAgent；Prompt projectPrompt |
 | Requirement | String userContent、agentUnderstanding、acceptanceCriteria、userConfirmMsg；List<RequirementTask> tasks |
 | RequirementTask | String id、content、acceptanceCriteria；TaskStatus status；AgentExecResult result |
 | common.agent.bean.AgentExecResult | String taskId、errorMessage、summary、confirmationMessage；boolean success、confirmationRequired；Long tokenCount |
@@ -20,11 +20,14 @@ RequirementTask.id 是规划任务标识，AgentExecResult.taskId 是一次执�
 
 ## 用户接口
 
-user.project.userif.ProjectUserif implements UserInterface：
+user.project.domain.ProjectDomain implements UserInterface：
 
-- Project newProject(String content, AgentBean planningAgent, AgentBean developmentAgent, AgentBean reviewAgent)：先解析三个模型，绑定到新项目后建立 UUID 目录并规划首批需求；旧无模型方法与无参 CodexRequirementPlanner 占位已删除。
+- Project newProject(String content, AgentBean planningAgent, AgentBean developmentAgent, AgentBean reviewAgent)：先解析三个模型，绑定到新项目后建立 UUID 目录并规划首批需求。
 - List<Requirement> createRequirements(Project project, String content)：成功后追加需求，返回本次新增需求及 Task。
-- List<Requirement> execTask(Project project, List<Requirement> requirements)：列表用于选定该项目内的执行范围；等待底层执行结束，返回含 Task 状态和结果的需求列表。
+- List<Requirement> execTask(Project project)：按该项目完整需求列表顺序执行，等待底层结束，返回含 Task 状态和结果的需求列表。旧二参数入口已删除。
+- Project newProject(String content)：使用显式配置的三个角色默认模型。
+- Project getProject(String projectId)：查询本次运行内登记的原对象；空白/未知ID抛IllegalArgumentException，不自动创建。
+- void addProjectPrompt(String projectId, String content)：非空白文本在现有项目规则后换行追加。
 
 项目具体实现规则见下文；包含关系仍通过 Bean 列表表达。
 
@@ -62,8 +65,8 @@ Java properties 使用标准转义规则；Windows 推荐正斜线，中文也�
 - agent.codex.CodexClient：二者共用的本机进程适配器。
 - agent.project.ProjectUserifImpl：项目目录、需求追加及等待异步结果的串行执行。
 
-Spring装配 AgentCatalog（AgentBase）、AgentExecFactoryImpl（AgentExecFactory）和 ProjectUserifImpl（ProjectUserif）。调用方用 getActiveAgent(brand,name,ver) 与 getExecutor(agent) 获取对应模型；键精确匹配，工厂复制元数据、复用同模型实例，不从品牌猜CLI，不自动回退。
-config/agents.properties 的 zb.agents[条目键] 使用 brand/name/ver/type/executable/model/timeout/enabled，所有字段显式配置，当前仅 codex；type表示执行实现，model为CLI参数，ver不代表CLI版本。示例见[agents.properties.example](../../config/agents.properties.example)。条目键按来源合并字段，JVM > 环境变量 > 文件；无配置允许Web启动，缺必填/重复三元组/非法值启动失败。无可用模型、未知模型或关闭工厂的获取用固定IllegalStateException；空/无效三元组用IllegalArgumentException。
+Spring装配 AgentCatalog（AgentBase）、AgentExecFactoryImpl（AgentExecFactory）和 ProjectUserifImpl（ProjectDomain）。调用方用 getActiveAgent(brand,name,ver) 与 getExecutor(agent) 获取对应模型；键精确匹配，工厂深拷贝元数据和嵌套规则、按实体身份绑定实例，不从品牌猜CLI，不自动回退。
+config/agents.properties 的 zb.agents[条目键] 使用 brand/name/ver/type/executable/model/timeout/enabled，所有字段显式配置，当前仅 codex；type表示执行实现，model为CLI参数，ver不代表CLI版本。示例见[agents.properties.example](../../config/agents.properties.example)。条目键按来源合并字段，JVM > 环境变量 > 文件；无配置允许Web启动，缺必填/重复三元组/非法值启动失败。不可用模型用 AgentConfigurationUnavailableException（IllegalStateException 子类）；无可用模型列表或工厂关闭仍用 IllegalStateException，空/无效三元组用 IllegalArgumentException。
 AgentCatalog初始化只检查文件可执行性，Windows只接受.exe，不运行CLI/鉴权；返回Bean副本。刷新只重查已加载配置中的文件状态；删除文件后刷新清除可用项，配置修改需要重启。已经取得的执行器若随后丢失CLI，按普通执行失败返回，不承诺实时可用性。
 Project保存三个AgentExecutor运行时引用；user接口类型依赖由用户明确批准，不保存线程/CLI参数/凭据到实体，也不承诺实体序列化或持久化。工厂统一拥有实例生命周期，调用方不能关闭共享实例。AgentRequirementPlanner使用当前工厂中与planningAgent同身份的规划适配器；跨工厂或自定义实例绑定无法规划时明确失败。reviewAgent当前仅绑定，网页聊天仍未接入。
 
@@ -79,14 +82,40 @@ getStderr 在受理后可查，最终回调前更新，执行中可能为空字�
 
 ## 项目具体行为
 
-newProject 验证非空内容，先通过工厂解析规划/开发/审核三个模型；解析失败不创建目录。全部成功后绑定实例，在 root/UUID 建目录并使用 planningAgent 规划首批需求。只有业务调用才创建尚不存在的根目录，初始化不创建。失败抛 IllegalStateException，仅尝试删除本次创建且仍为空的项目目录，绝不递归删除；保留根目录和外部写入的文件。
+newProject 完成首次规划后才登记到通用内存表。创建失败不登记。newProject 验证非空内容，先通过工厂解析规划/开发/审核三个模型；解析失败不创建目录。全部成功后绑定实例，在 root/UUID 建目录并使用 planningAgent 规划首批需求。只有业务调用才创建尚不存在的根目录，初始化不创建。普通创建失败抛 IllegalStateException；受理拒绝及配置未就绪保留原异常类型用于503映射。仅尝试删除本次创建且仍为空的项目目录，绝不递归删除；保留根目录和外部写入的文件。
 createRequirements 校验项目目录存在且真实路径位于根目录之下，完整规划成功后把列表替换为“旧需求 + 新需求”，原需求对象保留，返回本次新增列表；外部持有的旧列表引用不自动同步。这兼容 Bean setter 接受的不可变列表，失败不追加部分数据。
 规划只读分析原始内容和目录，返回理解、验收和按顺序执行的 Task；每条 userContent 保存本次完整输入。Java 生成 Task UUID，默认 PENDING、result=null。信息不足时 userConfirmMsg 为待确认事项且 tasks 为空，不自动发明业务规则。规划失败的受限脱敏 stderr 保留在 cause 的 suppressed 异常中供本地诊断，顶层错误仍固定；不得原样外传或用其它日志组件直接打印这段自由文本。
 
 execTask 开始前按对象身份检查需求归属，拒绝重复需求、共享 Task、无效 Task 标识/状态/内容及目录越界。同一实现实例对同一真实项目目录串行操作，锁的引用计数包含等待者，最后一位离开后回收；调用方不要在执行期间直接并发修改 Bean 或角色绑定。execTask在开始时快照developmentAgent，本轮不自动执行reviewAgent。
-按传入需求及 Task 列表顺序，只执行 PENDING。在本次范围内遇到既有 FAILED/NEEDS_CONFIRMATION 也立即返回，不能再次调用就自动绕过；SUCCEEDED 可跳过。提交时先快照上下文再置 RUNNING、清旧结果，受理失败恢复 PENDING 和旧结果并抛 RejectedExecutionException；受理后等待回调，写回结果并映射 SUCCEEDED、FAILED 或 NEEDS_CONFIRMATION。失败或待确认立即返回，后续任务不变。
+按项目需求及 Task 列表顺序，只执行 PENDING。在本次范围内遇到既有 FAILED/NEEDS_CONFIRMATION 也立即返回，不能再次调用就自动绕过；SUCCEEDED 可跳过。提交时先快照上下文再置 RUNNING、清旧结果，受理失败恢复 PENDING 和旧结果并抛 RejectedExecutionException；受理后等待回调，写回结果并映射 SUCCEEDED、FAILED 或 NEEDS_CONFIRMATION。失败或待确认立即返回，后续任务不变。
 调用方补充确认相关内容、将目标 Task 重置为 PENDING 后重试，保留规划 id，替换单次结果。上下文包含当前需求原始内容、理解、验收、确认相关内容，以及按规划任务和旧执行 ID 关联的先前摘要、确认问题、失败原因，在清旧结果前生成；简短答复也能关联原问题。不跨项目共享记忆。等待线程中断后仍等待已受理执行完成，再保留中断标志返回，不启动下一项，没有新增取消协议。
 
 ## 实现验证边界
 
-真实 Java fixture 子进程验证协议、中文 stdin/cwd、并发管道、非零退出、错误结果、确认、超时、回调一次、关闭及后代管道收尾；项目测试验证创建、追加、串行、停止、人工重试和数据隔离。fixture 不进入正式 JAR，完整 verify 继续覆盖 Web/JAR。未运行真实 Codex 登录、账号模型可用性或端到端模型验收，没有新增持久化、Git 操作、HTTP 路由或部署。
+真实 Java fixture 子进程验证协议、中文 stdin/cwd、并发管道、非零退出、错误结果、确认、超时、回调一次、关闭及后代管道收尾；项目测试验证创建、追加、串行、停止、人工重试和数据隔离。fixture 不进入正式 JAR，完整 verify 继续覆盖 Web/JAR。未运行真实 Codex 登录、账号模型可用性或端到端模型验收，没有新增持久化、业务 Git 操作或部署；项目 HTTP 入口按下文用户批准范围实现。
+
+## 内存登记及规则绑定
+
+2026-09-27用户批准：ProjectDomain替代原ProjectUserif，新增内存查询/项目规则追加、无参模型选择入口及项目Controller；以本节替代旧“同模型共享实例”的行为。
+common.memory.MemoryStore由Spring装配为单例。键是(namespace,id)二元组，值保存Java原引用；put同键替换，get需显式Class且返回Optional，类型错误抛IllegalArgumentException，值及Class不允许null，分类/ID不允许空白。remove只移除引用，不负责停止执行器或删除目录。无持久化、TTL或容量淘汰；不将唯一项目数据当成可丢弃缓存。服务重启后无法只凭ID还原对象。业务对象内部线程安全由调用者负责，不通过返回原引用授予并发修改权限。
+
+zb.agent-roles.<planning/development/review>.brand/name/ver与模型注册分开。任意可用模型能承担任意角色；完整显式选择优先，默认缺失/不完整在使用时抛AgentConfigurationUnavailableException，不选首个可用模型。默认在启动时读取，项目绑定固定，配置修改后重启，仅新建项目使用新默认。未知角色配置名视为配置错误。
+每个新项目对三角色分别创建独立AgentBean；角色规则由AgentBean.rolePrompt指定，未指定时从对应角色文件读取。工厂以对象身份缓存，实体/嵌套Prompt文本/Skill名称修改后再次getExecutor会拒绝；已绑定实例保留深拷贝。不同实体即使三元组和规则相同也不会共用执行器。共享4额度、诊断限制和工厂关闭规则不变；实例由工厂持有到应用关闭，不自动回收活动项目或执行器。
+
+PromptCatalog在启动阶段显式读取config/prompts中的default.txt、security.txt、planning.txt、development.txt、review.txt。UTF-8（接受BOM），无热加载；不存在/空白或以YOUR_开头的占位内容视为未配置，访问必需规则时抛AgentConfigurationUnavailableException；现有目录/文件不可读或UTF-8非法时启动失败。只读取固定名称，HTTP不能指定配置路径；真实规则被Git忽略，仓库只放.txt.example。
+AgentExecutor构造器只保存字段，getUserPrompt/getProjectPrompt为protected。AgentExecutorImpl提供显式initializePrompts(default,security)，保存文本快照且拒绝重复初始化；Codex执行器和独立规划器未初始化时均在进程启动前拒绝。规则按安全、通用、角色、用户、项目分段传入stdin，用户/项目规则可为空；项目对象的最新projectPrompt优先于构造时的项目规则。规划/执行在调用受理前生成快照，追加只影响后续调用，不改变进行中工作。分段文本不是操作系统权限保障，原sandbox与应用校验继续有效。
+Skill只保存skillName，不读取Skill文件，不自动安装或触发Skill执行。
+
+## 项目 HTTP 入口
+
+| 方法和路径 | JSON输入 | 成功响应 |
+| --- | --- | --- |
+| POST /api/projects | content；可选完整planningAgent/developmentAgent/reviewAgent三项，各仅brand/name/ver | 201 项目快照 |
+| GET/HEAD /api/projects/{projectId} | 无 | 200 项目快照；HEAD无正文 |
+| POST /api/projects/{projectId}/prompts | content | 204，无正文 |
+| POST /api/projects/{projectId}/requirements | content | 200 更新后项目快照 |
+| POST /api/projects/{projectId}/tasks/execute | 空对象 {} | 200 执行结束后的项目快照 |
+
+文本必须非空白，三个模型全给或全省略，不把部分null暗示为按角色补齐。未知项目404，不从请求反序列化Project，不接受目录、执行器或运行时规则对象。读取与域内修改按同一Project对象锁协调，快照复制后序列化；同项目同步执行期间查询/追加会等待，未引入进度流或取消功能。响应只含projectId和requirements，需求保留userContent/agentUnderstanding/acceptanceCriteria/userConfirmMsg/tasks，Task保留id/content/acceptanceCriteria/status/result，result沿用执行结果字段；不包含工作目录、执行器、模型配置、Prompt或stderr。模型生成的正文保持为业务文本，不等同于内部对象序列化。
+输入/JSON错误400；未知ID404；配置/模型未就绪和受理额度拒绝503；内部错误500。内部IllegalArgumentException不一概映射400。错误使用http.project.invalid/notFound/unavailable及既有http.internalError，通过MsgCatalog返回固定三语纯文本。GET的HEAD错误也无正文。Filter仅放行上述精确路由/方法，保留CSP、无缓存、请求编号和默认回环监听。日志使用PROJECT固定类别，不记录URL、ID、正文；项目异常及请求中的Spring诊断隐藏自由文本并保留完整类型、栈、cause和suppressed。
+没有新增项目网页、登录/权限模型、后台批次、真实数据库或真实模型验收；原聊天页面和/api/chat继续独立保持原行为。

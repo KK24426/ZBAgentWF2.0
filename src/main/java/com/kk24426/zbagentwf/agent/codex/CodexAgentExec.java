@@ -22,13 +22,13 @@ import com.kk24426.zbagentwf.common.agent.bean.Prompt;
 import com.kk24426.zbagentwf.common.logging.SecretRedactor;
 import com.kk24426.zbagentwf.common.project.bean.Project;
 import com.kk24426.zbagentwf.user.agent.userif.AgentExecCallback;
-import com.kk24426.zbagentwf.user.agent.userif.AgentExecutor;
+import com.kk24426.zbagentwf.agent.AgentExecutorImpl;
 
 /**
  * 工厂实例共享四个执行额度；诊断按共享资源的容量和保留时间查询。
  * 直接构造的低层实例拥有独立资源作用域，调用方必须 close。
  */
-public final class CodexAgentExec extends AgentExecutor implements AutoCloseable {
+public final class CodexAgentExec extends AgentExecutorImpl implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(CodexAgentExec.class);
     private final CodexClient client;
     private final Object lifecycle = new Object();
@@ -55,10 +55,12 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
     public String exec(Project project, String content, String memory, AgentExecCallback callback) {
         // 在受理前快照真实目录，避免异步线程读取到调用方随后修改的 Project 路径。
         // 此阶段失败统一同步拒绝，尚未启动工作，也不能触发完成回调。
+        String instructions;
         Path directory;
         try {
             Objects.requireNonNull(callback);
             Objects.requireNonNull(project);
+            instructions = instructionsFor(project);
             if (content == null || content.isBlank()) throw new IllegalArgumentException();
             directory = project.getWorkingDirectory().toRealPath();
             if (!Files.isDirectory(directory)) throw new IllegalArgumentException();
@@ -71,7 +73,7 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
             var ticket = resources.reserve(this);
             try {
                 Thread worker = Thread.ofVirtual().name("codex-exec-" + ticket.id()).unstarted(
-                        () -> execute(ticket, directory, content, memory, callback));
+                        () -> execute(ticket, directory, content, memory, instructions, callback));
                 ticket.attach(worker);
                 worker.start();
             }
@@ -84,7 +86,7 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
         }
     }
 
-    private void execute(ExecutionResources.Ticket ticket, Path directory, String content, String memory, AgentExecCallback callback) {
+    private void execute(ExecutionResources.Ticket ticket, Path directory, String content, String memory, String instructions, AgentExecCallback callback) {
         String id = ticket.id();
         String[] diagnostic = {""};
         AgentExecResult result = new AgentExecResult();
@@ -93,7 +95,7 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
             // 工厂可能在预留票据后、工作线程运行前关闭，此时按已受理执行失败完成回调。
             ticket.checkRunning();
             var input = CodexJson.JSON.createObjectNode().put("content", content).put("memory", memory);
-            String prompt = """
+            String prompt = instructions + """
                     执行以下 JSON 中 content 指定的任务，memory 仅为先前上下文。
                     遵守项目规则及既有权限；不要自行扩大需求、提交或推送代码。
                     按输出 schema 报告实际结果，不把未完成或工具错误报告为成功。

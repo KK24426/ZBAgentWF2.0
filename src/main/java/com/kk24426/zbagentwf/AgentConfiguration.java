@@ -13,6 +13,10 @@ import com.kk24426.zbagentwf.common.project.bean.ProjectSettings;
 import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
 
 import java.util.ArrayList;
+import java.nio.file.Path;
+import java.io.IOException;
+import com.kk24426.zbagentwf.common.memory.MemoryStore;
+import com.kk24426.zbagentwf.agent.prompt.PromptCatalog;
 import java.util.Map;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -33,15 +37,29 @@ public class AgentConfiguration {
         return new AgentCatalog(new ArrayList<>(definitions.values()));
     }
 
+    @Bean
+    PromptCatalog promptCatalog() throws IOException { return PromptCatalog.load(Path.of("config", "prompts")); }
+
+    @Bean
+    MemoryStore memoryStore() { return new MemoryStore(); }
+
+    @Bean
+    RoleAgentResolver roleAgentResolver(Environment environment, PromptCatalog prompts) {
+        var roles = Binder.get(environment).bind("zb.agent-roles", Bindable.mapOf(String.class, RoleAgentResolver.Selection.class))
+                .orElse(Map.of());
+        return new RoleAgentResolver(roles, prompts);
+    }
+
     @Bean(destroyMethod = "close")
-    AgentExecFactoryImpl agentExecFactory(AgentCatalog catalog) { return new AgentExecFactoryImpl(catalog); }
+    AgentExecFactoryImpl agentExecFactory(AgentCatalog catalog, PromptCatalog prompts) { return new AgentExecFactoryImpl(catalog, prompts); }
 
     @Bean
     AgentRequirementPlanner agentRequirementPlanner(AgentExecFactoryImpl factory) { return new AgentRequirementPlanner(factory); }
 
     @Bean
-    ProjectDomain projectDomain(ProjectSettings settings, AgentExecFactoryImpl factory, AgentRequirementPlanner planner) {
-        return new ProjectUserifImpl(settings, factory, planner);
+    ProjectDomain projectDomain(ProjectSettings settings, AgentExecFactoryImpl factory, AgentRequirementPlanner planner,
+            MemoryStore memory, RoleAgentResolver roles) {
+        return new ProjectUserifImpl(settings, factory, planner, memory, roles);
     }
 
     @Bean

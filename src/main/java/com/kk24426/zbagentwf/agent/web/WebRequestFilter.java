@@ -3,7 +3,7 @@
  * 更新日期：2026-09-27
  * 做 成 者：zebiao
  * 版    本：v0.3
- * 功能概要：限制首页和聊天路由访问面，记录脱敏请求诊断并隐藏错误详情。
+ * 功能概要：限制首页、聊天和项目路由访问面，记录脱敏请求诊断并隐藏错误详情。
  */
 package com.kk24426.zbagentwf.agent.web;
 
@@ -27,7 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/** 仅开放固定资源及单次聊天路由；其它入口仍需用户批准。 */
+/** 仅开放固定资源、聊天及已批准的项目路由；其它入口仍需用户批准。 */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class WebRequestFilter extends OncePerRequestFilter {
@@ -52,7 +52,12 @@ public class WebRequestFilter extends OncePerRequestFilter {
         String method = Set.of("GET", "HEAD", "POST").contains(request.getMethod()) ? request.getMethod() : "OTHER";
         String path = request.getRequestURI();
         boolean chat = "/api/chat".equals(path);
-        String route = chat ? "CHAT" : Set.of("/", "/index.html").contains(path) ? "HOME"
+        boolean projectCollection = "/api/projects".equals(path);
+        boolean projectItem = path.matches("/api/projects/[A-Za-z0-9-]+");
+        boolean projectAction = path.matches("/api/projects/[A-Za-z0-9-]+/(prompts|requirements|tasks/execute)");
+        boolean project = projectCollection || projectItem || projectAction;
+        boolean write = chat || projectCollection || projectAction;
+        String route = project ? "PROJECT" : chat ? "CHAT" : Set.of("/", "/index.html").contains(path) ? "HOME"
                 : PATHS.contains(path) ? "ASSET" : "OTHER";
         MDC.put("route", route);
         Locale locale = locales.resolveLocale(request);
@@ -65,12 +70,12 @@ public class WebRequestFilter extends OncePerRequestFilter {
             response.setHeader("Cache-Control", "no-store");
             if (LogFailureMonitor.hasFailed()) {
                 reject(response, 503, "http.unavailable", method, locale);
-            } else if (chat ? !method.equals("POST") : !Set.of("GET", "HEAD").contains(method)) {
-                response.setHeader("Allow", chat ? "POST" : "GET, HEAD");
+            } else if (write ? !method.equals("POST") : !Set.of("GET", "HEAD").contains(method)) {
+                response.setHeader("Allow", write ? "POST" : "GET, HEAD");
                 reject(response, 405, "http.methodNotAllowed", method, locale);
-            } else if (!chat && !PATHS.contains(path)) {
+            } else if (!chat && !project && !PATHS.contains(path)) {
                 reject(response, 404, "http.notFound", method, locale);
-            } else if (chat && !isJson(request.getContentType())) {
+            } else if (write && !isJson(request.getContentType())) {
                 // consumes 匹配失败时 Controller 尚未选中，在精确路由边界返回固定错误。
                 reject(response, 415, "http.jsonRequired", method, locale);
             } else {

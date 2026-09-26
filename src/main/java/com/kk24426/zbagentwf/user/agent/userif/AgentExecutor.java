@@ -18,12 +18,6 @@ import com.kk24426.zbagentwf.user.UserInterface;
 public abstract class AgentExecutor implements UserInterface {
 	private final AgentBean agent;
 
-	/** 所有Agent执行时的默认规则 */
-	private Prompt defluatPrompt;
-
-	/** 安全相关的规则 */
-	private Prompt securityPrompt;
-
 	/** 用户配置的提示词 */
 	private Prompt userPrompt;
 
@@ -35,10 +29,6 @@ public abstract class AgentExecutor implements UserInterface {
 		this.agent = agent;
 		this.userPrompt = null;
 		this.projectPrompt = null;
-		if (defluatPrompt == null)
-			defluatPrompt = getDefluatPrompt();
-		if (securityPrompt == null)
-			securityPrompt = getSecurityPrompt();
 	}
 
 	/**
@@ -52,13 +42,9 @@ public abstract class AgentExecutor implements UserInterface {
 		this.agent = agent;
 		this.userPrompt = userPrompt;
 		this.projectPrompt = projectPrompt;
-		if (defluatPrompt == null)
-			defluatPrompt = getDefluatPrompt();
-		if (securityPrompt == null)
-			securityPrompt = getSecurityPrompt();
 	}
 
-	private Prompt getUserPrompt() {
+	protected Prompt getUserPrompt() {
 		return userPrompt;
 	}
 
@@ -66,7 +52,7 @@ public abstract class AgentExecutor implements UserInterface {
 		this.userPrompt = userPrompt;
 	}
 
-	private Prompt getProjectPrompt() {
+	protected Prompt getProjectPrompt() {
 		return projectPrompt;
 	}
 
@@ -75,12 +61,12 @@ public abstract class AgentExecutor implements UserInterface {
 	}
 
 	/**
-	 * 通过Prompt配置文件获取默认的提示词
+	 * 读取显式初始化后的默认提示词；不得在 getter 中加载文件
 	 */
 	protected abstract Prompt getDefluatPrompt();
 
 	/**
-	 * 通过Prompt配置文件获取安全相关的提示词
+	 * 读取显式初始化后的安全提示词；不得在 getter 中加载文件
 	 */
 	protected abstract Prompt getSecurityPrompt();
 

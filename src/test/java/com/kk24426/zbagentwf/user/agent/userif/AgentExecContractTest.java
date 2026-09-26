@@ -9,6 +9,8 @@ package com.kk24426.zbagentwf.user.agent.userif;
 
 import static org.junit.jupiter.api.Assertions.*;
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
+import com.kk24426.zbagentwf.common.agent.bean.Prompt;
+import com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum;
 import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
 import com.kk24426.zbagentwf.common.project.bean.Project;
 import com.kk24426.zbagentwf.common.project.bean.Requirement;
@@ -78,23 +80,31 @@ class AgentExecContractTest {
     @Test
     void projectPortCarriesProjectAndSelectedRequirements() {
         var port = new ProjectDomain() {
-            @Override public Project newProject(String content, AgentBean planning, AgentBean development, AgentBean review) { return project(content); }
+            private final Map<String, Project> projects = new HashMap<>();
+            @Override protected AgentBean getAgent(AgentTypeEnum role) { return new AgentBean(); }
+            @Override public Project getProject(String id) { return projects.get(id); }
+            @Override public void addProjectPrompt(String id, String content) {
+                projects.get(id).setProjectPrompt(com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt(content));
+            }
+            @Override public Project newProject(String content, AgentBean planning, AgentBean development, AgentBean review) { var p = project(content); projects.put(content, p); return p; }
             @Override public List<Requirement> createRequirements(Project project, String content) {
                 var requirement = new Requirement();
                 requirement.setUserContent(content);
                 project.getRequirements().add(requirement);
                 return project.getRequirements();
             }
-            @Override public List<Requirement> execTask(Project project, List<Requirement> requirements) {
-                assertTrue(project.getRequirements().containsAll(requirements));
-                return requirements;
+            @Override public List<Requirement> execTask(Project project) {
+                return project.getRequirements();
             }
         };
         assertInstanceOf(UserInterface.class, port);
         Project project = port.newProject("项目", new AgentBean(), new AgentBean(), new AgentBean());
         var requirements = port.createRequirements(project, "需求");
         assertSame(project.getRequirements(), requirements);
-        assertSame(requirements, port.execTask(project, requirements));
+        assertSame(project, port.getProject("项目"));
+        port.addProjectPrompt("项目", "项目规则");
+        assertEquals("项目规则", project.getProjectPrompt().getPrompt());
+        assertSame(requirements, port.execTask(project));
     }
 
     private static Project project(String id) {
@@ -112,6 +122,8 @@ class AgentExecContractTest {
         private boolean reject;
 
         private ManualExecutor(AgentBean agent) { super(agent); }
+        @Override protected Prompt getDefluatPrompt() { return com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-default"); }
+        @Override protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-security"); }
 
         @Override
         public String exec(Project project, String content, String memory, AgentExecCallback callback) {

@@ -63,7 +63,6 @@ public abstract class ProjectDomain implements UserInterface {
 	 * 等待底层异步执行结束后汇总结果；需要确认同样代表该次底层执行已结束。
 	 *
 	 * @param project      本次执行所属项目及工作目录
-	 * @param requirements 从该项目中选定的本次需求范围，其中 Task 均属于对应需求
 	 * @return 带有 Task 状态和执行结果的需求列表，不是异步批次标识
 	 */
 	public abstract List<Requirement> execTask(Project project);

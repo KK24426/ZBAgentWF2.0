@@ -18,6 +18,6 @@ public final class AgentRequirementPlanner {
     public AgentRequirementPlanner(AgentExecFactoryImpl factory) { this.factory = Objects.requireNonNull(factory); }
     /** 以项目绑定的实例选择专用规划协议；普通执行结果摘要不能作为需求列表解析。 */
     public List<Requirement> plan(Project project, String content) {
-        return factory.plannerFor(project.getPlanningAgent()).plan(project.getWorkingDirectory(), content);
+        return factory.plannerFor(project.getPlanningAgent()).plan(project, content);
     }
 }

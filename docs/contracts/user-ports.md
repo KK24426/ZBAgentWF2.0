@@ -21,7 +21,7 @@
 | ver | 具体版本 | getVer / setVer |
 
 三个属性相互独立，默认 null；getter 返回 String，setter 接受 String 并返回 void。允许 null、空字符串、中文和空白字符，原样存取，不增加校验、规范化或默认值。
-不增加业务字段、构造参数要求、equals/hashCode/toString 或新的依赖；后续字段含义及业务约束仍由用户定义。
+用户于2026-09-27新增rolePrompt（Prompt）和skill（Skill），已补标准getter/setter。Prompt.prompt与Skill.skillName原样存取、默认null，无自动读取/执行。工厂在绑定时复制这些嵌套值，规则和身份语义见[项目契约](./project-agent.md)。不增加equals/hashCode/toString。
 
 ## 验证边界
 

@@ -7,7 +7,7 @@
  */
 package com.kk24426.zbagentwf.common.agent.bean;
 
-/** 普通数据对象；三个属性独立保存，允许 null 和空字符串，不校验或转换输入。 */
+/** 普通数据对象；属性独立保存，允许 null 和空字符串，不校验或转换输入。 */
 public class AgentBean {
 	/** Agent 模型提供方，如 ChatGPT、Claude、Deepseek 等。 */
 	private String brand;
@@ -46,4 +46,8 @@ public class AgentBean {
 	public void setVer(String ver) {
 		this.ver = ver;
 	}
+    public Prompt getRolePrompt() { return rolePrompt; }
+    public void setRolePrompt(Prompt rolePrompt) { this.rolePrompt = rolePrompt; }
+    public Skill getSkill() { return skill; }
+    public void setSkill(Skill skill) { this.skill = skill; }
 }

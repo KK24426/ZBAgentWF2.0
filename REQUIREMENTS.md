@@ -3,12 +3,12 @@
 ## 当前范围
 单 Maven JAR 工程；Java 26、Spring Boot 4.1.1、MyBatis Starter 4.1.0。
 启动入口初始化日志、读取必填项目根目录配置并启动 Spring Web，扫描 user/agent/common，持续运行。
-当前有简单首页及单次聊天调用骨架；配置驱动的模型注册、执行器工厂与项目三角色绑定已由 Spring 装配。网页聊天仍未接入；业务表和持久化未实现，原应用 CLI 已移除。
+当前有简单首页及单次聊天调用骨架；配置驱动的模型注册、执行器工厂与项目三角色绑定已由 Spring 装配。已补充项目 HTTP 操作、内存登记、角色默认选择和提示词配置；网页聊天仍未接入；业务表和持久化未实现，原应用 CLI 已移除。
 
 ## 用户骨架与最小补充
 
 用户已提供 AgentBean、UserInterface、AgentBase、UserService 及项目/执行契约；实现进度见下文，真实模型账号验收仍未运行。
-AgentBean 保留 brand/name/ver 三个私有 String 属性，提供标准 getter/setter 和无参构造；默认 null，允许 null、空字符串及中文，原样存取、不校验、不设置默认值。
+AgentBean 保存 brand/name/ver、rolePrompt 和 skill，Prompt 保存 prompt 文本、Skill 保存 skillName；均为普通 Bean，原字段原样存取、默认 null。Skill 名称不会触发自动安装或调用。
 UserInterface 是由 UserImpl 更名的公共空父接口，用户接口通过 extends 继承；不新增业务方法。
 AgentBase 位于 user.agent.userif，声明列表、brand/name/ver 精确查询与刷新；agent.registry.AgentCatalog 保存配置和本机文件可执行性快照，返回防御性复制的 Bean。UserService 保留原占位行为。
 验收包括属性独立读写、边界值、父接口继承实现关系，以及既有 Spring 和真实 Web JAR 回归；测试样例不进入正式 JAR。
@@ -17,21 +17,21 @@ AgentBase 位于 user.agent.userif，声明列表、brand/name/ver 精确查询�
 ## 项目、需求与 Task
 
 Project 包含多条 Requirement，每条 Requirement 包含多个 RequirementTask，均为独立普通 Java Bean；无父对象反向引用、数据库外键或自动业务校验。
-Project 保存 projectId、Path workingDirectory、requirements，以及 planningAgent/developmentAgent/reviewAgent 三个 AgentExecutor 运行时引用；Requirement 保存 userContent、agentUnderstanding、acceptanceCriteria、tasks、userConfirmMsg。
+Project 保存 projectId、Path workingDirectory、requirements，projectPrompt，以及 planningAgent/developmentAgent/reviewAgent 三个 AgentExecutor 运行时引用；Requirement 保存 userContent、agentUnderstanding、acceptanceCriteria、tasks、userConfirmMsg。
 两个列表默认各实例独立的空列表，setter 原样赋值。RequirementTask 保存 id、content、acceptanceCriteria、status、result；默认 PENDING。
 TaskStatus 为 PENDING、RUNNING、SUCCEEDED、FAILED、NEEDS_CONFIRMATION，普通 Bean 不自动转换状态；项目实现按下述执行规则更新。
 规划任务 id 与单次执行 taskId 区分；AgentExecResult 保存 taskId、success、errorMessage、Long tokenCount、summary、confirmationRequired、String confirmationMessage。token 数未知时 null。
 AgentExecutor 保存 final 模型引用并提供 protected getter；exec(Project, content, memory, callback) 异步受理后返回 String 执行标识，最终 onCompleted 回调一次；提交失败同步抛 RejectedExecutionException 且不回调。getStderr(taskId) 按执行读取诊断。
 成功 success=true、confirmationRequired=false；普通失败两者 false；需要确认 success=false、confirmationRequired=true，本次执行结束，答复后重新提交取得新标识。不增加暂停恢复或取消接口。
-ProjectUserif 的 newProject(content, planningAgent, developmentAgent, reviewAgent) 接受三个 AgentBean、返回绑定执行器的 Project；旧无模型入口已删除。createRequirements(project, content) 返回需求列表，execTask(project, requirements) 等待底层结束并返回带 Task 状态和结果的需求列表；列表参数选定项目内的执行范围。
-用户进一步批准先接入 Codex：newProject 使用 UUID，目录为 root/UUID，创建后规划首批需求；createRequirements 完整规划成功后追加，返回本次新增列表。execTask 按所选需求和 Task 顺序串行，只执行 PENDING；遇到新产生或既有的失败/待确认 Task 都立即返回，其余 PENDING 保持不变。重试由调用者补充确认相关内容并手动重置 PENDING，新执行标识替换单次结果，规划 id 不变；提交前快照旧确认问题、失败原因及摘要，以便新会话理解答复。
+ProjectDomain 的 newProject(content, planningAgent, developmentAgent, reviewAgent) 接受显式选择，newProject(content) 使用三角色默认配置。getProject(projectId) 取回本次运行内原对象，addProjectPrompt(projectId, content) 追加规则。createRequirements(project, content) 返回新增需求，execTask(project) 按项目完整需求顺序执行并等待结果；旧二参数入口已删除。
+用户进一步批准先接入 Codex：newProject 使用 UUID，目录为 root/UUID，创建后规划首批需求；createRequirements 完整规划成功后追加，返回本次新增列表。execTask 按项目需求和 Task 顺序串行，只执行 PENDING；遇到新产生或既有的失败/待确认 Task 都立即返回，其余 PENDING 保持不变。重试由调用者补充确认相关内容并手动重置 PENDING，新执行标识替换单次结果，规划 id 不变；提交前快照旧确认问题、失败原因及摘要，以便新会话理解答复。
 
 ## 模型注册、工厂与项目角色
 
 config/agents.properties 通过 Spring 启动导入，真实文件忽略、占位示例入仓。zb.agents[条目键] 包含 brand/name/ver/type/executable/model/timeout/enabled，字段全部显式配置；仅 type=codex 已实现。模型三元组精确匹配、必填、重复拒绝，普通 AgentBean 的原样存取契约不变。CLI路径、实际模型参数和单次超时独立于模型元数据。
-条目按键合并配置来源，支持 JVM > 环境变量 > 文件的字段覆盖；配置错误导致启动失败。无配置或空表保留 Web 启动能力，查询/刷新无可用项、未知/禁用模型明确失败，不选择默认模型。初始化只检查配置文件路径是否为可执行普通文件，Windows要求.exe，不执行CLI或鉴权；“可用”不等于账号模型已验收。refreshAgentList 重新检查已加载配置的文件状态，配置修改后重启。
-AgentExecFactoryImpl 按不可变三元组复用 CodexAgentExec，防止修改入参 Bean 影响缓存；工厂负责生命周期。AgentRequirementPlanner 将项目 planningAgent 与同工厂的只读规划适配器关联，业务调用方无需依赖 Codex 类；手工替换为其它工厂/自定义规划实例会明确失败。
-newProject 三个模型全部解析成功后才创建 root/UUID，绑定规划/开发/审核执行器并规划首批需求；createRequirements 使用 planningAgent，execTask 使用 developmentAgent；reviewAgent 仅绑定，不自动增加审核流程。相同模型可被多个角色和项目复用，需求/任务与上下文仍分别归属项目。Project 的执行器引用不承诺序列化或持久化，不自行关闭共享实例。
+条目按键合并配置来源，支持 JVM > 环境变量 > 文件的字段覆盖；配置错误导致启动失败。无配置或空表保留 Web 启动能力，查询/刷新无可用项、未知/禁用模型明确失败，不自动挑选替代模型。角色默认值必须单独显式配置。初始化只检查配置文件路径是否为可执行普通文件，Windows要求.exe，不执行CLI或鉴权；“可用”不等于账号模型已验收。refreshAgentList 重新检查已加载配置的文件状态，配置修改后重启。
+AgentExecFactoryImpl 按 AgentBean 对象身份绑定 CodexAgentExec，同一未修改实体复用、不同实体独立；深拷贝元数据/角色提示词/Skill 名称，原实体修改后再次获取明确拒绝。工厂负责生命周期。AgentRequirementPlanner 将项目 planningAgent 与同工厂的只读规划适配器关联，业务调用方无需依赖 Codex 类；手工替换为其它工厂/自定义规划实例会明确失败。
+newProject 三个模型全部解析成功后才创建 root/UUID，绑定规划/开发/审核执行器并规划首批需求；createRequirements 使用 planningAgent，execTask 使用 developmentAgent；reviewAgent 仅绑定，不自动增加审核流程。任意可用模型可承担任意角色，但不同项目/角色使用独立 Agent 实体和执行器绑定；上下文分别归属项目。Project 的执行器引用不承诺序列化或持久化，不自行关闭共享实例。
 执行继续采用结构化 command/args/stdin、Codex JSONL及输出schema；规划read-only，开发workspace-write，不管理CLI登录或改变已有规则。项目路径归属、完整规划后追加、失败停止和人工重试规则不变；目录锁计入持有者和等待者，最后一位离开后回收。
 
 ## Agent 资源与验证
@@ -51,7 +51,7 @@ ProjectConfiguration 在根包初始化只读 ProjectSettings；ProjectUserifImp
 
 ## Web
 显式提供项目根目录后无参数启动服务，默认 127.0.0.1:8080；远程仅通过 SSH 隧道访问，不开放公网。
-首页 /、/index.html 及固定资源 /app.css、/favicon.svg、/chat.js 接受 GET/HEAD；/api/chat 仅接受 POST。
+首页 /、/index.html 及固定资源 /app.css、/favicon.svg、/chat.js 接受 GET/HEAD；/api/chat 仅接受 POST。项目五个精确入口见[项目与执行契约](docs/contracts/project-agent.md#项目-http-入口)，其余路径不放行。
 未批准的路径/方法继续拒绝；聊天错误响应为固定文字，不暴露异常或原始输入。
 stdout 不输出业务结果，stderr 为错误及运行诊断，异常保留脱敏后的完整调用链。
 启动失败退出1、命令参数错误退出2；正常运行不主动退出，正常停止有20秒优雅关闭窗口。
@@ -94,3 +94,11 @@ mysql-it 仅接受回环地址 zbagentwf_test 和独立环境变量，可经 SSH
 真实 Codex 验收、审核 Agent 业务流程；后续业务表结构、事务边界及会话功能；
 生产环境与权限模型（当前仅批准远程测试环境、专用测试库和受限账号）；
 日志历史保留策略若需要自动清理，由后续任务定义。
+
+## 内存项目、角色默认值与提示词
+
+common.memory.MemoryStore 是应用单例，以分类+ID保存任意非空对象引用，支持 put/get(Class)->Optional/remove；空键或类型错误明确失败，无TTL、自动淘汰或持久化。Project 完整创建成功后登记在 project 分类；未知/空白 ID 抛 IllegalArgumentException，不自动重建；重启后原数据无法恢复。登记后 projectId 不应改变。
+zb.agent-roles.<planning/development/review>.brand/name/ver 提供显式默认选择；用户完整选择三个模型时优先使用其选择。默认缺失/不完整时仅创建失败，Web仍可启动。默认配置在启动时快照，新项目绑定后不会自动换模型。
+config/prompts/{default,security,planning,development,review}.txt 为 UTF-8 规则，由用户提供。启动显式加载，缺失/空白/占位规则在使用时拒绝；非法UTF8/不可读文件使初始化失败。构造器和getter不读文件，也不调用子类初始化方法。执行器构造完成后显式初始化通用/安全规则，缺规则不能启动子进程；规划与开发都注入分段规则，项目追加规则在下一次调用生效，已受理调用保留快照。Skill本次仅保存名称。具体规则内容不由应用自动生成，也不替代原进程权限限制。
+ProjectController -> ProjectService -> ProjectDomain，后续请求仅提交项目ID及文本，不接受工作目录或执行器。响应为项目ID、需求、Task和结果的不可变快照，同项目修改/复制使用对象锁；目录锁继续保护实际目录。错误区分400/404/503/500并通过msg返回三语固定提示；PROJECT异常与Spring绑定日志隐藏自由文本并保留完整调用链。未增加项目页面、数据库、真实模型验收或部署。
+验收覆盖通用异类存储、原对象取回、失败不登记、角色任意绑定与显式选择优先、规则缺失/变更/嵌套隔离、并发快照、五个HTTP操作及真实JAR无配置错误路径。

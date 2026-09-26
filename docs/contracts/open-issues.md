@@ -8,3 +8,5 @@
 
 已确定：单工程、user/agent/common、Spring Boot Web、简单首页及单次聊天骨架（仅测试替身验证）、移除CLI、MyBatis/MySQL、独立运行日志、远程专用测试库和受限账号、SSH隧道访问。
 已确定：Project→Requirement→RequirementTask、一对多包含、单次异步执行与最终回调、待确认结束后重提、项目级等待结果、必填根目录。已批准并实现显式组合的 Codex 执行/只读规划、UUID 项目目录与首批需求、追加需求、串行只执行 PENDING、失败或待确认停止、调用方人工重置后重试。配置注册、按版本选择、工厂与三角色项目装配已实现，详见[项目与执行契约](./project-agent.md)。
+
+已确定：通用内存登记、ProjectDomain按ID查询、每Agent实体独立执行器、三角色显式默认配置、外部五类提示词及项目HTTP操作，详见项目与执行契约。实际规则文本由用户提供；Skill自动发现/执行与重启恢复仍未实现。

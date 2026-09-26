@@ -9,3 +9,15 @@ zb.agents[0].model=YOUR_CODEX_MODEL_SELECTOR
 # 单次调用超时示例，不是应用关闭的20秒预算。
 zb.agents[0].timeout=30m
 zb.agents[0].enabled=false
+
+# 未选择模型时使用的角色默认值；任意可用模型可承担任意角色。
+# 使用前取消注释并填写已注册模型的精确三元组；也可让请求显式提供完整三个选择。
+# zb.agent-roles.planning.brand=YOUR_BRAND
+# zb.agent-roles.planning.name=YOUR_NAME
+# zb.agent-roles.planning.ver=YOUR_VER
+# zb.agent-roles.development.brand=YOUR_BRAND
+# zb.agent-roles.development.name=YOUR_NAME
+# zb.agent-roles.development.ver=YOUR_VER
+# zb.agent-roles.review.brand=YOUR_BRAND
+# zb.agent-roles.review.name=YOUR_NAME
+# zb.agent-roles.review.ver=YOUR_VER

@@ -9,15 +9,15 @@ stderr包含日志、固定错误提示及脱敏异常链，stdout无业务输�
 
 ## HTTP入口
 
-GET/HEAD访问 /、/index.html、/app.css、/favicon.svg、/chat.js；POST /api/chat 见聊天契约。其余未批准路径/方法仍拒绝。
+GET/HEAD访问 /、/index.html、/app.css、/favicon.svg、/chat.js；POST /api/chat 见聊天契约。项目五个精确入口见[项目HTTP契约](./project-agent.md#项目-http-入口)；其余路径/方法仍拒绝。
 错误体为按请求语言查询的固定文字，HEAD无响应体；每次请求返回服务端生成的X-Request-ID。页面与接口的消息文件、配置和语言选择见[本地化契约](./msg.md)。
 页面包含CSP、nosniff、no-referrer保护，资源不依赖外部站点，禁用缓存。
 请求日志只含白名单方法、固定类别、状态和耗时；不记录原始URL/查询/正文。
 Tomcat协议组件的解析前诊断采用固定摘要，异常类型/堆栈/cause/suppressed保留、原始消息隐藏；解析前拒绝的请求没有应用requestId。
 运行期检测到日志故障后，后续请求503；恢复服务需解决日志故障并重启。
-当前无登录系统，默认回环监听；本轮仅批准单次聊天骨架API，公网开放和其它业务路由另行批准。
+当前无登录系统，默认回环监听；已批准单次聊天及项目创建/查询/提示词/需求/执行入口，公网开放和其它业务路由仍需另行批准。
 
-聊天请求内Spring诊断及聊天异常隐藏消息原文并保留完整调用链；无请求上下文的聊天组件异常也适用，普通启动/数据库日志不受影响。
+聊天和项目请求内Spring诊断及相关异常隐藏消息原文并保留完整调用链；无请求上下文的聊天组件异常也适用，普通启动/数据库日志不受影响。
 
 ## 配置入口
 | 配置 | 来源与默认 |
@@ -46,3 +46,5 @@ MyBatis原生日志关闭，诊断拦截器只记录statement ID、操作、耗�
 
 ZbAgentWfApplication、ProjectConfiguration、AgentConfiguration、ProjectSettings、WebRequestFilter、common.logging公开类型和MySqlConfiguration属于已批准的技术基础能力，不构成用户业务接口。2026-09-27批准MsgConfiguration、common.msg.MsgCatalog、agent.web.MsgLocaleResolver/HomePageController作为本地化技术能力；没有新增业务API。
 后续用户业务接口、DTO、schema、事务变化在本文同步索引，不能由文档先发明契约。
+
+2026-09-27另行批准ProjectController/Service、ProjectDomain适配、common.memory.MemoryStore、ProjectHttp快照及Prompt/Skill原字段读写。角色映射和规则文件契约详见[项目与执行契约](./project-agent.md#内存登记及规则绑定)。

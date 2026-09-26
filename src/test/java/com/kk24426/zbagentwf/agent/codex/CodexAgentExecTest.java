@@ -89,7 +89,7 @@ class CodexAgentExecTest {
     @Test
     void timeoutKillsProcessAndCleansSchemaEvenWhenStdinIsNotConsumed() throws Exception {
         Project project = project("timeout");
-        try (var executor = new CodexAgentExec(new AgentBean(), CodexFixtureSupport.client("no-input", Duration.ofSeconds(2)))) {
+        try (var executor = CodexFixtureSupport.ready(new CodexAgentExec(new AgentBean(), CodexFixtureSupport.client("no-input", Duration.ofSeconds(2))))) {
             var done = new CompletableFuture<AgentExecResult>();
             executor.exec(project, "x".repeat(1024 * 1024), "", done::complete);
             assertFalse(done.get(10, TimeUnit.SECONDS).isSuccess());
@@ -149,7 +149,7 @@ class CodexAgentExecTest {
         } finally { executor.close(); }
     }
 
-    private CodexAgentExec executor(String scenario) { return new CodexAgentExec(new AgentBean(), CodexFixtureSupport.client(scenario)); }
+    private CodexAgentExec executor(String scenario) { return CodexFixtureSupport.ready(new CodexAgentExec(new AgentBean(), CodexFixtureSupport.client(scenario))); }
 
     private AgentExecResult submit(CodexAgentExec executor, Project project) throws Exception {
         var done = new CompletableFuture<AgentExecResult>();

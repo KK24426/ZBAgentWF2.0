@@ -38,7 +38,8 @@ public final class MsgCatalog {
             "chat.validation.tooLong", "chat.error.400", "chat.error.405", "chat.error.415", "chat.error.503",
             "chat.error.generic", "chat.error.timeout", "chat.error.connection",
             "http.unavailable", "http.methodNotAllowed", "http.notFound", "http.jsonRequired",
-            "http.internalError", "http.chat.invalid", "http.chat.unavailable");
+            "http.internalError", "http.chat.invalid", "http.chat.unavailable",
+            "http.project.invalid", "http.project.notFound", "http.project.unavailable");
 
     private final Map<String, Map<String, String>> messages;
 

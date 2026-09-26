@@ -8,6 +8,7 @@
 package com.kk24426.zbagentwf.agent.registry;
 
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
+import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
 import com.kk24426.zbagentwf.user.agent.userif.AgentBase;
 import java.nio.file.Files;
 import java.util.*;
@@ -68,7 +69,7 @@ public final class AgentCatalog extends AgentBase {
     AgentDefinition require(AgentDefinition.Key key) {
         // 精确匹配失败就报告不可用，不按品牌、名称或旧版本降级选择其它注册。
         AgentDefinition value = available.get(key);
-        if (value == null) throw new IllegalStateException("指定 Agent 未注册、未启用或本机不可用。");
+        if (value == null) throw new AgentConfigurationUnavailableException();
         return value;
     }
 }

@@ -19,7 +19,7 @@ class CodexRequirementPlannerTest {
 
     @Test
     void createsMultipleRequirementsAndTasksPreservingOriginalInput() {
-        var planner = new CodexRequirementPlanner(CodexFixtureSupport.client("success"));
+        var planner = CodexFixtureSupport.planner(CodexFixtureSupport.client("success"));
         String content = "  用户原始输入\n中文  ";
         var requirements = planner.plan(temp, content);
         assertEquals(2, requirements.size());
@@ -37,13 +37,13 @@ class CodexRequirementPlannerTest {
 
     @Test
     void rejectsPartialOrInvalidPlanning() {
-        var planner = new CodexRequirementPlanner(CodexFixtureSupport.client("bad-plan"));
+        var planner = CodexFixtureSupport.planner(CodexFixtureSupport.client("bad-plan"));
         assertThrows(IllegalStateException.class, () -> planner.plan(temp, "原始需求"));
     }
 
     @Test
     void failedPlanningRetainsBoundedRedactedDiagnosticsWithoutChangingPublicMessage() {
-        var planner = new CodexRequirementPlanner(CodexFixtureSupport.client("auth-failure"));
+        var planner = CodexFixtureSupport.planner(CodexFixtureSupport.client("auth-failure"));
         var failure = assertThrows(IllegalStateException.class, () -> planner.plan(temp, "原始需求"));
         assertEquals("需求规划失败，原需求列表未修改。", failure.getMessage());
         assertTrue(failure.getCause().getMessage().contains("退出码=7"));

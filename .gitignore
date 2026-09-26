@@ -36,3 +36,5 @@ application-local.properties
 /config/agents.properties
 /config/msg.properties
 /config/msg/*.properties
+
+/config/prompts/*.txt

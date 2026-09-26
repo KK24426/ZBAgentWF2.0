@@ -110,6 +110,36 @@ class WebJarIT {
     }
 
     @Test
+    void projectRoutesReachRealControllerWithoutConfigurationOrInternalDataExposure() throws Exception {
+        try (Pending server = start(Map.of())) {
+            int port = awaitReady(server);
+            try (HttpClient client = HttpClient.newHttpClient()) {
+                var unavailable = projectPost(client, port, "/api/projects", "{\"content\":\"project-private-input\"}");
+                assertEquals(503, unavailable.statusCode());
+                assertFalse(unavailable.body().contains("project-private-input"));
+                assertEquals(400, projectPost(client, port, "/api/projects", "{}").statusCode());
+                assertEquals(400, projectPost(client, port, "/api/projects", "{").statusCode());
+                assertEquals(404, get(client, port, "/api/projects/missing").statusCode());
+                assertEquals(404, projectPost(client, port, "/api/projects/missing/tasks/execute", "{}").statusCode());
+                assertEquals(405, get(client, port, "/api/projects/missing/prompts").statusCode());
+                assertEquals(404, get(client, port, "/api/projects/missing/unapproved").statusCode());
+                var head = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/projects/missing"))
+                        .timeout(Duration.ofSeconds(5)).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(),
+                        HttpResponse.BodyHandlers.ofString());
+                assertEquals(404, head.statusCode()); assertEquals("", head.body());
+            }
+            String log = readLog(server.directory);
+            assertTrue(log.contains("route=PROJECT")); assertFalse(log.contains("project-private-input"));
+        }
+    }
+
+    private static HttpResponse<String> projectPost(HttpClient client, int port, String path, String json) throws Exception {
+        return client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+                .timeout(Duration.ofSeconds(5)).header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
     void productionChatIsUnavailableAndInvalidRequestsStayPrivate() throws Exception {
         try (Pending server = start(Map.of())) {
             int port = awaitReady(server);
@@ -141,7 +171,7 @@ class WebJarIT {
                 assertFalse(output.contains("普通隐私"));
                 assertTrue(output.contains("AgentUnavailableException"));
                 assertTrue(output.contains("HttpMessageNotReadableException"));
-                assertTrue(output.contains("ProjectController.java"));
+                assertTrue(output.contains("ChatController.java"));
                 assertTrue(output.contains("Caused by:"));
             }
             assertTrue(readLog(server.directory).contains("method=POST route=CHAT"));
@@ -214,7 +244,7 @@ class WebJarIT {
             }
             assertTrue(names.contains("BOOT-INF/classes/static/chat.js"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.class"));
-            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/AgentExecutorImpl.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/CodexAgentExec.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/project/ProjectUserifImpl.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/userif/AgentExecutor.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/registry/AgentExecFactoryImpl.class"));

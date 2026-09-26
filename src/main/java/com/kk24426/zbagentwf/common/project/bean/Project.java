@@ -33,7 +33,10 @@ public class Project {
 	private AgentExecutor reviewAgent;
 
 	/** 项目中使用的提示词 */
-	private Prompt ProjectPrompt;
+	private Prompt projectPrompt;
+
+    public Prompt getProjectPrompt() { return projectPrompt; }
+    public void setProjectPrompt(Prompt projectPrompt) { this.projectPrompt = projectPrompt; }
 
 	public AgentExecutor getPlanningAgent() {
 		return planningAgent;

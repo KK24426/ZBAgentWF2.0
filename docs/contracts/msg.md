@@ -25,3 +25,5 @@ MsgLocaleResolver把选择缓存在当前request属性中。WebRequestFilter在�
 原`/`、`/index.html`继续接受GET/HEAD，HomePageController渲染非公开`web/index.html`模板；其它路由和状态码不变。仅固定key占位符替换，不引入模板表达式引擎。模板值统一HTML转义；前端三语消息先JSON序列化再做HTML文本转义，存入不可执行的`template#msg-catalog`，通过`content.textContent`读取。HTTP错误key不导出到前端；前端有独立的按状态码归类的安全提示。
 
 翻译、输入及模型输出均不作为HTML执行；沿用CSP、自有脚本、无缓存与请求隐私保护。没有翻译下载API、设置写API、数据库或外部翻译调用。模板、内置消息和外部配置路径不可通过HTTP访问。无JavaScript时首屏与启用脚本提示仍按请求语言渲染。
+
+项目HTTP固定提示新增http.project.invalid、http.project.notFound、http.project.unavailable，使用同一三语查询与覆盖规则；业务文本与模型输出仍保持原文。

@@ -27,4 +27,24 @@ public final class CodexFixtureSupport {
         return new CodexClient(List.of(java, "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8", "-cp", classpath,
                 FakeCodexFixture.class.getName(), scenario), model, timeout);
     }
+    public static com.kk24426.zbagentwf.agent.prompt.PromptCatalog prompts(Path base) {
+        try {
+            Path directory = java.nio.file.Files.createDirectories(base.resolve("prompt-fixture"));
+            for (String name : List.of("default", "security", "planning", "development", "review")) {
+                java.nio.file.Files.writeString(directory.resolve(name + ".txt"), "fixture-" + name + "-规则");
+            }
+            return com.kk24426.zbagentwf.agent.prompt.PromptCatalog.load(directory);
+        } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+    }
+    public static CodexAgentExec ready(CodexAgentExec executor) {
+        executor.initializePrompts(com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-default-规则"),
+                com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-security-规则"));
+        return executor;
+    }
+    public static CodexRequirementPlanner planner(CodexClient client) {
+        var planner = new CodexRequirementPlanner(client);
+        planner.initializePrompts(com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-default-规则"),
+                com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-security-规则"));
+        return planner;
+    }
 }

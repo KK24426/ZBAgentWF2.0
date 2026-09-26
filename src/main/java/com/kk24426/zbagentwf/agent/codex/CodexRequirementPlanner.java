@@ -8,6 +8,10 @@
 package com.kk24426.zbagentwf.agent.codex;
 
 import com.kk24426.zbagentwf.common.project.bean.Requirement;
+import com.kk24426.zbagentwf.common.project.bean.Project;
+import com.kk24426.zbagentwf.common.agent.bean.Prompt;
+import com.kk24426.zbagentwf.agent.AgentExecutorImpl;
+import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
 import com.kk24426.zbagentwf.common.project.bean.RequirementTask;
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
 import java.nio.file.Path;
@@ -23,6 +27,7 @@ public final class CodexRequirementPlanner {
     private final CodexClient client;
     private final ExecutionResources resources;
     private final Object owner;
+    private volatile String initializedRules;
 
     public CodexRequirementPlanner(CodexClient client) {
         this(client, new ExecutionResources(), new Object());
@@ -34,21 +39,38 @@ public final class CodexRequirementPlanner {
         this.owner = Objects.requireNonNull(owner);
     }
 
+    /** 独立低层规划器也必须显式初始化；工厂规划使用已绑定执行器的规则。 */
+    public synchronized void initializePrompts(Prompt defaults, Prompt security) {
+        if (initializedRules != null) throw new IllegalStateException("规划规则已经初始化。");
+        initializedRules = AgentExecutorImpl.instructions(defaults, security, null, null, null);
+    }
+
+    public List<Requirement> plan(Project project, String content) {
+        if (!(owner instanceof AgentExecutorImpl executor)) throw new AgentConfigurationUnavailableException();
+        return planWithRules(project.getWorkingDirectory(), content, executor.instructionsFor(project));
+    }
+
     /** 仅生成尚未执行的数据；调用方在本方法全部成功后才加入项目。 */
     public List<Requirement> plan(Path directory, String content) {
+        String rules = initializedRules;
+        if (rules == null) throw new AgentConfigurationUnavailableException();
+        return planWithRules(directory, content, rules);
+    }
+
+    private List<Requirement> planWithRules(Path directory, String content, String rules) {
         // 同步规划也占用全工厂并发额度；附着调用线程，让关闭操作能中断阻塞中的进程调用。
         // 票据仅覆盖本次调用，结束就归还，不能等待可能长期存活的调用线程退出。
         try (var ticket = resources.reserve(owner)) {
             ticket.attach(Thread.currentThread());
             ticket.checkRunning();
-            return planAccepted(directory, content);
+            return planAccepted(directory, content, rules);
         }
     }
 
-    private List<Requirement> planAccepted(Path directory, String content) {
+    private List<Requirement> planAccepted(Path directory, String content, String rules) {
         var diagnostics = new StringBuilder();
         try {
-            String prompt = """
+            String prompt = rules + """
                     仅分析用户需求和当前项目，禁止修改文件、执行实现任务、提交或推送。
                     将用户输入规划为需求列表，每项给出理解、可观察的验收标准和按执行顺序排列的 Task。
                     不添加用户未要求的功能或业务规则；信息不足时在 userConfirmMsg 写待确认问题，

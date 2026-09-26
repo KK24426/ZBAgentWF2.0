@@ -39,7 +39,7 @@
 | `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentBase.java` | 本机Agent发现、查询和刷新抽象契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentExecutor.java` | 项目内单次异步执行与诊断查询契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentExecCallback.java` | 执行最终结果回调契约 |
-| `src/main/java/com/kk24426/zbagentwf/user/project/userif/ProjectUserif.java` | 项目创建、需求规划和任务结果汇总契约 |
+| `src/main/java/com/kk24426/zbagentwf/user/project/domain/ProjectDomain.java` | 项目创建、需求规划和任务结果汇总契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/UserInterface.java` | 用户接口的空父接口 |
 | `src/main/java/com/kk24426/zbagentwf/user/UserService.java` | 用户服务父类占位，未定义行为 |
 | `src/main/java/com/kk24426/zbagentwf/user/chat/controller/ChatController.java` | 聊天HTTP入口与固定错误映射 |
@@ -95,3 +95,26 @@ agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging�
 
 规则入口：根AGENTS.md、三个包AGENTS.md、根REQUIREMENTS.md。
 流程入口：[开发技能](../../.agents/skills/zb-development/SKILL.md)与[审核技能](../../.agents/skills/zb-review/SKILL.md)；审核模板随审核技能维护。
+
+## 项目内存与规则新增文件
+
+| 文件 | 职责 |
+| --- | --- |
+| `src/main/java/com/kk24426/zbagentwf/agent/AgentExecutorImpl.java` | 保存 Agent 绑定快照并在显式初始化后组合通用与角色规则。 |
+| `src/main/java/com/kk24426/zbagentwf/user/project/controller/ProjectController.java` | 接收项目操作，通过服务查找内存项目并返回安全快照及本地化错误。 |
+| `src/main/java/com/kk24426/zbagentwf/user/project/service/ProjectService.java` | 校验项目输入并通过用户定义的领域接口编排操作。 |
+| `src/main/java/com/kk24426/zbagentwf/common/exception/AgentConfigurationUnavailableException.java` | 区分模型或规则尚未配置与执行中的内部错误。 |
+| `src/main/java/com/kk24426/zbagentwf/common/memory/MemoryStore.java` | 按分类和标识保存本进程内的对象引用。 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/bean/AgentTypeEnum.java` | 项目角色类型或相关验证。 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/bean/ProjectHttp.java` | 定义项目 HTTP 输入及不含运行时引用的响应快照。 |
+| `src/main/java/com/kk24426/zbagentwf/common/agent/bean/AgentReviewResult.java` | 项目角色类型或相关验证。 |
+| `src/main/java/com/kk24426/zbagentwf/common/agent/bean/Prompt.java` | 保存提示词文本。 |
+| `src/main/java/com/kk24426/zbagentwf/common/agent/bean/Skill.java` | 保存Skill 名称，不自动加载或执行。 |
+| `src/main/java/com/kk24426/zbagentwf/agent/prompt/PromptCatalog.java` | 显式加载 UTF-8 规则快照，查询时不进行文件访问。 |
+| `src/main/java/com/kk24426/zbagentwf/agent/registry/RoleAgentResolver.java` | 将任意已选择模型与角色规则绑定，缺省选择由显式配置提供。 |
+| `src/test/java/com/kk24426/zbagentwf/agent/AgentPromptTest.java` | 验证提示词显式初始化、输入快照和缺规则时不启动进程。 |
+| `src/test/java/com/kk24426/zbagentwf/user/project/controller/ProjectControllerTest.java` | 验证项目 Controller、Service、精确路由及三语隐私边界。 |
+| `src/test/java/com/kk24426/zbagentwf/common/memory/MemoryStoreTest.java` | 验证共享内存存储的类型、分类、引用和并发边界。 |
+| `src/test/java/com/kk24426/zbagentwf/common/project/bean/ProjectHttpTest.java` | 验证项目响应是独立且一致的不可变数据快照。 |
+| `src/test/java/com/kk24426/zbagentwf/agent/project/ProjectMemoryTest.java` | 验证项目登记、角色选择、提示词追加及失败不发布。 |
+| `config/prompts/*.txt.example` | 五类UTF-8规则占位，实际.txt不入仓 |
