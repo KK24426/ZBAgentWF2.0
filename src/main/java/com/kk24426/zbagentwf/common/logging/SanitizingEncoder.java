@@ -7,12 +7,13 @@
  */
 package com.kk24426.zbagentwf.common.logging;
 
+import java.util.Arrays;
+
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.classic.spi.StackTraceElementProxy;
-import java.util.Arrays;
 
 /** 避免只处理 %msg 而遗漏 %ex 中的凭据；保留异常类型和调用链。 */
 public class SanitizingEncoder extends PatternLayoutEncoder {
