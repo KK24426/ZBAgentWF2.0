@@ -1,19 +1,21 @@
 /*
  * 创建日期：2026-09-23
- * 更新日期：2026-09-24
+ * 更新日期：2026-09-27
  * 做 成 者：zebiao
- * 版    本：v0.2
+ * 版    本：v0.3
  * 功能概要：限制首页和聊天路由访问面，记录脱敏请求诊断并隐藏错误详情。
  */
 package com.kk24426.zbagentwf.agent.web;
 
 import com.kk24426.zbagentwf.common.logging.LogFailureMonitor;
+import com.kk24426.zbagentwf.common.msg.MsgCatalog;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Set;
+import java.util.Locale;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +33,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class WebRequestFilter extends OncePerRequestFilter {
     private static final Logger LOG = LoggerFactory.getLogger(WebRequestFilter.class);
     private static final Set<String> PATHS = Set.of("/", "/index.html", "/app.css", "/favicon.svg", "/chat.js");
+    private final MsgCatalog messages;
+    private final MsgLocaleResolver locales;
+
+    public WebRequestFilter(MsgCatalog messages, MsgLocaleResolver locales) {
+        this.messages = messages;
+        this.locales = locales;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -46,6 +55,7 @@ public class WebRequestFilter extends OncePerRequestFilter {
         String route = chat ? "CHAT" : Set.of("/", "/index.html").contains(path) ? "HOME"
                 : PATHS.contains(path) ? "ASSET" : "OTHER";
         MDC.put("route", route);
+        Locale locale = locales.resolveLocale(request);
         try {
             response.setHeader("X-Request-ID", requestId);
             response.setHeader("X-Content-Type-Options", "nosniff");
@@ -54,15 +64,15 @@ public class WebRequestFilter extends OncePerRequestFilter {
                     "default-src 'none'; style-src 'self'; img-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
             response.setHeader("Cache-Control", "no-store");
             if (LogFailureMonitor.hasFailed()) {
-                reject(response, 503, "服务暂不可用。", method);
+                reject(response, 503, "http.unavailable", method, locale);
             } else if (chat ? !method.equals("POST") : !Set.of("GET", "HEAD").contains(method)) {
                 response.setHeader("Allow", chat ? "POST" : "GET, HEAD");
-                reject(response, 405, "不支持的请求方式。", method);
+                reject(response, 405, "http.methodNotAllowed", method, locale);
             } else if (!chat && !PATHS.contains(path)) {
-                reject(response, 404, "页面不存在。", method);
+                reject(response, 404, "http.notFound", method, locale);
             } else if (chat && !isJson(request.getContentType())) {
                 // consumes 匹配失败时 Controller 尚未选中，在精确路由边界返回固定错误。
-                reject(response, 415, "仅支持 JSON 请求。", method);
+                reject(response, 415, "http.jsonRequired", method, locale);
             } else {
                 chain.doFilter(request, response);
             }
@@ -70,7 +80,7 @@ public class WebRequestFilter extends OncePerRequestFilter {
             LOG.error("HTTP 请求执行失败 route={}", route, failure);
             if (!response.isCommitted()) {
                 response.resetBuffer();
-                reject(response, 500, "服务内部错误，请联系维护者并提供请求编号。", method);
+                reject(response, 500, "http.internalError", method, locale);
             } else {
                 // 已发送的响应不可重写，保留异常及请求编号，不把细节作为二次响应写出。
                 throw failure;
@@ -94,10 +104,11 @@ public class WebRequestFilter extends OncePerRequestFilter {
         }
     }
 
-    private static void reject(HttpServletResponse response, int status, String message, String method)
+    private void reject(HttpServletResponse response, int status, String key, String method, Locale locale)
             throws IOException {
         response.setStatus(status);
         response.setContentType("text/plain;charset=UTF-8");
-        if (!method.equals("HEAD")) response.getWriter().write(message);
+        response.setHeader("Content-Language", MsgCatalog.languageTag(locale));
+        if (!method.equals("HEAD")) response.getWriter().write(messages.get(key, locale));
     }
 }

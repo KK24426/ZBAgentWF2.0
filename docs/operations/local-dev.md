@@ -37,6 +37,19 @@ POM沿用Maven官方声明，不通过关闭所有XML校验解决。
 如仍显示旧工程，按上述步骤移除引用后重新导入，再清理已核实仅含缓存和IDE元数据的旧目录。
 只保留根工程；本地IDE元数据仍不提交到Git，不直接修改Eclipse工作区.metadata。
 
+## 页面语言与消息覆盖
+
+复制[语言配置示例](../../config/msg.properties.example)为启动工作目录下的`config/msg.properties`，设置`zb.msg.locale=auto`（默认）、`zh-CN`、`en`或`ja`。也可设置`ZB_MSG_LOCALE`或JVM `-Dzb.msg.locale`，JVM优先。`auto`按浏览器语言选择，不使用服务器操作系统语言；无支持语言时默认中文。配置修改后重启。
+
+页面右上角的语言选择优先于服务配置，并通过当前浏览器的`zb.locale` Cookie保存一年。选择“自动”清除手动偏好。切换不会清空输入、改变模型回复或重发正在执行的请求。禁用Cookie的浏览器不能保证刷新后记住选择。
+
+需要修改文案时，将[消息示例目录](../../config/msg/)中的相应`.properties.example`复制为同目录下的`.properties`文件，只写需要覆盖的已知key。文件必须为UTF-8，三语可分别覆盖，缺省条目使用内置同语言文案。比如`chat.sending=正在发送…`，或`chat.requestId=请求编号：{0}`。不要删掉原文需要的参数，不写HTML模板或秘密信息；未知key、空白值、重复key、非法编码/格式、参数不一致都会启动失败。修改后重启。
+
+真实配置文件已被Git忽略，只有内置消息和示例入仓。详细key、优先级、参数及HTTP边界见[消息契约](../contracts/msg.md)。翻译测试使用临时目录，不修改开发者的真实外部配置。
+
+本地化Java测试与真实JAR回归纳入普通`mvnw.cmd verify`。首次从旧静态首页版本构建应执行`mvnw.cmd clean verify`，清除target中的旧首页资源。
+浏览器验收可在临时工作目录启动回环测试JAR，再用Python 3执行`src/test/browser/localization_fixture.py --upstream-port <JAR端口>`。替身只绑定127.0.0.1并打印随机端口，代理真实页面；输入`fixture:delayed`在8秒后返回固定成功文本，`fixture:timeout`在35秒后返回以验证页面30秒超时，`fixture:invalid`返回格式错误，其余输入返回模拟503。它用于验证切换过程中按钮/输入/结果和安全显示，不代表真实模型验收，不属于应用运行依赖；验收结束停止替身与测试JAR。
+
 ## 日志
 文件：当前工作目录/logs/<runId>/application.log；UTF-8，默认项目DEBUG/框架INFO。
 目录优先级：JVM -Dzb.log-dir > ZB_LOG_DIR > logs。

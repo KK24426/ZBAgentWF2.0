@@ -51,7 +51,7 @@ ProjectConfiguration 在根包初始化只读 ProjectSettings；ProjectUserifImp
 
 ## Web
 显式提供项目根目录后无参数启动服务，默认 127.0.0.1:8080；远程仅通过 SSH 隧道访问，不开放公网。
-固定资源 /、/index.html、/app.css、/favicon.svg、/chat.js 接受 GET/HEAD；/api/chat 仅接受 POST。
+首页 /、/index.html 及固定资源 /app.css、/favicon.svg、/chat.js 接受 GET/HEAD；/api/chat 仅接受 POST。
 未批准的路径/方法继续拒绝；聊天错误响应为固定文字，不暴露异常或原始输入。
 stdout 不输出业务结果，stderr 为错误及运行诊断，异常保留脱敏后的完整调用链。
 启动失败退出1、命令参数错误退出2；正常运行不主动退出，正常停止有20秒优雅关闭窗口。
@@ -64,6 +64,14 @@ POST /api/chat 接收 application/json 的 message 字符串，非空白、长�
 正式实现只明确报告 Agent 尚未接入；测试替身仅存在于测试源码，不打入正式JAR。验收包括 Controller → Service → 替身返回的成功链路，以及生产占位的503；不得把替身验证声称为真实模型验收。
 首页提供输入框、发送按钮、发送中状态、结果/错误区和请求编号；重复提交被阻止、完成后恢复按钮，返回文本不作为HTML执行。不保存会话、不增加数据库/外部调用/模型配置。
 未来 provider、超时/取消、重试、会话与存储规则由后续任务定义；当前页面30秒等待上限仅防止浏览器一直等待，不承诺取消服务端工作。
+
+## 页面与接口提示本地化
+项目自有页面（含标题、元信息、无障碍文字、输入校验、无脚本提示、聊天过程与请求编号）及Filter/Controller固定HTTP提示统一通过消息key查询，提供zh-CN/en/ja。用户输入和模型回复保持原文；日志、内部异常、启动诊断、过滤器之前的容器协议错误不在本轮范围内。
+common.msg.MsgCatalog在根包MsgConfiguration显式装配时加载UTF-8三语消息；内置msg/msg_zh_CN.properties、msg_en.properties、msg_ja.properties，启动目录下config/msg/同名外部文件按key覆盖内置同语言。缺外部文件/键合法；未知键、空白消息、重复键、编码或格式错误、占位符不一致使启动失败。纯文本参数仅支持从零连续编号的{0}/{1}等，值不解释为HTML或再次替换。配置及译文修改后重启。
+config/msg.properties中zb.msg.locale允许auto/zh-CN/en/ja，默认auto；JVM属性 > ZB_MSG_LOCALE > 文件。语言优先级为合法zb.locale Cookie > 显式服务语言 > Accept-Language > 简体中文。请求头按权重、同权重原序匹配中文/英文/日文主语言，排除q=0和无具体语言的通配符；畸形请求头整体按无偏好处理，不改变原HTTP状态。不使用JVM全局默认语言。
+首页由agent.web.HomePageController在原路径渲染非公开模板；MsgLocaleResolver与过滤器/MVC共享请求级语言，禁止跨请求串扰。模板值与JSON先转义为HTML文本，三语前端消息通过inert template传递，无新增HTTP路径或可执行内联脚本。前端仍只按状态码展示固定安全错误，保持CSP、HEAD空体和原业务接口/DTO/状态码。
+语言选择提供自动/简体中文/English/日本語，即时更新文字及已有校验/请求状态，保留输入、模型回复、请求编号和正在进行的请求。Cookie仅保存语言一年、Path=/、SameSite=Lax，HTTPS添加Secure；自动清除偏好。浏览器禁用Cookie时不能保证刷新后的持久化，不引入账号/服务端会话或业务数据存储。
+验收覆盖三语和UTF-8、参数/覆盖/启动失败、配置及语言优先级、请求隔离、HTTP安全错误、HTML转义、模板不可访问、真实JAR与浏览器切换/刷新/自动恢复/超时/处理中切换及英日布局。
 
 ## 日志
 项目 DEBUG、框架 INFO；UTF-8 文件按每次运行隔离，20MB/日滚动压缩，不自动删除历史。

@@ -34,3 +34,5 @@ application-local.yaml
 application-local.properties
 /config/project.properties
 /config/agents.properties
+/config/msg.properties
+/config/msg/*.properties

@@ -1,8 +1,8 @@
 /*
  * 创建日期：2026-09-24
- * 更新日期：2026-09-24
+ * 更新日期：2026-09-27
  * 做 成 者：zebiao
- * 版    本：v0.2
+ * 版    本：v0.3
  * 功能概要：通过真实 Controller 和 Service 加测试替身验证聊天 HTTP 契约。
  */
 package com.kk24426.zbagentwf.user.chat.controller;
@@ -16,6 +16,8 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.OutputStreamAppender;
 import com.kk24426.zbagentwf.agent.web.WebRequestFilter;
+import com.kk24426.zbagentwf.agent.web.MsgLocaleResolver;
+import com.kk24426.zbagentwf.common.msg.MsgCatalog;
 import com.kk24426.zbagentwf.common.chat.ChatRequest;
 import com.kk24426.zbagentwf.common.exception.AgentUnavailableException;
 import com.kk24426.zbagentwf.common.logging.SanitizingEncoder;
@@ -23,6 +25,10 @@ import com.kk24426.zbagentwf.user.chat.service.ChatAgentFixture;
 import com.kk24426.zbagentwf.user.chat.service.ChatService;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Locale;
+import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
@@ -36,11 +42,49 @@ class ChatControllerTest {
     private final ChatAgentFixture agent = new ChatAgentFixture();
     private final JsonMapper json = JsonMapper.builder().build();
     private MockMvc mvc;
+    @TempDir Path temp;
+    private MsgCatalog messages;
 
     @BeforeEach
-    void prepare() {
-        mvc = MockMvcBuilders.standaloneSetup(new ChatController(new ChatService(agent)))
-                .addFilters(new WebRequestFilter()).build();
+    void prepare() throws Exception {
+        messages = MsgCatalog.load(temp);
+        var locales = new MsgLocaleResolver("auto");
+        mvc = MockMvcBuilders.standaloneSetup(new ChatController(new ChatService(agent), messages))
+                .setLocaleResolver(locales).addFilters(new WebRequestFilter(messages, locales)).build();
+    }
+
+    @Test
+    void localizedErrorResponsesKeepStatusShapeAndManualPreference() throws Exception {
+        for (String language : MsgCatalog.LANGUAGES) {
+            Locale locale = Locale.forLanguageTag(language);
+            mvc.perform(post("/api/chat").header("Accept-Language", language)
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().string(messages.get("http.chat.invalid", locale)));
+            mvc.perform(post("/api/chat").header("Accept-Language", language)
+                            .contentType(MediaType.APPLICATION_JSON).content("{"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().string(messages.get("http.chat.invalid", locale)));
+            agent.failure = new AgentUnavailableException();
+            mvc.perform(post("/api/chat").header("Accept-Language", language)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"message\":\"你好\"}"))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(content().string(messages.get("http.chat.unavailable", locale)));
+            agent.failure = new IllegalStateException("private-input");
+            mvc.perform(post("/api/chat").header("Accept-Language", language)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"message\":\"你好\"}"))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(content().string(messages.get("http.internalError", locale)));
+        }
+        mvc.perform(post("/api/chat").header("Accept-Language", "en").cookie(new Cookie("zb.locale", "ja"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(header().string("Content-Language", "ja"))
+                .andExpect(content().string(messages.get("http.chat.invalid", Locale.JAPANESE)));
+        agent.failure = null;
+        mvc.perform(post("/api/chat").header("Accept-Language", "ja")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"message\":\"原样保留\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.reply").value(agent.result));
+        assertEquals("原样保留", agent.message);
     }
 
     @Test

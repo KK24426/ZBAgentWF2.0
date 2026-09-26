@@ -1,0 +1,3 @@
+# auto: 浏览器语言；也可显式设置 zh-CN、en、ja。修改后重启。
+# 手动页面选择优先于此配置。JVM -Dzb.msg.locale > ZB_MSG_LOCALE > 本文件。
+zb.msg.locale=auto

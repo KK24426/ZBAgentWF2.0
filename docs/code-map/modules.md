@@ -13,5 +13,6 @@
 | 单次聊天骨架 | user.chat、agent.chat、common.chat、common.exception、static/chat.js | Service/Controller替身、过滤器/日志、真实JAR未接入路径 |
 | Bean、工具、共享技术异常 | common | 目标测试、调用方、verify |
 | Web启动、首页、配置 | 根包、agent.web及resources | 单元测试、真实Web JAR IT、verify |
+| 页面与HTTP消息本地化 | MsgConfiguration、common.msg、agent.web、resources/msg、resources/web、static/chat.js | MsgCatalogTest、MsgConfigurationTest、MsgLocaleResolverTest、HomePageControllerTest、Filter/Controller测试、WebJarIT与浏览器验收 |
 
 开始任务先读根AGENTS.md、就近AGENTS.md和根REQUIREMENTS.md。

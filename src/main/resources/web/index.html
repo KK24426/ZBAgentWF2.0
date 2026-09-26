@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="{{_locale}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" data-msg-content="page.description" content="{{page.description}}">
+  <title data-msg="page.title">{{page.title}}</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/app.css">
+  <script src="/chat.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" data-msg-aria-label="page.brandLabel" aria-label="{{page.brandLabel}}"><span class="mark">ZB</span> AgentWF <span class="edition">2.0</span></a>
+    <nav data-msg-aria-label="page.navLabel" aria-label="{{page.navLabel}}"><a href="#chat" data-msg="page.nav.chat">{{page.nav.chat}}</a><a href="#structure" data-msg="page.nav.structure">{{page.nav.structure}}</a></nav>
+    <span class="environment" data-msg="page.environment">{{page.environment}}</span>
+    <label class="language-setting"><span data-msg="language.label">{{language.label}}</span>
+      <select id="language-select" disabled>
+        <option value="auto" data-msg="language.auto">{{language.auto}}</option>
+        <option value="zh-CN" data-msg="language.zh">{{language.zh}}</option>
+        <option value="en" data-msg="language.en">{{language.en}}</option>
+        <option value="ja" data-msg="language.ja">{{language.ja}}</option>
+      </select>
+    </label>
+  </header>
+  <main>
+    <section class="hero" id="start" aria-labelledby="title">
+      <div class="eyebrow"><span class="dot"></span><span data-msg="page.hero.eyebrow">{{page.hero.eyebrow}}</span></div>
+      <h1 id="title"><span data-msg="page.hero.titleFirst">{{page.hero.titleFirst}}</span><br><span data-msg="page.hero.titleSecond">{{page.hero.titleSecond}}</span><span class="accent" data-msg="page.hero.punctuation">{{page.hero.punctuation}}</span></h1>
+      <p class="intro"><span data-msg="page.hero.introFirst">{{page.hero.introFirst}}</span><br><span data-msg="page.hero.introSecond">{{page.hero.introSecond}}</span></p>
+      <a class="primary" href="#chat"><span data-msg="page.hero.action">{{page.hero.action}}</span><span aria-hidden="true">↗</span></a>
+      <div class="hero-note"><span data-msg="page.hero.foundation">{{page.hero.foundation}}</span><p><span data-msg="page.hero.noteFirst">{{page.hero.noteFirst}}</span><br><span data-msg="page.hero.noteSecond">{{page.hero.noteSecond}}</span></p></div>
+    </section>
+    <section class="chat" id="chat" aria-labelledby="chat-title">
+      <div class="section-heading"><h2 id="chat-title" data-msg="page.chat.title">{{page.chat.title}}</h2><span class="label neutral" data-msg="page.chat.badge">{{page.chat.badge}}</span></div>
+      <p class="chat-intro" data-msg="page.chat.intro">{{page.chat.intro}}</p>
+      <form id="chat-form" novalidate>
+        <label for="chat-message" data-msg="page.chat.label">{{page.chat.label}}</label>
+        <textarea id="chat-message" name="message" rows="5" maxlength="4000" required aria-describedby="chat-hint" data-msg-placeholder="page.chat.placeholder" placeholder="{{page.chat.placeholder}}"></textarea>
+        <div class="chat-actions"><span id="chat-hint" data-msg="page.chat.hint">{{page.chat.hint}}</span><button id="chat-send" type="submit" disabled><span id="chat-send-label">{{chat.send}}</span> <span aria-hidden="true">↗</span></button></div>
+      </form>
+      <div class="chat-result" id="chat-result" role="status" aria-live="polite" aria-atomic="true">
+        <span class="result-label" id="chat-status">{{chat.status.waiting}}</span>
+        <pre id="chat-reply">{{chat.initial}}</pre>
+        <small id="chat-request-id"></small>
+      </div>
+      <noscript><p>{{page.chat.noScript}}</p></noscript>
+    </section>
+    <section class="foundation" aria-labelledby="foundation-title">
+      <div class="section-heading"><h2 id="foundation-title" data-msg="page.foundation.title">{{page.foundation.title}}</h2><span data-msg="page.foundation.subtitle">{{page.foundation.subtitle}}</span></div>
+      <div class="cards">
+        <article class="card"><span class="number">01</span><h3 data-msg="page.foundation.webTitle">{{page.foundation.webTitle}}</h3><p data-msg="page.foundation.webBody">{{page.foundation.webBody}}</p><span class="label" data-msg="page.foundation.webBadge">{{page.foundation.webBadge}}</span></article>
+        <article class="card"><span class="number">02</span><h3 data-msg="page.foundation.logTitle">{{page.foundation.logTitle}}</h3><p data-msg="page.foundation.logBody">{{page.foundation.logBody}}</p><span class="label" data-msg="page.foundation.logBadge">{{page.foundation.logBadge}}</span></article>
+        <article class="card"><span class="number">03</span><h3 data-msg="page.foundation.dataTitle">{{page.foundation.dataTitle}}</h3><p data-msg="page.foundation.dataBody">{{page.foundation.dataBody}}</p><span class="label neutral" data-msg="page.foundation.dataBadge">{{page.foundation.dataBadge}}</span></article>
+      </div>
+    </section>
+    <section id="structure" class="structure" aria-labelledby="structure-title">
+      <div><div class="eyebrow" data-msg="page.structure.eyebrow">{{page.structure.eyebrow}}</div><h2 id="structure-title" data-msg="page.structure.title">{{page.structure.title}}</h2><p data-msg="page.structure.intro">{{page.structure.intro}}</p></div>
+      <dl><div><dt>user<span data-msg="page.structure.userTitle">{{page.structure.userTitle}}</span></dt><dd data-msg="page.structure.userBody">{{page.structure.userBody}}</dd></div><div><dt>agent<span data-msg="page.structure.agentTitle">{{page.structure.agentTitle}}</span></dt><dd data-msg="page.structure.agentBody">{{page.structure.agentBody}}</dd></div><div><dt>common<span data-msg="page.structure.commonTitle">{{page.structure.commonTitle}}</span></dt><dd data-msg="page.structure.commonBody">{{page.structure.commonBody}}</dd></div></dl>
+    </section>
+    <aside class="next"><span class="next-icon" aria-hidden="true">＋</span><div><h2 data-msg="page.next.title">{{page.next.title}}</h2><p data-msg="page.next.body">{{page.next.body}}</p></div></aside>
+  </main>
+  <footer><span>ZBAgentWF 2.0</span><span data-msg="page.footer">{{page.footer}}</span></footer>
+  <template id="msg-catalog">{{_catalog}}</template>
+</body>
+</html>

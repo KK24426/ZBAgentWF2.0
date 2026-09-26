@@ -10,7 +10,7 @@ stderr包含日志、固定错误提示及脱敏异常链，stdout无业务输�
 ## HTTP入口
 
 GET/HEAD访问 /、/index.html、/app.css、/favicon.svg、/chat.js；POST /api/chat 见聊天契约。其余未批准路径/方法仍拒绝。
-错误体为固定文字，HEAD无响应体；每次请求返回服务端生成的X-Request-ID。
+错误体为按请求语言查询的固定文字，HEAD无响应体；每次请求返回服务端生成的X-Request-ID。页面与接口的消息文件、配置和语言选择见[本地化契约](./msg.md)。
 页面包含CSP、nosniff、no-referrer保护，资源不依赖外部站点，禁用缓存。
 请求日志只含白名单方法、固定类别、状态和耗时；不记录原始URL/查询/正文。
 Tomcat协议组件的解析前诊断采用固定摘要，异常类型/堆栈/cause/suppressed保留、原始消息隐藏；解析前拒绝的请求没有应用requestId。
@@ -25,6 +25,8 @@ Tomcat协议组件的解析前诊断采用固定摘要，异常类型/堆栈/cau
 | Spring属性 | 标准外部配置、环境变量、JVM -D；不接受命令参数配置 |
 | Agent注册 | config/agents.properties；zb.agents[条目键] 的 brand/name/ver/type/executable/model/timeout/enabled；支持标准字段覆盖，无默认模型，配置修改后重启 |
 | 项目根目录 | zb.project.root，启动工作目录下 config/project.properties；支持 ZB_PROJECT_ROOT 和 JVM -Dzb.project.root 覆盖，无默认值且必须显式配置 |
+| 默认显示语言 | config/msg.properties 中 zb.msg.locale=auto/zh-CN/en/ja，默认 auto；JVM > ZB_MSG_LOCALE > 文件；手动 Cookie 优先 |
+| 消息覆盖 | config/msg/ 中同名 UTF-8 properties 按 key 覆盖内置同语言，修改后重启；真实文件忽略，仅示例入仓 |
 | Web监听 | server.address=127.0.0.1、server.port=8080；环境变量SERVER_ADDRESS、SERVER_PORT |
 | 关闭窗口 | server.shutdown=graceful、spring.lifecycle.timeout-per-shutdown-phase=20s |
 | mysql开关 | spring.profiles.active=mysql 或 SPRING_PROFILES_ACTIVE=mysql；默认关闭 |
@@ -42,5 +44,5 @@ MyBatis Mapper 仅在 mysql profile 下由 Spring 扫描注册；接口位于 co
 文件日志使用UTF-8；控制台日志跟随System.err编码，与固定错误提示保持一致。
 MyBatis原生日志关闭，诊断拦截器只记录statement ID、操作、耗时、结果和异常；不输出参数和SQL文本。
 
-ZbAgentWfApplication、ProjectConfiguration、AgentConfiguration、ProjectSettings、WebRequestFilter、common.logging公开类型和MySqlConfiguration属于已批准的技术基础能力，不构成用户业务接口。
+ZbAgentWfApplication、ProjectConfiguration、AgentConfiguration、ProjectSettings、WebRequestFilter、common.logging公开类型和MySqlConfiguration属于已批准的技术基础能力，不构成用户业务接口。2026-09-27批准MsgConfiguration、common.msg.MsgCatalog、agent.web.MsgLocaleResolver/HomePageController作为本地化技术能力；没有新增业务API。
 后续用户业务接口、DTO、schema、事务变化在本文同步索引，不能由文档先发明契约。

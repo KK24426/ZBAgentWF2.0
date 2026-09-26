@@ -1,9 +1,21 @@
 # 文件索引
 
-单工程：根pom负责构建，根REQUIREMENTS记录验收。以下均为实际Java源码。
+单工程：根pom负责构建，根REQUIREMENTS记录验收。以下列出Java源码及本地化相关资源。
 
 | 文件 | 类型 |
 | --- | --- |
+| `src/main/java/com/kk24426/zbagentwf/MsgConfiguration.java` | 显式加载消息/模板并装配语言解析 |
+| `src/main/java/com/kk24426/zbagentwf/common/msg/MsgCatalog.java` | 三语校验、外部覆盖及不可变纯文本消息查询 |
+| `src/main/java/com/kk24426/zbagentwf/agent/web/MsgLocaleResolver.java` | Cookie/配置/请求头优先级及请求级语言缓存 |
+| `src/main/java/com/kk24426/zbagentwf/agent/web/HomePageController.java` | 原首页路径的安全消息模板渲染 |
+| `src/main/resources/web/index.html` | 非公开首页模板与语言选择 |
+| `src/main/resources/msg/msg_zh_CN.properties`、`msg_en.properties`、`msg_ja.properties` | 内置UTF-8三语消息 |
+| `config/msg.properties.example`、`config/msg/*.properties.example` | 默认语言及部分消息覆盖示例 |
+| `src/test/java/com/kk24426/zbagentwf/MsgConfigurationTest.java` | 默认及非法语言配置 |
+| `src/test/java/com/kk24426/zbagentwf/common/msg/MsgCatalogTest.java` | 三语、参数、覆盖快照及启动错误 |
+| `src/test/java/com/kk24426/zbagentwf/agent/web/MsgLocaleResolverTest.java` | 优先级、请求头容错及并发隔离 |
+| `src/test/java/com/kk24426/zbagentwf/agent/web/HomePageControllerTest.java` | 首屏、模板约束、恶意译文转义 |
+| `src/test/browser/localization_fixture.py` | 仅回环浏览器验收替身，代理真实页面并模拟延迟/超时/错误，不进入JAR |
 | `src/main/java/com/kk24426/zbagentwf/ZbAgentWfApplication.java` | Web启动与生命周期 |
 | `src/main/java/com/kk24426/zbagentwf/ProjectConfiguration.java` | 必填项目根目录读取与初始化校验，不创建目录 |
 | `src/main/java/com/kk24426/zbagentwf/agent/web/WebRequestFilter.java` | 请求保护与安全日志 |
@@ -77,7 +89,7 @@
 
 入口ZbAgentWfApplication负责Web初始化与生命周期；CLI类和测试已移除。
 ProjectConfiguration通过application.properties导入启动工作目录下的config/project.properties；config/project.properties.example仅为入仓示例，真实配置不入仓。
-首页资源为src/main/resources/static/index.html、app.css、favicon.svg和chat.js；脚本提交单次请求，结果只作为纯文本显示。
+首页模板为src/main/resources/web/index.html，由HomePageController在原路径返回；静态资源app.css、favicon.svg和chat.js仍位于static目录。MsgConfiguration导入config/msg.properties并读取config/msg/可选消息覆盖。脚本从首页inert template读取三语消息，只持久化语言Cookie；单次请求结果仍只作为纯文本显示。
 agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging负责日志路径、脱敏、故障可见性。
 测试包含聊天调用替身、跨包注入、日志滚动、真实JAR未接入路径、显式MySQL专用库验收。package-info仅职责标记。
 

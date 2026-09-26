@@ -1,8 +1,8 @@
 /*
  * 创建日期：2026-09-23
- * 更新日期：2026-09-26
+ * 更新日期：2026-09-27
  * 做 成 者：zebiao
- * 版    本：v0.3
+ * 版    本：v0.4
  * 功能概要：通过真实 JAR 进程验证常驻 Web、静态页面、失败路径和资源隔离。
  */
 package com.kk24426.zbagentwf;
@@ -207,7 +207,11 @@ class WebJarIT {
             assertEquals("com.kk24426.zbagentwf.ZbAgentWfApplication",
                     archive.getManifest().getMainAttributes().getValue("Start-Class"));
             var names = archive.stream().map(java.util.zip.ZipEntry::getName).toList();
-            assertTrue(names.contains("BOOT-INF/classes/static/index.html"));
+            assertTrue(names.contains("BOOT-INF/classes/web/index.html"));
+            assertFalse(names.contains("BOOT-INF/classes/static/index.html"));
+            for (String language : List.of("zh_CN", "en", "ja")) {
+                assertTrue(names.contains("BOOT-INF/classes/msg/msg_" + language + ".properties"));
+            }
             assertTrue(names.contains("BOOT-INF/classes/static/chat.js"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/CodexAgentExec.class"));
@@ -283,6 +287,119 @@ class WebJarIT {
         }
     }
 
+    @Test
+    void localizedJarServesAllLanguagesSafeErrorsAndNonPublicTemplates() throws Exception {
+        try (Pending server = start(Map.of()); HttpClient client = HttpClient.newHttpClient()) {
+            int port = awaitReady(server);
+            String[][] languages = {
+                    {"zh-CN", "ZBAgentWF · 工作台", "Agent 尚未接入，暂时无法生成回复。"},
+                    {"en", "ZBAgentWF · Workspace", "The agent is not connected yet, so a reply cannot be generated."},
+                    {"ja", "ZBAgentWF · ワークスペース", "Agent がまだ接続されていないため、返信を生成できません。"}};
+            for (String[] language : languages) {
+                for (String path : List.of("/", "/index.html")) {
+                    var home = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+                                    .timeout(Duration.ofSeconds(5)).header("Accept-Language", language[0]).build(),
+                            HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                    assertEquals(200, home.statusCode());
+                    assertEquals(language[0], home.headers().firstValue("Content-Language").orElseThrow());
+                    assertTrue(home.body().contains("<title data-msg=\"page.title\">" + language[1] + "</title>"));
+                    assertTrue(home.body().contains("<template id=\"msg-catalog\">"));
+                    assertFalse(home.body().contains("{{"));
+                }
+                var unavailable = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/chat"))
+                                .timeout(Duration.ofSeconds(5)).header("Accept-Language", language[0])
+                                .header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString("{\"message\":\"private-user-input\"}")).build(),
+                        HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                assertEquals(503, unavailable.statusCode());
+                assertEquals(language[2], unavailable.body());
+            }
+            var manual = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/"))
+                            .header("Accept-Language", "en").header("Cookie", "zb.locale=ja").build(),
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            assertEquals("ja", manual.headers().firstValue("Content-Language").orElseThrow());
+            for (String path : List.of("/web/index.html", "/msg/msg_en.properties", "/config/msg.properties",
+                    "/config/msg/msg_en.properties")) {
+                assertEquals(404, get(client, port, path).statusCode());
+            }
+            var malformed = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/missing"))
+                            .header("Accept-Language", "en;q=bad").build(), HttpResponse.BodyHandlers.ofString());
+            assertEquals(404, malformed.statusCode());
+            for (String path : List.of("/", "/index.html", "/api/chat", "/missing")) {
+                var head = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+                                .header("Accept-Language", "ja").method("HEAD", HttpRequest.BodyPublishers.noBody()).build(),
+                        HttpResponse.BodyHandlers.ofString());
+                assertEquals("", head.body());
+                assertEquals(path.equals("/api/chat") ? 405 : path.equals("/missing") ? 404 : 200, head.statusCode());
+            }
+            assertFalse(readLog(server.directory).contains("private-user-input"));
+        }
+    }
+
+    @Test
+    void localeFileEnvironmentJvmAndBrowserPreferenceKeepTheirPrecedence() throws Exception {
+        for (int level = 0; level < 3; level++) {
+            Map<String, String> properties = level == 2 ? Map.of("zb.msg.locale", "zh-CN") : Map.of();
+            Map<String, String> environment = level >= 1 ? Map.of("ZB_MSG_LOCALE", "ja") : Map.of();
+            try (Pending server = startWithFiles(properties, environment, "projects",
+                    Map.of("config/msg.properties", "zb.msg.locale=en\n"));
+                 HttpClient client = HttpClient.newHttpClient()) {
+                int port = awaitReady(server);
+                String expected = level == 0 ? "en" : level == 1 ? "ja" : "zh-CN";
+                var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/"))
+                        .header("Accept-Language", "fr");
+                var home = client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+                assertEquals(expected, home.headers().firstValue("Content-Language").orElseThrow());
+                var manual = client.send(request.header("Cookie", "zb.locale=ja").build(), HttpResponse.BodyHandlers.ofString());
+                assertEquals("ja", manual.headers().firstValue("Content-Language").orElseThrow());
+            }
+        }
+    }
+
+    @Test
+    void utf8ExternalMessagesOverrideOnlyTheirLanguageAndReloadAfterRestart() throws Exception {
+        try (Pending server = startWithFiles(Map.of(), Map.of(), "projects", Map.of(
+                "config/msg/msg_en.properties", "page.title=外部 English 日本語\nhttp.chat.unavailable=External unavailable\n"));
+             HttpClient client = HttpClient.newHttpClient()) {
+            int port = awaitReady(server);
+            var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/"))
+                    .header("Accept-Language", "en").build();
+            String home = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).body();
+            assertTrue(home.contains("<title data-msg=\"page.title\">外部 English 日本語</title>"));
+            assertTrue(home.contains(">Your request</label>"));
+            Files.writeString(server.directory.resolve("config/msg/msg_en.properties"), "page.title=Changed\n");
+            assertEquals(home, client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).body());
+            assertTrue(get(client, port, "/").body().contains("<title data-msg=\"page.title\">ZBAgentWF · 工作台</title>"));
+            var unavailable = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/chat"))
+                            .header("Accept-Language", "en").header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString("{\"message\":\"test\"}")).build(),
+                    HttpResponse.BodyHandlers.ofString());
+            assertEquals(503, unavailable.statusCode());
+            assertEquals("External unavailable", unavailable.body());
+        }
+        try (Pending restarted = startWithFiles(Map.of("zb.msg.locale", "en"), Map.of(), "projects",
+                Map.of("config/msg/msg_en.properties", "page.title=Changed\n"));
+             HttpClient client = HttpClient.newHttpClient()) {
+            assertTrue(get(client, awaitReady(restarted), "/").body()
+                    .contains("<title data-msg=\"page.title\">Changed</title>"));
+        }
+    }
+
+    @Test
+    void invalidLocaleAndExternalMessageKeysFailStartupWithoutEchoingValues() throws Exception {
+        for (Map<String, String> files : List.of(
+                Map.of("config/msg.properties", "zb.msg.locale=private-config-value\n"),
+                Map.of("config/msg/msg_en.properties", "private.unknown=private-config-value\n"),
+                Map.of("config/msg/msg_en.properties", "chat.requestId=private-config-value\n"))) {
+            try (Pending server = startWithFiles(Map.of(), Map.of(), "projects", files)) {
+                assertExit(server, 1);
+                assertTrue(readLog(server.directory).contains("msg"));
+                assertFalse(server.error().contains("private-config-value"));
+                assertFalse(readLog(server.directory).contains("private-config-value"));
+            }
+        }
+    }
+
     private HttpResponse<String> chat(HttpClient client, int port, String contentType, String body) throws Exception {
         return client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/chat"))
                         .timeout(Duration.ofSeconds(5)).header("Content-Type", contentType)
@@ -301,6 +418,11 @@ class WebJarIT {
 
     private Pending startConfigured(Map<String, String> properties, Map<String, String> environment,
                                     String fileRoot, String... arguments) throws Exception {
+        return startWithFiles(properties, environment, fileRoot, Map.of(), arguments);
+    }
+
+    private Pending startWithFiles(Map<String, String> properties, Map<String, String> environment,
+                                   String fileRoot, Map<String, String> extraFiles, String... arguments) throws Exception {
         Path directory = Files.createTempDirectory(temp, "web-");
         if (fileRoot != null) {
             Path config = Files.createDirectory(directory.resolve("config")).resolve("project.properties");
@@ -309,6 +431,12 @@ class WebJarIT {
             try (var output = Files.newOutputStream(config)) {
                 values.store(output, "isolated project configuration");
             }
+        }
+        for (var entry : extraFiles.entrySet()) {
+            Path file = directory.resolve(entry.getKey()).normalize();
+            if (!file.startsWith(directory)) throw new IllegalArgumentException("测试文件必须位于隔离目录。");
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, entry.getValue(), StandardCharsets.UTF_8);
         }
         List<String> command = new ArrayList<>();
         command.add(Path.of(System.getProperty("java.home"), "bin",
