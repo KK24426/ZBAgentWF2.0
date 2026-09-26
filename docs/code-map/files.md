@@ -18,14 +18,14 @@
 | `src/main/java/com/kk24426/zbagentwf/common/package-info.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/common/agent/bean/AgentBean.java` | Agent 数据骨架及属性访问 |
 | `src/main/java/com/kk24426/zbagentwf/common/agent/bean/AgentExecResult.java` | 单次执行结果及待确认内容 |
-| `src/main/java/com/kk24426/zbagentwf/common/project/bean/Project.java` | 项目标识、工作目录和需求列表 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/bean/Project.java` | 项目标识、工作目录、三角色执行器和需求列表 |
 | `src/main/java/com/kk24426/zbagentwf/common/project/bean/Requirement.java` | 项目内需求及Task列表 |
 | `src/main/java/com/kk24426/zbagentwf/common/project/bean/RequirementTask.java` | 规划任务、状态与单次执行结果 |
 | `src/main/java/com/kk24426/zbagentwf/common/project/bean/TaskStatus.java` | 已批准的任务状态值，不实现状态转换 |
 | `src/main/java/com/kk24426/zbagentwf/common/project/bean/ProjectSettings.java` | 初始化后的只读项目根目录 |
 | `src/main/java/com/kk24426/zbagentwf/user/package-info.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentBase.java` | 本机Agent发现、查询和刷新抽象契约 |
-| `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentExec.java` | 项目内单次异步执行与诊断查询契约 |
+| `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentExecutor.java` | 项目内单次异步执行与诊断查询契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentExecCallback.java` | 执行最终结果回调契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/project/userif/ProjectUserif.java` | 项目创建、需求规划和任务结果汇总契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/UserInterface.java` | 用户接口的空父接口 |
@@ -64,6 +64,16 @@
 | `src/test/java/com/kk24426/zbagentwf/agent/codex/CodexRequirementPlannerTest.java` | Codex/项目实现验证，测试类不进入 JAR |
 | `src/test/java/com/kk24426/zbagentwf/agent/codex/FakeCodexFixture.java` | Codex/项目实现验证，测试类不进入 JAR |
 | `src/test/java/com/kk24426/zbagentwf/agent/project/ProjectUserifImplTest.java` | Codex/项目实现验证，测试类不进入 JAR |
+| `src/main/java/com/kk24426/zbagentwf/agent/registry/AgentCatalog.java` | 模型注册、工厂装配或共享资源实现 |
+| `src/main/java/com/kk24426/zbagentwf/agent/registry/AgentDefinition.java` | 模型注册、工厂装配或共享资源实现 |
+| `src/main/java/com/kk24426/zbagentwf/agent/registry/AgentExecFactoryImpl.java` | 模型注册、工厂装配或共享资源实现 |
+| `src/main/java/com/kk24426/zbagentwf/agent/registry/AgentRequirementPlanner.java` | 模型注册、工厂装配或共享资源实现 |
+| `src/main/java/com/kk24426/zbagentwf/agent/runtime/ExecutionResources.java` | 模型注册、工厂装配或共享资源实现 |
+| `src/main/java/com/kk24426/zbagentwf/AgentConfiguration.java` | 模型注册、工厂装配或共享资源实现 |
+| `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentExecFactory.java` | 模型注册、工厂装配或共享资源实现 |
+| `src/test/java/com/kk24426/zbagentwf/agent/registry/AgentRegistryTest.java` | 测试，不进入正式JAR |
+| `src/test/java/com/kk24426/zbagentwf/agent/runtime/ExecutionResourcesTest.java` | 测试，不进入正式JAR |
+| `src/test/java/com/kk24426/zbagentwf/AgentConfigurationTest.java` | 测试，不进入正式JAR |
 
 入口ZbAgentWfApplication负责Web初始化与生命周期；CLI类和测试已移除。
 ProjectConfiguration通过application.properties导入启动工作目录下的config/project.properties；config/project.properties.example仅为入仓示例，真实配置不入仓。

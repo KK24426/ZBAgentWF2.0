@@ -1,7 +1,7 @@
 # 接口与配置
 
 已提供[单次聊天骨架](./chat.md)，真实 Agent 与持久化 schema 尚未接入；原空父接口及数据骨架见[用户骨架契约](./user-ports.md)。根包启动入口为 com.kk24426.zbagentwf.ZbAgentWfApplication。
-项目包含需求、需求包含 Task 的实体及执行行为见[项目与执行契约](./project-agent.md)。已有可显式组合的 Codex 执行和项目实现；模型发现与 Spring 模型装配待确认，尚未运行真实模型验收。
+项目包含需求、需求包含 Task 的实体及执行行为见[项目与执行契约](./project-agent.md)。已有配置驱动的模型注册、执行器工厂与项目三角色装配；尚未运行真实模型验收。
 聊天调用的共享技术异常为 common.exception.AgentUnavailableException，供实现层与调用层共同引用。
 正式调用为 java -jar target/zbagentwf-web-<version>.jar，无命令参数，持续运行。
 stderr包含日志、固定错误提示及脱敏异常链，stdout无业务输出。
@@ -23,6 +23,7 @@ Tomcat协议组件的解析前诊断采用固定摘要，异常类型/堆栈/cau
 | 配置 | 来源与默认 |
 | --- | --- |
 | Spring属性 | 标准外部配置、环境变量、JVM -D；不接受命令参数配置 |
+| Agent注册 | config/agents.properties；zb.agents[条目键] 的 brand/name/ver/type/executable/model/timeout/enabled；支持标准字段覆盖，无默认模型，配置修改后重启 |
 | 项目根目录 | zb.project.root，启动工作目录下 config/project.properties；支持 ZB_PROJECT_ROOT 和 JVM -Dzb.project.root 覆盖，无默认值且必须显式配置 |
 | Web监听 | server.address=127.0.0.1、server.port=8080；环境变量SERVER_ADDRESS、SERVER_PORT |
 | 关闭窗口 | server.shutdown=graceful、spring.lifecycle.timeout-per-shutdown-phase=20s |
@@ -41,5 +42,5 @@ MyBatis Mapper 仅在 mysql profile 下由 Spring 扫描注册；接口位于 co
 文件日志使用UTF-8；控制台日志跟随System.err编码，与固定错误提示保持一致。
 MyBatis原生日志关闭，诊断拦截器只记录statement ID、操作、耗时、结果和异常；不输出参数和SQL文本。
 
-ZbAgentWfApplication、ProjectConfiguration、ProjectSettings、WebRequestFilter、common.logging公开类型和MySqlConfiguration属于已批准的技术基础能力，不构成用户业务接口。
+ZbAgentWfApplication、ProjectConfiguration、AgentConfiguration、ProjectSettings、WebRequestFilter、common.logging公开类型和MySqlConfiguration属于已批准的技术基础能力，不构成用户业务接口。
 后续用户业务接口、DTO、schema、事务变化在本文同步索引，不能由文档先发明契约。

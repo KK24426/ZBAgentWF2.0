@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-22
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.4
  * 功能概要：对消息和异常完整渲染结果统一脱敏后编码。
@@ -31,6 +31,8 @@ public class SanitizingEncoder extends PatternLayoutEncoder {
                 || chatRoute && logger.startsWith("org.springframework.");
         boolean agentDiagnostic = event.getThrowableProxy() != null
                 && (logger.startsWith("com.kk24426.zbagentwf.agent.codex.")
+                    || logger.startsWith("com.kk24426.zbagentwf.agent.registry.")
+                    || logger.startsWith("com.kk24426.zbagentwf.agent.runtime.")
                     || logger.startsWith("com.kk24426.zbagentwf.agent.project."));
         if (protocol || chatDiagnostic || agentDiagnostic) {
             IThrowableProxy safeThrowable = wrap(event.getThrowableProxy());

@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-23
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：验证空父接口声明及仅用于测试的接口继承、实现关系。
@@ -16,6 +16,7 @@ class UserInterfaceTest {
         assertTrue(UserInterface.class.isInterface());
         assertEquals(0, UserInterface.class.getDeclaredMethods().length);
         assertTrue(UserInterface.class.isAssignableFrom(com.kk24426.zbagentwf.user.agent.userif.AgentExecutor.class));
+        assertTrue(UserInterface.class.isAssignableFrom(com.kk24426.zbagentwf.user.agent.userif.AgentExecFactory.class));
     }
 
     @Test

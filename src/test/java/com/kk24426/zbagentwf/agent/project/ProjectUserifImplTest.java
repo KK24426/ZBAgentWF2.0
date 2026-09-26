@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：验证项目创建、原子追加和等待异步结果的串行执行规则。
@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import com.kk24426.zbagentwf.agent.codex.*;
+import com.kk24426.zbagentwf.agent.registry.AgentRequirementPlanner;
 import com.kk24426.zbagentwf.common.agent.bean.*;
 import com.kk24426.zbagentwf.common.project.bean.*;
 import com.kk24426.zbagentwf.user.agent.userif.*;
@@ -22,14 +23,19 @@ import org.junit.jupiter.api.io.TempDir;
 
 class ProjectUserifImplTest {
     @TempDir Path temp;
+    private final AgentBean model = new AgentBean();
+    private final List<Project> existingProjects = new ArrayList<>();
 
     @Test
     void newProjectsUseUniqueDirectoriesAndPlanInitialRequirements() throws Exception {
-        var planner = new CodexRequirementPlanner(CodexFixtureSupport.client("success"));
+        var rawPlanner = new CodexRequirementPlanner(CodexFixtureSupport.client("success"));
+        var planner = mock(AgentRequirementPlanner.class);
+        when(planner.plan(any(), anyString())).thenAnswer(call ->
+                rawPlanner.plan(((Project) call.getArgument(0)).getWorkingDirectory(), call.getArgument(1)));
         var service = service(planner, new ManualExecutor());
         assertFalse(Files.exists(temp.resolve("projects")));
-        Project first = service.newProject("第一项目");
-        Project second = service.newProject("第二项目");
+        Project first = service.newProject("第一项目", model, model, model);
+        Project second = service.newProject("第二项目", model, model, model);
         assertNotEquals(first.getProjectId(), second.getProjectId());
         assertDoesNotThrow(() -> UUID.fromString(first.getProjectId()));
         assertEquals(temp.resolve("projects").resolve(first.getProjectId()), first.getWorkingDirectory());
@@ -48,20 +54,20 @@ class ProjectUserifImplTest {
 
     @Test
     void failedPlanningDoesNotAppendAndNewProjectCleansOnlyItsEmptyDirectory() throws Exception {
-        var planner = mock(CodexRequirementPlanner.class);
+        var planner = mock(AgentRequirementPlanner.class);
         when(planner.plan(any(), anyString())).thenThrow(new IllegalStateException("fixture"));
         var service = service(planner, new ManualExecutor());
-        assertThrows(IllegalStateException.class, () -> service.newProject("任务"));
+        assertThrows(IllegalStateException.class, () -> service.newProject("任务", model, model, model));
         try (var directories = Files.list(temp.resolve("projects"))) { assertEquals(0, directories.count()); }
         Project project = existing();
         var original = project.getRequirements();
         assertThrows(IllegalStateException.class, () -> service.createRequirements(project, "任务"));
         assertSame(original, project.getRequirements());
         doAnswer(invocation -> {
-            Files.writeString(((Path) invocation.getArgument(0)).resolve("user-file"), "用户数据");
+            Files.writeString(((Project) invocation.getArgument(0)).getWorkingDirectory().resolve("user-file"), "用户数据");
             throw new IllegalStateException("fixture");
         }).when(planner).plan(any(), anyString());
-        assertThrows(IllegalStateException.class, () -> service.newProject("保留"));
+        assertThrows(IllegalStateException.class, () -> service.newProject("保留", model, model, model));
         try (var paths = Files.walk(temp.resolve("projects"))) {
             assertEquals(1, paths.filter(path -> path.getFileName().toString().equals("user-file")).count());
         }
@@ -74,7 +80,7 @@ class ProjectUserifImplTest {
         var second = requirement("c");
         project.getRequirements().addAll(List.of(first, second));
         var executor = new ManualExecutor();
-        var service = service(mock(CodexRequirementPlanner.class), executor);
+        var service = service(mock(AgentRequirementPlanner.class), executor);
         try (var callers = Executors.newVirtualThreadPerTaskExecutor()) {
             Future<List<Requirement>> call = callers.submit(() -> service.execTask(project, List.of(second, first)));
             Invocation c = executor.next();
@@ -121,7 +127,7 @@ class ProjectUserifImplTest {
         var requirement = requirement("a", "b");
         project.getRequirements().add(requirement);
         var executor = new ManualExecutor();
-        var service = service(mock(CodexRequirementPlanner.class), executor);
+        var service = service(mock(AgentRequirementPlanner.class), executor);
         executor.reject = true;
         assertThrows(RejectedExecutionException.class, () -> service.execTask(project, List.of(requirement)));
         assertEquals(TaskStatus.PENDING, requirement.getTasks().getFirst().getStatus());
@@ -152,7 +158,7 @@ class ProjectUserifImplTest {
         var requirement = requirement("a");
         project.getRequirements().add(requirement);
         var executor = new ManualExecutor();
-        var service = service(mock(CodexRequirementPlanner.class), executor);
+        var service = service(mock(AgentRequirementPlanner.class), executor);
         assertThrows(IllegalArgumentException.class, () -> service.execTask(project, List.of(requirement("foreign"))));
         assertThrows(IllegalArgumentException.class, () -> service.execTask(project, List.of(requirement, requirement)));
         var duplicateOwner = new Requirement();
@@ -170,7 +176,7 @@ class ProjectUserifImplTest {
         var requirement = requirement("a", "b");
         project.getRequirements().add(requirement);
         var executor = new ManualExecutor();
-        var service = service(mock(CodexRequirementPlanner.class), executor);
+        var service = service(mock(AgentRequirementPlanner.class), executor);
         var finished = new CompletableFuture<Boolean>();
         Thread caller = Thread.ofVirtual().start(() -> {
             service.execTask(project, List.of(requirement));
@@ -186,14 +192,45 @@ class ProjectUserifImplTest {
         assertTrue(executor.calls.isEmpty());
     }
 
-    private ProjectUserifImpl service(CodexRequirementPlanner planner, AgentExecutor executor) {
-        return new ProjectUserifImpl(new ProjectSettings(temp.resolve("projects")), planner, executor);
+    private ProjectUserifImpl service(AgentRequirementPlanner planner, AgentExecutor executor) {
+        existingProjects.forEach(project -> project.setDevelopmentAgent(executor));
+        return new ProjectUserifImpl(new ProjectSettings(temp.resolve("projects")), ignored -> executor, planner);
+    }
+
+    @Test
+    void concurrentPlanningKeepsOneDirectoryLockAndReleasesItAfterLastWaiter() throws Exception {
+        var planner = mock(AgentRequirementPlanner.class);
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var count = new java.util.concurrent.atomic.AtomicInteger();
+        var inside = new java.util.concurrent.atomic.AtomicInteger();
+        var service = service(planner, new ManualExecutor());
+        Project project = existing();
+        when(planner.plan(any(), anyString())).thenAnswer(call -> {
+            assertEquals(1, inside.incrementAndGet());
+            try {
+                if (count.getAndIncrement() == 0) { entered.countDown(); assertTrue(release.await(5, TimeUnit.SECONDS)); }
+                return List.of(requirement("planned"));
+            } finally { inside.decrementAndGet(); }
+        });
+        try (var callers = Executors.newVirtualThreadPerTaskExecutor()) {
+            var first = callers.submit(() -> service.createRequirements(project, "first"));
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            var second = callers.submit(() -> service.createRequirements(project, "second"));
+            release.countDown();
+            first.get(5, TimeUnit.SECONDS); second.get(5, TimeUnit.SECONDS);
+            assertEquals(2, project.getRequirements().size());
+        } finally { release.countDown(); }
+        var field = ProjectUserifImpl.class.getDeclaredField("locks");
+        field.setAccessible(true);
+        assertTrue(((Map<?, ?>) field.get(service)).isEmpty(), "结束后的项目锁不应一直积累");
     }
 
     private Project existing() throws Exception {
         var project = new Project();
         project.setProjectId(UUID.randomUUID().toString());
         project.setWorkingDirectory(Files.createDirectories(temp.resolve("projects").resolve(project.getProjectId())));
+        existingProjects.add(project);
         return project;
     }
 

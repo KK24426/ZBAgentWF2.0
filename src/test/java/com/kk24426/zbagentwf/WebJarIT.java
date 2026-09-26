@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-23
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.3
  * 功能概要：通过真实 JAR 进程验证常驻 Web、静态页面、失败路径和资源隔离。
@@ -212,6 +212,9 @@ class WebJarIT {
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/CodexAgentExec.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/project/ProjectUserifImpl.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/userif/AgentExecutor.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/registry/AgentExecFactoryImpl.class"));
+            assertFalse(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/userif/AgentExec.class"));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/tomcat-embed-core")));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/mysql-connector-j")));
             assertFalse(names.stream().anyMatch(n -> n.contains("CliApplication") || n.contains("ZbAgentWfCli")
@@ -219,6 +222,7 @@ class WebJarIT {
                     || n.contains("AgentBeanTest") || n.contains("UserInterfaceTest")
                     || n.contains("ProjectModelTest") || n.contains("AgentExecContractTest")
                     || n.contains("ProjectConfigurationTest")
+                    || n.contains("AgentConfigurationTest") || n.contains("ExecutionResourcesTest") || n.contains("AgentRegistryTest")
                     || n.contains("CodexAgentExecTest") || n.contains("CodexRequirementPlannerTest") || n.contains("ProjectUserifImplTest")
                     || n.contains("ChatAgentFixture") || n.contains("ChatControllerTest") || n.contains("ChatServiceTest")));
         }

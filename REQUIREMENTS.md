@@ -3,37 +3,43 @@
 ## 当前范围
 单 Maven JAR 工程；Java 26、Spring Boot 4.1.1、MyBatis Starter 4.1.0。
 启动入口初始化日志、读取必填项目根目录配置并启动 Spring Web，扫描 user/agent/common，持续运行。
-当前有简单首页及单次聊天调用骨架；另有可显式组合的 Codex 执行与项目实现。模型发现及 Spring 模型装配待确认，网页聊天仍未接入；业务表和持久化未实现，原应用 CLI 已移除。
+当前有简单首页及单次聊天调用骨架；配置驱动的模型注册、执行器工厂与项目三角色绑定已由 Spring 装配。网页聊天仍未接入；业务表和持久化未实现，原应用 CLI 已移除。
 
 ## 用户骨架与最小补充
 
 用户已提供 AgentBean、UserInterface、AgentBase、UserService 及项目/执行契约；实现进度见下文，真实模型账号验收仍未运行。
 AgentBean 保留 brand/name/ver 三个私有 String 属性，提供标准 getter/setter 和无参构造；默认 null，允许 null、空字符串及中文，原样存取、不校验、不设置默认值。
 UserInterface 是由 UserImpl 更名的公共空父接口，用户接口通过 extends 继承；不新增业务方法。
-AgentBase 位于 user.agent.userif，保留用户定义的本机工具发现、查询和刷新抽象方法；不实现缓存或扫描。UserService 保留原占位行为。
+AgentBase 位于 user.agent.userif，声明列表、brand/name/ver 精确查询与刷新；agent.registry.AgentCatalog 保存配置和本机文件可执行性快照，返回防御性复制的 Bean。UserService 保留原占位行为。
 验收包括属性独立读写、边界值、父接口继承实现关系，以及既有 Spring 和真实 Web JAR 回归；测试样例不进入正式 JAR。
 此最小补充仅用于验证协作流程，不代表复杂业务接口、模型调用或数据库持久化已实现或验收。
 
 ## 项目、需求与 Task
 
 Project 包含多条 Requirement，每条 Requirement 包含多个 RequirementTask，均为独立普通 Java Bean；无父对象反向引用、数据库外键或自动业务校验。
-Project 保存 projectId、Path workingDirectory、requirements；Requirement 保存 userContent、agentUnderstanding、acceptanceCriteria、tasks、userConfirmMsg。
+Project 保存 projectId、Path workingDirectory、requirements，以及 planningAgent/developmentAgent/reviewAgent 三个 AgentExecutor 运行时引用；Requirement 保存 userContent、agentUnderstanding、acceptanceCriteria、tasks、userConfirmMsg。
 两个列表默认各实例独立的空列表，setter 原样赋值。RequirementTask 保存 id、content、acceptanceCriteria、status、result；默认 PENDING。
 TaskStatus 为 PENDING、RUNNING、SUCCEEDED、FAILED、NEEDS_CONFIRMATION，普通 Bean 不自动转换状态；项目实现按下述执行规则更新。
 规划任务 id 与单次执行 taskId 区分；AgentExecResult 保存 taskId、success、errorMessage、Long tokenCount、summary、confirmationRequired、String confirmationMessage。token 数未知时 null。
-AgentExec 保存 final 模型引用并提供 protected getter；exec(Project, content, memory, callback) 异步受理后返回 String 执行标识，最终 onCompleted 回调一次；提交失败同步抛 RejectedExecutionException 且不回调。getStderr(taskId) 按执行读取诊断。
+AgentExecutor 保存 final 模型引用并提供 protected getter；exec(Project, content, memory, callback) 异步受理后返回 String 执行标识，最终 onCompleted 回调一次；提交失败同步抛 RejectedExecutionException 且不回调。getStderr(taskId) 按执行读取诊断。
 成功 success=true、confirmationRequired=false；普通失败两者 false；需要确认 success=false、confirmationRequired=true，本次执行结束，答复后重新提交取得新标识。不增加暂停恢复或取消接口。
-ProjectUserif 的 newProject(content) 返回 Project，createRequirements(project, content) 返回需求列表，execTask(project, requirements) 等待底层结束并返回带 Task 状态和结果的需求列表；列表参数选定项目内的执行范围。
+ProjectUserif 的 newProject(content, planningAgent, developmentAgent, reviewAgent) 接受三个 AgentBean、返回绑定执行器的 Project；旧无模型入口已删除。createRequirements(project, content) 返回需求列表，execTask(project, requirements) 等待底层结束并返回带 Task 状态和结果的需求列表；列表参数选定项目内的执行范围。
 用户进一步批准先接入 Codex：newProject 使用 UUID，目录为 root/UUID，创建后规划首批需求；createRequirements 完整规划成功后追加，返回本次新增列表。execTask 按所选需求和 Task 顺序串行，只执行 PENDING；遇到新产生或既有的失败/待确认 Task 都立即返回，其余 PENDING 保持不变。重试由调用者补充确认相关内容并手动重置 PENDING，新执行标识替换单次结果，规划 id 不变；提交前快照旧确认问题、失败原因及摘要，以便新会话理解答复。
 
-## Codex 与项目具体实现阶段
+## 模型注册、工厂与项目角色
 
-agent.codex.CodexAgentExec 实现 AgentExec，CodexRequirementPlanner 负责只读规划，agent.project.ProjectUserifImpl 实现 ProjectUserif。CodexClient 是两者共享的 Codex 专用进程适配器；显式构造参数为本机原生可执行文件路径、模型 selector 和正值超时，不擅自映射 AgentBean 三字段。用户新增 AgentExec implements UserInterface 已单独 checkpoint。
-模型列表来源尚待选择。本阶段不添加模型外部配置、不自动选默认模型、不注册这些业务组件为 Spring Bean；它们可由 Java 调用方显式组合调用。AgentBase 仍为抽象契约，不能把本阶段当作所有接口或真实模型验收已完成。
-执行通过结构化 command/args/stdin，Codex exec JSONL 和输出 schema 双重校验；任务 workspace-write，规划 read-only，保留 CLI 原有配置和规则，不使用危险绕过权限的选项。需确认通过结构化最终结果表达，本次执行结束；权限或工具错误不能冒充成功。
-执行器最多四个同时受理的执行，不排队，满或已关闭同步拒绝。每个已受理调用最终回调一次；并行消费管道，超时/关闭回收进程和已观察到的后代。stdout 上限 8 MiB；每次 stderr 至多保留 64 KiB 并标明截断、脱敏，不写原文日志。未知执行标识返回 null；诊断仅内存存储到 close，实例必须由调用者关闭，总量仍随已完成次数增长，长驻装配前需要确定总量/淘汰策略。
-项目方法在执行前检查目录归属、需求和 Task 归属；规划失败不追加部分数据。新项目失败仅尝试删除本次创建且仍为空的目录，不递归清理。数据保留在内存，未增加 Git 操作、数据库或 HTTP 路由。
-验收使用真实本地 Java fixture 子进程测试协议、超时、管道、回调、关闭及项目行为，fixture 不进入正式 JAR；没有访问真实模型账号，不能视为 Codex 账号可用性或端到端模型验收。完整 verify 继续覆盖 Web/JAR，MySQL 仍显式单独启用。
+config/agents.properties 通过 Spring 启动导入，真实文件忽略、占位示例入仓。zb.agents[条目键] 包含 brand/name/ver/type/executable/model/timeout/enabled，字段全部显式配置；仅 type=codex 已实现。模型三元组精确匹配、必填、重复拒绝，普通 AgentBean 的原样存取契约不变。CLI路径、实际模型参数和单次超时独立于模型元数据。
+条目按键合并配置来源，支持 JVM > 环境变量 > 文件的字段覆盖；配置错误导致启动失败。无配置或空表保留 Web 启动能力，查询/刷新无可用项、未知/禁用模型明确失败，不选择默认模型。初始化只检查配置文件路径是否为可执行普通文件，Windows要求.exe，不执行CLI或鉴权；“可用”不等于账号模型已验收。refreshAgentList 重新检查已加载配置的文件状态，配置修改后重启。
+AgentExecFactoryImpl 按不可变三元组复用 CodexAgentExec，防止修改入参 Bean 影响缓存；工厂负责生命周期。AgentRequirementPlanner 将项目 planningAgent 与同工厂的只读规划适配器关联，业务调用方无需依赖 Codex 类；手工替换为其它工厂/自定义规划实例会明确失败。
+newProject 三个模型全部解析成功后才创建 root/UUID，绑定规划/开发/审核执行器并规划首批需求；createRequirements 使用 planningAgent，execTask 使用 developmentAgent；reviewAgent 仅绑定，不自动增加审核流程。相同模型可被多个角色和项目复用，需求/任务与上下文仍分别归属项目。Project 的执行器引用不承诺序列化或持久化，不自行关闭共享实例。
+执行继续采用结构化 command/args/stdin、Codex JSONL及输出schema；规划read-only，开发workspace-write，不管理CLI登录或改变已有规则。项目路径归属、完整规划后追加、失败停止和人工重试规则不变；目录锁计入持有者和等待者，最后一位离开后回收。
+
+## Agent 资源与验证
+
+Spring工厂共享ExecutionResources，规划和开发共用4个票据、不排队；异步执行满额或关闭同步抛RejectedExecutionException且不回调，受理后最终回调一次。同步规划也消耗额度；回调前归还票据，支持回调重入关闭。
+诊断是按执行ID查询的stderr，不是Task结果。单次stderr至多64KiB并脱敏、标明截断；stdout上限8MiB。全工厂完成诊断最多256条、保留30分钟，先淘汰最早完成记录，运行中条目不淘汰；未知、其他执行器所有或过期ID返回null。定时清理与读时校验共同管理到期，不清除Task状态/结果/摘要。同步规划没有公开执行ID，失败仍通过既有安全异常链保留受限诊断。
+ContextClosedEvent停止工厂和票据受理、同时中断执行与规划；销毁阶段等待票据归还，总等待沿用开始关闭时的单一20秒预算，不等待同步调用线程结束。此预算只约束Agent资源，既有Spring Web按phase配置20秒，不承诺全应用所有Bean总退出时长。单任务timeout独立按模型条目配置。关闭后诊断清空且不接收迟到写入；直接构造的低层实例拥有独立资源作用域，应由调用方close。
+验证注册/配置覆盖/刷新、工厂版本与复用、Spring接口注入、项目三角色和隔离、共享额度、关闭竞态、容量/TTL、锁回收，并运行真实Java fixture子进程和完整verify。没有访问真实模型账号；用户决定初期功能完成后另行验收。MySQL仍按显式环境测试单独启用。
 
 ## 项目根目录配置
 
@@ -77,6 +83,6 @@ mysql-it 仅接受回环地址 zbagentwf_test 和独立环境变量，可经 SSH
 缺配置时显式测试失败；普通构建跳过该环境测试。
 
 ## 待用户提供
-AgentBase 模型列表来源、默认模型配置与 Spring 装配、诊断缓存总量策略及真实 Codex 验收；后续业务表结构、事务边界及会话功能；
+真实 Codex 验收、审核 Agent 业务流程；后续业务表结构、事务边界及会话功能；
 生产环境与权限模型（当前仅批准远程测试环境、专用测试库和受限账号）；
 日志历史保留策略若需要自动清理，由后续任务定义。

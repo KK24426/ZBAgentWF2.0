@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：定义项目内单次异步 Agent 执行及按执行标识读取诊断的契约。
@@ -13,7 +13,7 @@ import com.kk24426.zbagentwf.user.UserInterface;
 
 import java.util.concurrent.RejectedExecutionException;
 
-/** 用户定义的执行契约；具体 Codex 实现位于 agent.codex，由调用方显式组合。 */
+/** 用户定义的执行契约；通过 AgentExecFactory 按已注册模型获取实现。 */
 public abstract class AgentExecutor implements UserInterface{
     private final AgentBean agent;
 
@@ -45,6 +45,7 @@ public abstract class AgentExecutor implements UserInterface{
      *
      * @param taskId exec 返回的单次执行标识
      * @return 对应执行的诊断文本，不得未经处理写入日志或公开错误响应
+     *         未知、其他执行器所有或已过期时返回 null；完成记录全应用最多256条、保留30分钟
      */
     public abstract String getStderr(String taskId);
 }

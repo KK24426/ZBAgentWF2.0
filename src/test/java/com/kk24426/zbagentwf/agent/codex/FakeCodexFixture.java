@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：以真实 Java 子进程提供可控 Codex JSONL 测试协议，不调用模型。
@@ -22,6 +22,7 @@ public class FakeCodexFixture {
             return;
         }
         var arguments = List.of(args);
+        Files.writeString(Path.of("model-selection"), arguments.get(arguments.indexOf("--model") + 1));
         Path schema = Path.of(arguments.get(arguments.indexOf("--output-schema") + 1));
         Files.writeString(Path.of("started"), Long.toString(ProcessHandle.current().pid()));
         Files.writeString(Path.of("schema-path"), schema.toString());

@@ -13,7 +13,7 @@
 | agent.chat.AgentChatImpl implements AgentChat | 正式占位实现，仅明确不可用，不继承 AgentBase |
 | common.chat.ChatRequest / ChatResponse | 不可变请求message与响应reply载体，不注册为Spring组件 |
 
-UserService 保留原占位行为。2026-09-25 按用户批准将父接口更名为 UserInterface，并纠正 AgentChatImpl 对 AgentBase 的继承；聊天当前不调用新的 AgentExec。接口实现可以在测试中注入替换；测试成功不代表真实 Agent 已接入。
+UserService 保留原占位行为。2026-09-25 按用户批准将父接口更名为 UserInterface，并纠正 AgentChatImpl 对 AgentBase 的继承；聊天当前不调用新的 AgentExecutor。接口实现可以在测试中注入替换；测试成功不代表真实 Agent 已接入。
 
 2026-09-24按用户要求，将AgentUnavailableException从user服务包移到common.exception；Java调用方需更新import，不保留旧包兼容类。异常继承、无参构造、固定文案和HTTP 503映射不变，不新增父异常体系。
 

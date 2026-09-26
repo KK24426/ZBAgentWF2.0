@@ -1,0 +1,11 @@
+# 复制为 config/agents.properties，替换占位值后启用；真实配置不入仓。
+# 模型元数据与 CLI 模型参数独立配置，配置修改后重启应用。
+zb.agents[0].brand=YOUR_MODEL_PROVIDER
+zb.agents[0].name=YOUR_MODEL_NAME
+zb.agents[0].ver=YOUR_MODEL_VERSION
+zb.agents[0].type=codex
+zb.agents[0].executable=PATH_TO_NATIVE_CODEX_EXECUTABLE/codex.exe
+zb.agents[0].model=YOUR_CODEX_MODEL_SELECTOR
+# 单次调用超时示例，不是应用关闭的20秒预算。
+zb.agents[0].timeout=30m
+zb.agents[0].enabled=false

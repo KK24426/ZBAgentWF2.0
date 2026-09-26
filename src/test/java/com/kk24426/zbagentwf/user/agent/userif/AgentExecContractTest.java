@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：用手动完成的测试替身验证执行接口、项目传递和结果关联。
@@ -77,7 +77,7 @@ class AgentExecContractTest {
     @Test
     void projectPortCarriesProjectAndSelectedRequirements() {
         var port = new ProjectUserif() {
-            @Override public Project newProject(String content) { return project(content); }
+            @Override public Project newProject(String content, AgentBean planning, AgentBean development, AgentBean review) { return project(content); }
             @Override public List<Requirement> createRequirements(Project project, String content) {
                 var requirement = new Requirement();
                 requirement.setUserContent(content);
@@ -90,7 +90,7 @@ class AgentExecContractTest {
             }
         };
         assertInstanceOf(UserInterface.class, port);
-        Project project = port.newProject("项目");
+        Project project = port.newProject("项目", new AgentBean(), new AgentBean(), new AgentBean());
         var requirements = port.createRequirements(project, "需求");
         assertSame(project.getRequirements(), requirements);
         assertSame(requirements, port.execTask(project, requirements));

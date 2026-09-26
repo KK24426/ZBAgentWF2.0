@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：通过只读 Codex 调用规划需求，在完整校验后生成项目数据对象。
@@ -9,6 +9,7 @@ package com.kk24426.zbagentwf.agent.codex;
 
 import com.kk24426.zbagentwf.common.project.bean.Requirement;
 import com.kk24426.zbagentwf.common.project.bean.RequirementTask;
+import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,11 +21,29 @@ import tools.jackson.databind.JsonNode;
 /** 项目实现使用的具体规划辅助类，不注册新用户业务接口。 */
 public final class CodexRequirementPlanner {
     private final CodexClient client;
+    private final ExecutionResources resources;
+    private final Object owner;
 
-    public CodexRequirementPlanner(CodexClient client) { this.client = Objects.requireNonNull(client); }
+    public CodexRequirementPlanner(CodexClient client) {
+        this(client, new ExecutionResources(), new Object());
+    }
+
+    public CodexRequirementPlanner(CodexClient client, ExecutionResources resources, Object owner) {
+        this.client = Objects.requireNonNull(client);
+        this.resources = Objects.requireNonNull(resources);
+        this.owner = Objects.requireNonNull(owner);
+    }
 
     /** 仅生成尚未执行的数据；调用方在本方法全部成功后才加入项目。 */
     public List<Requirement> plan(Path directory, String content) {
+        try (var ticket = resources.reserve(owner)) {
+            ticket.attach(Thread.currentThread());
+            ticket.checkRunning();
+            return planAccepted(directory, content);
+        }
+    }
+
+    private List<Requirement> planAccepted(Path directory, String content) {
         var diagnostics = new StringBuilder();
         try {
             String prompt = """

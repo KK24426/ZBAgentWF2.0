@@ -1,47 +1,56 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：实现 UUID 项目创建、需求追加及遇到失败或确认即停止的串行 Task 执行。
  */
 package com.kk24426.zbagentwf.agent.project;
 
-import com.kk24426.zbagentwf.agent.codex.CodexRequirementPlanner;
+import com.kk24426.zbagentwf.agent.registry.AgentRequirementPlanner;
+import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
 import com.kk24426.zbagentwf.common.project.bean.*;
 import com.kk24426.zbagentwf.user.agent.userif.AgentExecutor;
+import com.kk24426.zbagentwf.user.agent.userif.AgentExecFactory;
 import com.kk24426.zbagentwf.user.project.userif.ProjectUserif;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 
-/** 显式注入已选择的执行器和规划器；模型发现及 Spring 自动装配另行实现。 */
+/** 创建时绑定三角色，后续操作读取项目中的绑定；实例本身不保存当前项目或默认模型。 */
 public final class ProjectUserifImpl extends ProjectUserif {
     private final ProjectSettings settings;
-    private final CodexRequirementPlanner planner;
-    private final AgentExecutor executor;
-    private final Map<Path, Object> locks = new ConcurrentHashMap<>();
+    private final AgentRequirementPlanner planner;
+    private final AgentExecFactory factory;
+    private final Map<Path, ProjectLock> locks = new HashMap<>();
 
-    public ProjectUserifImpl(ProjectSettings settings, CodexRequirementPlanner planner, AgentExecutor executor) {
+    public ProjectUserifImpl(ProjectSettings settings, AgentExecFactory factory, AgentRequirementPlanner planner) {
         this.settings = Objects.requireNonNull(settings);
         this.planner = Objects.requireNonNull(planner);
-        this.executor = Objects.requireNonNull(executor);
+        this.factory = Objects.requireNonNull(factory);
     }
 
     @Override
-    public Project newProject(String content) {
+    public Project newProject(String content, AgentBean planningAgent, AgentBean developmentAgent, AgentBean reviewAgent) {
         requireContent(content);
+        // 三个模型全部解析成功后才产生项目目录等外部副作用。
+        AgentExecutor planning = Objects.requireNonNull(factory.getExecutor(planningAgent));
+        AgentExecutor development = Objects.requireNonNull(factory.getExecutor(developmentAgent));
+        AgentExecutor review = Objects.requireNonNull(factory.getExecutor(reviewAgent));
         Path created = null;
         try {
             Path root = settings.getRootDirectory();
             Files.createDirectories(root);
             var project = new Project();
+            project.setPlanningAgent(planning);
+            project.setDevelopmentAgent(development);
+            project.setReviewAgent(review);
             project.setProjectId(UUID.randomUUID().toString());
             created = Files.createDirectory(root.resolve(project.getProjectId()));
             project.setWorkingDirectory(created.toAbsolutePath().normalize());
@@ -61,9 +70,9 @@ public final class ProjectUserifImpl extends ProjectUserif {
     public List<Requirement> createRequirements(Project project, String content) {
         requireContent(content);
         Path directory = directory(project);
-        synchronized (locks.computeIfAbsent(directory, ignored -> new Object())) {
+        try (var ignored = lock(directory)) {
             List<Requirement> existing = Objects.requireNonNull(project.getRequirements(), "项目需求列表不能为空。");
-            List<Requirement> added = planner.plan(directory, content);
+            List<Requirement> added = planner.plan(project, content);
             // 用新的可修改列表整体替换，兼容 Bean setter 接收的不可变列表，避免部分追加。
             var combined = new ArrayList<>(existing);
             combined.addAll(added);
@@ -75,7 +84,9 @@ public final class ProjectUserifImpl extends ProjectUserif {
     @Override
     public List<Requirement> execTask(Project project, List<Requirement> requirements) {
         Path directory = directory(project);
-        synchronized (locks.computeIfAbsent(directory, ignored -> new Object())) {
+        try (var ignored = lock(directory)) {
+            AgentExecutor executor = project.getDevelopmentAgent();
+            if (executor == null) throw new IllegalArgumentException("项目未绑定开发 Agent。");
             List<Requirement> selected = validateSelection(project, requirements);
             boolean interrupted = false;
             try {
@@ -136,6 +147,27 @@ public final class ProjectUserifImpl extends ProjectUserif {
             return actual;
         } catch (IOException failure) {
             throw new IllegalArgumentException("项目目录不可用。", failure);
+        }
+    }
+
+    private ProjectLock lock(Path directory) {
+        ProjectLock value;
+        synchronized (locks) {
+            value = locks.computeIfAbsent(directory, ProjectLock::new);
+            value.users++; // 等待者也持有引用，不能在解锁瞬间让同目录出现两把锁。
+        }
+        value.lock.lock();
+        return value;
+    }
+
+    private final class ProjectLock implements AutoCloseable {
+        private final Path directory;
+        private final ReentrantLock lock = new ReentrantLock();
+        private int users;
+        private ProjectLock(Path directory) { this.directory = directory; }
+        @Override public void close() {
+            lock.unlock();
+            synchronized (locks) { if (--users == 0) locks.remove(directory, this); }
         }
     }
 

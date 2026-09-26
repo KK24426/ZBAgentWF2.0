@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-22
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.3
  * 功能概要：验证脱敏、完整异常链、目录隔离、滚动和日志故障。
@@ -37,6 +37,8 @@ class LoggingTest {
             for (String logger : new String[]{"com.kk24426.zbagentwf.user.chat.service.ChatService",
                     "com.kk24426.zbagentwf.agent.chat.AgentChatImpl", "org.springframework.web.Binding",
                     "com.kk24426.zbagentwf.agent.codex.CodexClient",
+                    "com.kk24426.zbagentwf.agent.registry.AgentExecFactoryImpl",
+                    "com.kk24426.zbagentwf.agent.runtime.ExecutionResources",
                     "com.kk24426.zbagentwf.agent.project.ProjectUserifImpl",
                     "com.kk24426.zbagentwf.agent.web.WebRequestFilter"}) {
                 var event = new LoggingEvent("test", context.getLogger(logger), Level.ERROR,

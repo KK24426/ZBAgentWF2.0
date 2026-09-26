@@ -1,6 +1,6 @@
 # 项目、需求与 Agent 执行契约
 
-用户于 2026-09-25 批准本轮数据结构、方法签名及配置初始化。随后用户批准先接入 Codex 及项目操作规则；当前已有可显式组合的具体实现，模型发现及 Spring 自动装配待确认。
+用户于 2026-09-25 批准本轮数据结构、方法签名及配置初始化。随后用户批准先接入 Codex 及项目操作规则；2026-09-26进一步批准配置注册、Spring工厂、项目角色绑定和资源限制，真实模型验收延后。
 
 ## 包含关系与数据
 
@@ -8,7 +8,7 @@ Project → List<Requirement> → List<RequirementTask>，均是独立 Java 类�
 
 | 类型 | 字段 |
 | --- | --- |
-| Project | String projectId、Path workingDirectory、List<Requirement> requirements |
+| Project | String projectId、Path workingDirectory、List<Requirement> requirements；AgentExecutor planningAgent/developmentAgent/reviewAgent |
 | Requirement | String userContent、agentUnderstanding、acceptanceCriteria、userConfirmMsg；List<RequirementTask> tasks |
 | RequirementTask | String id、content、acceptanceCriteria；TaskStatus status；AgentExecResult result |
 | common.agent.bean.AgentExecResult | String taskId、errorMessage、summary、confirmationMessage；boolean success、confirmationRequired；Long tokenCount |
@@ -22,13 +22,13 @@ RequirementTask.id 是规划任务标识，AgentExecResult.taskId 是一次执�
 
 user.project.userif.ProjectUserif implements UserInterface：
 
-- Project newProject(String content)：建立 UUID 项目目录并规划首批需求，将目录放入 workingDirectory。
+- Project newProject(String content, AgentBean planningAgent, AgentBean developmentAgent, AgentBean reviewAgent)：先解析三个模型，绑定到新项目后建立 UUID 目录并规划首批需求；旧无模型方法与无参 CodexRequirementPlanner 占位已删除。
 - List<Requirement> createRequirements(Project project, String content)：成功后追加需求，返回本次新增需求及 Task。
 - List<Requirement> execTask(Project project, List<Requirement> requirements)：列表用于选定该项目内的执行范围；等待底层执行结束，返回含 Task 状态和结果的需求列表。
 
 项目具体实现规则见下文；包含关系仍通过 Bean 列表表达。
 
-user.agent.userif.AgentExec implements UserInterface，通过构造函数保存 private final AgentBean，protected getAgent() 供实现类读取；工作目录从本次传入的 Project 获取：
+user.agent.userif.AgentExecutor implements UserInterface，通过构造函数保存 private final AgentBean，protected getAgent() 供实现类读取；工作目录从本次传入的 Project 获取：
 
 - String exec(Project project, String content, String memory, AgentExecCallback callback)：异步受理，返回单次执行标识。memory 没有时可为空。
 - String getStderr(String taskId)：读取该次执行的诊断文本；stderr 不决定执行成败，不能原样公开或写日志。
@@ -62,25 +62,28 @@ Java properties 使用标准转义规则；Windows 推荐正斜线，中文也�
 - agent.codex.CodexClient：二者共用的本机进程适配器。
 - agent.project.ProjectUserifImpl：项目目录、需求追加及等待异步结果的串行执行。
 
-构造参数显式组合：CodexClient 接收原生可执行文件 Path、CLI 模型 selector String 和正值 Duration；CodexAgentExec 接收 AgentBean 和 client；planner 接收 client；ProjectUserifImpl 接收 ProjectSettings、planner 和 AgentExec。没有把 CLI 版本填入 AgentBean.ver，没有决定三个字段与 selector 的映射。模型列表来源和默认选择待用户答复，AgentBase 仍未实现，以上组件未自动注册到 Spring，网页聊天保持未接入。
+Spring装配 AgentCatalog（AgentBase）、AgentExecFactoryImpl（AgentExecFactory）和 ProjectUserifImpl（ProjectUserif）。调用方用 getActiveAgent(brand,name,ver) 与 getExecutor(agent) 获取对应模型；键精确匹配，工厂复制元数据、复用同模型实例，不从品牌猜CLI，不自动回退。
+config/agents.properties 的 zb.agents[条目键] 使用 brand/name/ver/type/executable/model/timeout/enabled，所有字段显式配置，当前仅 codex；type表示执行实现，model为CLI参数，ver不代表CLI版本。示例见[agents.properties.example](../../config/agents.properties.example)。条目键按来源合并字段，JVM > 环境变量 > 文件；无配置允许Web启动，缺必填/重复三元组/非法值启动失败。无可用模型、未知模型或关闭工厂的获取用固定IllegalStateException；空/无效三元组用IllegalArgumentException。
+AgentCatalog初始化只检查文件可执行性，Windows只接受.exe，不运行CLI/鉴权；返回Bean副本。刷新只重查已加载配置中的文件状态；删除文件后刷新清除可用项，配置修改需要重启。已经取得的执行器若随后丢失CLI，按普通执行失败返回，不承诺实时可用性。
+Project保存三个AgentExecutor运行时引用；user接口类型依赖由用户明确批准，不保存线程/CLI参数/凭据到实体，也不承诺实体序列化或持久化。工厂统一拥有实例生命周期，调用方不能关闭共享实例。AgentRequirementPlanner使用当前工厂中与planningAgent同身份的规划适配器；跨工厂或自定义实例绑定无法规划时明确失败。reviewAgent当前仅绑定，网页聊天仍未接入。
 
 ## 执行器与进程细节
 
-每次受理返回 UUID。快速执行可在 exec 返回前完成回调，调用者按 result.taskId 关联，不能假设回调发生在返回之后。工作目录在受理时快照。无效输入、无效目录、四个执行槽已满或关闭时同步拒绝且不回调。回调异常只记录脱敏诊断，不重复回调。close 停止受理、中断执行并有限等待；不承诺抵抗 JVM 崩溃或调用方永不返回的回调。
+每次受理返回 UUID。快速执行可在 exec 返回前完成回调，调用者按 result.taskId 关联，不能假设回调发生在返回之后。工作目录在受理时快照。无效输入、无效目录、全工厂四个执行额度已满或关闭时同步拒绝且不回调；只读规划也消耗同一额度。回调异常只记录脱敏诊断，不重复回调。close 停止受理、中断执行并有限等待；不承诺抵抗 JVM 崩溃或调用方永不返回的回调。
 
 ProcessBuilder 分离 executable、args 和 UTF-8 stdin，固定使用 Codex exec JSONL、临时输出 schema、ephemeral、无颜色和允许普通非 Git 项目。任务 sandbox 为 workspace-write，规划为 read-only，approval 为 never；保留 CLI 原有配置、认证和规则，不使用危险绕过选项。权限或工具错误不能冒充成功，程序不自行扩大权限。
 退出码 0、唯一 turn.completed、无 turn.failed/error 且最终 agent_message 为合法结构化数据，才接受协议结果；业务结果仍可失败或待确认。Java 生成执行 ID，usage 的 input_tokens + output_tokens 为 tokenCount，cached_input_tokens 不重复计数；缺失或不可表示时为 null。
 
 三个管道并发处理，整体超时和进程退出后收尾有界，回收主进程及已观察到的后代；ProcessHandle 遍历不等同于操作系统级进程组隔离。stdout 超过 8 MiB 失败，stderr 保留至多 64 KiB 并标明截断、脱敏。schema 临时文件结束后删除；日志隐藏自由文本但保留异常类型、堆栈和关系，单独记录生成标识、固定阶段及退出码。
-getStderr 在受理后可查，最终回调前更新，执行中可能为空字符串，未知 ID 返回 null。内容不得直接公开到 HTTP，脱敏无法保证识别任意隐私文本。诊断只保留在内存直到 close，关闭后清空且不再接受迟到写入。总量随完成次数增长，必须管理实例生命周期；长驻装配前确定总量上限或淘汰策略。
+getStderr 在受理后可查，最终回调前更新，执行中可能为空字符串，未知 ID 返回 null。内容不得直接公开到 HTTP，脱敏无法保证识别任意隐私文本。已完成诊断全工厂最多256条并保留30分钟，按完成顺序淘汰；运行中条目不淘汰，未知、其他执行器所有和过期ID返回null，Task结果不受影响。定时清理及读取时校验到期；关闭清空并禁止晚写回。ContextClosedEvent停止受理并同时中断任务，工厂close等待票据归还，沿用从关闭开始的单一20秒预算，不join长期调用线程，也不按实例累计等待。单任务timeout单独配置；Spring Web的每phase20秒不是整个应用所有资源的总退出承诺。
 
 ## 项目具体行为
 
-newProject 验证非空内容，在 root/UUID 建目录并规划首批需求。只有业务调用才创建尚不存在的根目录，初始化不创建。失败抛 IllegalStateException，仅尝试删除本次创建且仍为空的项目目录，绝不递归删除；保留根目录和外部写入的文件。
+newProject 验证非空内容，先通过工厂解析规划/开发/审核三个模型；解析失败不创建目录。全部成功后绑定实例，在 root/UUID 建目录并使用 planningAgent 规划首批需求。只有业务调用才创建尚不存在的根目录，初始化不创建。失败抛 IllegalStateException，仅尝试删除本次创建且仍为空的项目目录，绝不递归删除；保留根目录和外部写入的文件。
 createRequirements 校验项目目录存在且真实路径位于根目录之下，完整规划成功后把列表替换为“旧需求 + 新需求”，原需求对象保留，返回本次新增列表；外部持有的旧列表引用不自动同步。这兼容 Bean setter 接受的不可变列表，失败不追加部分数据。
 规划只读分析原始内容和目录，返回理解、验收和按顺序执行的 Task；每条 userContent 保存本次完整输入。Java 生成 Task UUID，默认 PENDING、result=null。信息不足时 userConfirmMsg 为待确认事项且 tasks 为空，不自动发明业务规则。规划失败的受限脱敏 stderr 保留在 cause 的 suppressed 异常中供本地诊断，顶层错误仍固定；不得原样外传或用其它日志组件直接打印这段自由文本。
 
-execTask 开始前按对象身份检查需求归属，拒绝重复需求、共享 Task、无效 Task 标识/状态/内容及目录越界。同一实现实例对同一真实项目目录串行操作，调用方不要在执行期间直接并发修改 Bean。
+execTask 开始前按对象身份检查需求归属，拒绝重复需求、共享 Task、无效 Task 标识/状态/内容及目录越界。同一实现实例对同一真实项目目录串行操作，锁的引用计数包含等待者，最后一位离开后回收；调用方不要在执行期间直接并发修改 Bean 或角色绑定。execTask在开始时快照developmentAgent，本轮不自动执行reviewAgent。
 按传入需求及 Task 列表顺序，只执行 PENDING。在本次范围内遇到既有 FAILED/NEEDS_CONFIRMATION 也立即返回，不能再次调用就自动绕过；SUCCEEDED 可跳过。提交时先快照上下文再置 RUNNING、清旧结果，受理失败恢复 PENDING 和旧结果并抛 RejectedExecutionException；受理后等待回调，写回结果并映射 SUCCEEDED、FAILED 或 NEEDS_CONFIRMATION。失败或待确认立即返回，后续任务不变。
 调用方补充确认相关内容、将目标 Task 重置为 PENDING 后重试，保留规划 id，替换单次结果。上下文包含当前需求原始内容、理解、验收、确认相关内容，以及按规划任务和旧执行 ID 关联的先前摘要、确认问题、失败原因，在清旧结果前生成；简短答复也能关联原问题。不跨项目共享记忆。等待线程中断后仍等待已受理执行完成，再保留中断标志返回，不启动下一项，没有新增取消协议。
 

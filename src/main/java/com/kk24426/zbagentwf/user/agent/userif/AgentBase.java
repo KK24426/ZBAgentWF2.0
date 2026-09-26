@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：保留用户定义的本机 Agent 发现、查询和刷新抽象能力。
@@ -27,7 +27,7 @@ public abstract class AgentBase implements UserInterface {
 	public abstract List<AgentBean> getActiveAgent();
 
 	/**
-	 * 通过指定品牌和模型名去全局变量中获取特定的Agent
+	 * 通过品牌、模型名和版本从已初始化的快照中精确获取 Agent。
 	 *
 	 * @param brand 提供方
 	 * @param name 模型名
