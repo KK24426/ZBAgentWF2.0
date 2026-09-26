@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-26
+ * 更新日期：2026-09-27
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：实现 Codex 异步受理、单次完成回调和按执行标识读取诊断。
@@ -52,6 +52,8 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
 
     @Override
     public String exec(Project project, String content, String memory, AgentExecCallback callback) {
+        // 在受理前快照真实目录，避免异步线程读取到调用方随后修改的 Project 路径。
+        // 此阶段失败统一同步拒绝，尚未启动工作，也不能触发完成回调。
         Path directory;
         try {
             Objects.requireNonNull(callback);
@@ -62,6 +64,7 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
         } catch (Exception failure) {
             throw new RejectedExecutionException("提交无效：需要有效项目目录、非空内容及回调。", failure);
         }
+        // 与当前执行器的 close 互斥；先占共享名额，再创建线程，不能先启动进程再判断容量。
         synchronized (lifecycle) {
             if (closed) throw new RejectedExecutionException("执行器已关闭。");
             var ticket = resources.reserve(this);
@@ -72,6 +75,7 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
                 worker.start();
             }
             catch (RuntimeException | Error failure) {
+                // 线程未成功启动时归还名额；受理失败不能留下占位或伪造完成结果。
                 ticket.close();
                 throw new RejectedExecutionException("无法受理执行。", failure);
             }
@@ -85,6 +89,7 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
         AgentExecResult result = new AgentExecResult();
         result.setTaskId(id);
         try {
+            // 工厂可能在预留票据后、工作线程运行前关闭，此时按已受理执行失败完成回调。
             ticket.checkRunning();
             var input = CodexJson.JSON.createObjectNode().put("content", content).put("memory", memory);
             String prompt = """
@@ -97,6 +102,7 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
                     """ + CodexJson.JSON.writeValueAsString(input);
             var response = client.run(directory, prompt, CodexSchemas.EXECUTION, false, value -> diagnostic[0] = value);
             result.setTokenCount(response.tokens());
+            // CLI 正常退出只代表通信成功；业务成功、待确认、普通失败还需独立校验。
             var value = response.value();
             CodexJson.fields(value, "success", "summary", "errorMessage", "confirmationRequired", "confirmationMessage");
             boolean success = CodexJson.bool(value, "success");
@@ -104,6 +110,7 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
             String error = CodexJson.text(value, "errorMessage", true);
             String message = CodexJson.text(value, "confirmationMessage", true);
             String summary = CodexJson.text(value, "summary", true);
+            // 成功不能同时要求确认；待确认必须给出问题，普通失败必须给出原因。
             if (success && confirmation || confirmation && (message == null || message.isBlank())
                     || !success && !confirmation && (error == null || error.isBlank())) {
                 throw new IllegalStateException("Codex 最终结果状态互相矛盾或缺少原因。");
@@ -144,6 +151,7 @@ public final class CodexAgentExec extends AgentExecutor implements AutoCloseable
             if (closed) return;
             closed = true;
         }
+        // 独立实例回收自己的整个作用域；工厂共享实例只关闭自身，避免中断其它模型。
         if (ownsResources) resources.close();
         else resources.closeOwner(this);
     }

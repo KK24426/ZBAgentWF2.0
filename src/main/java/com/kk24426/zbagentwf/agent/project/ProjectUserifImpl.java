@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-26
+ * 更新日期：2026-09-27
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：实现 UUID 项目创建、需求追加及遇到失败或确认即停止的串行 Task 执行。
@@ -52,6 +52,7 @@ public final class ProjectUserifImpl extends ProjectUserif {
             project.setDevelopmentAgent(development);
             project.setReviewAgent(review);
             project.setProjectId(UUID.randomUUID().toString());
+            // 只有业务创建调用才建立目录；createDirectory 要求项目目录全新，不能复用已有目录。
             created = Files.createDirectory(root.resolve(project.getProjectId()));
             project.setWorkingDirectory(created.toAbsolutePath().normalize());
             createRequirements(project, content);
@@ -71,6 +72,7 @@ public final class ProjectUserifImpl extends ProjectUserif {
         requireContent(content);
         Path directory = directory(project);
         try (var ignored = lock(directory)) {
+            // 锁覆盖规划到列表替换的整个过程，避免同目录并发追加时各自覆盖对方的新增需求。
             List<Requirement> existing = Objects.requireNonNull(project.getRequirements(), "项目需求列表不能为空。");
             List<Requirement> added = planner.plan(project, content);
             // 用新的可修改列表整体替换，兼容 Bean setter 接收的不可变列表，避免部分追加。
@@ -85,6 +87,7 @@ public final class ProjectUserifImpl extends ProjectUserif {
     public List<Requirement> execTask(Project project, List<Requirement> requirements) {
         Path directory = directory(project);
         try (var ignored = lock(directory)) {
+            // 本批固定使用开始时绑定的开发执行器；审核角色不会在任务执行后被隐式调用。
             AgentExecutor executor = project.getDevelopmentAgent();
             if (executor == null) throw new IllegalArgumentException("项目未绑定开发 Agent。");
             List<Requirement> selected = validateSelection(project, requirements);
@@ -93,6 +96,7 @@ public final class ProjectUserifImpl extends ProjectUserif {
                 for (Requirement requirement : selected) {
                     for (RequirementTask task : requirement.getTasks()) {
                         if (Thread.currentThread().isInterrupted()) return selected;
+                        // 既有失败或待确认也会挡住后续任务；只有调用方显式重置 PENDING 才算重试。
                         if (task.getStatus() == TaskStatus.FAILED || task.getStatus() == TaskStatus.NEEDS_CONFIRMATION) return selected;
                         if (task.getStatus() != TaskStatus.PENDING) continue;
                         var completion = new CompletableFuture<AgentExecResult>();
@@ -106,16 +110,20 @@ public final class ProjectUserifImpl extends ProjectUserif {
                             id = executor.exec(project, task.getContent() + "\n验收标准：\n"
                                     + Objects.toString(task.getAcceptanceCriteria(), ""), context, completion::complete);
                         } catch (RejectedExecutionException failure) {
+                            // 未受理不会回调；恢复提交前的结果，避免 Task 永远停留在 RUNNING。
                             task.setStatus(TaskStatus.PENDING);
                             task.setResult(previous);
                             throw failure;
                         }
                         AgentExecResult result;
+                        // 当前契约没有取消操作。调用方中断后仍须等已受理执行结束并落下结果，
+                        // 随后停止本批并恢复中断标志，不能留下后台修改与前台状态脱节的 Task。
                         while (true) {
                             try { result = completion.get(); break; }
                             catch (InterruptedException failure) { interrupted = true; }
                             catch (ExecutionException failure) { throw new IllegalStateException("等待执行结果失败。", failure); }
                         }
+                        // 回调可能来自其它实现或替身；标识不匹配、互斥状态冲突时统一记为失败。
                         if (result == null || !Objects.equals(id, result.getTaskId())
                                 || result.isSuccess() && result.isConfirmationRequired()) {
                             result = new AgentExecResult();
@@ -123,6 +131,7 @@ public final class ProjectUserifImpl extends ProjectUserif {
                             result.setErrorMessage("底层执行结果违反回调契约。");
                         }
                         task.setResult(result);
+                        // 待确认也是本次执行的终态，等待用户补充后重新提交，不在这里暂停底层会话。
                         task.setStatus(result.isConfirmationRequired() ? TaskStatus.NEEDS_CONFIRMATION
                                 : result.isSuccess() ? TaskStatus.SUCCEEDED : TaskStatus.FAILED);
                         if (interrupted || task.getStatus() != TaskStatus.SUCCEEDED) return selected;
@@ -139,6 +148,7 @@ public final class ProjectUserifImpl extends ProjectUserif {
         if (project == null || project.getProjectId() == null || project.getProjectId().isBlank()
                 || project.getWorkingDirectory() == null) throw new IllegalArgumentException("项目缺少标识或目录。");
         try {
+            // 先解析真实路径再比较归属，避免符号链接把表面位于根目录内的项目导向外部。
             Path root = settings.getRootDirectory().toRealPath();
             Path actual = project.getWorkingDirectory().toRealPath();
             if (!Files.isDirectory(actual) || actual.equals(root) || !actual.startsWith(root)) {
@@ -156,6 +166,7 @@ public final class ProjectUserifImpl extends ProjectUserif {
             value = locks.computeIfAbsent(directory, ProjectLock::new);
             value.users++; // 等待者也持有引用，不能在解锁瞬间让同目录出现两把锁。
         }
+        // 不持有 locks 映射锁等待项目锁，允许不同项目独立运行，也让释放者能归还引用。
         value.lock.lock();
         return value;
     }
@@ -167,12 +178,14 @@ public final class ProjectUserifImpl extends ProjectUserif {
         private ProjectLock(Path directory) { this.directory = directory; }
         @Override public void close() {
             lock.unlock();
+            // 解锁与减引用之间进入的新调用者也会先加引用，因此不会出现同目录两把有效锁。
             synchronized (locks) { if (--users == 0) locks.remove(directory, this); }
         }
     }
 
     private static List<Requirement> validateSelection(Project project, List<Requirement> requirements) {
         if (requirements == null || project.getRequirements() == null) throw new IllegalArgumentException("需求列表不能为空。");
+        // 归属按实际对象身份判断；同内容的外部对象不属于项目，同一 Task 对象也不能被两条需求共享。
         Set<Requirement> owned = Collections.newSetFromMap(new IdentityHashMap<>());
         Set<RequirementTask> tasks = Collections.newSetFromMap(new IdentityHashMap<>());
         for (Requirement requirement : project.getRequirements()) {
@@ -183,6 +196,7 @@ public final class ProjectUserifImpl extends ProjectUserif {
                 if (task == null || !tasks.add(task)) throw new IllegalArgumentException("Task 不能被重复归属。");
             }
         }
+        // 先完整校验本次范围再执行，避免处理到中途才发现后面的需求不属于该项目。
         Set<Requirement> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         var selected = new ArrayList<Requirement>();
         for (Requirement requirement : requirements) {
@@ -199,6 +213,7 @@ public final class ProjectUserifImpl extends ProjectUserif {
         return selected;
     }
 
+    /** 新执行不复用旧 CLI 会话；用本需求的历史结果重建上下文，并保留确认答复对应的旧问题。 */
     private static String memory(Requirement requirement) {
         var memory = new StringBuilder();
         memory.append("用户原始需求：\n").append(Objects.toString(requirement.getUserContent(), ""))

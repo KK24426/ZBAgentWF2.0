@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-27
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：使用结构化命令、标准输入和 JSONL 调用本机 Codex，并管理进程资源。
@@ -57,6 +57,7 @@ public final class CodexClient {
         this.timeout = timeout;
     }
 
+    /** 单次调用拥有进程、管道和临时 schema；无论结果如何，均在收尾后交付受限诊断。 */
     Response run(Path directory, String prompt, String schema, boolean readOnly, Consumer<String> diagnostics) {
         Process process = null;
         Path schemaFile = null;
@@ -69,12 +70,15 @@ public final class CodexClient {
             LOG.debug("Codex 进程准备 callId={} readOnly={}", callId, readOnly);
             schemaFile = Files.createTempFile("zbagentwf-codex-schema-", ".json");
             Files.writeString(schemaFile, schema, StandardCharsets.UTF_8);
+            // 参数逐项传给 ProcessBuilder，用户内容只写 stdin，不拼接到可执行的 shell 命令。
+            // 规划使用只读沙箱，开发允许工作目录写入；程序不代替用户批准额外权限。
             var command = new ArrayList<>(executable);
             command.addAll(List.of("-a", "never", "exec", "--json", "--ephemeral", "--color", "never",
                     "--skip-git-repo-check", "--sandbox", readOnly ? "read-only" : "workspace-write",
                     "--model", model, "--output-schema", schemaFile.toString(), "-"));
             process = new ProcessBuilder(command).directory(directory.toFile()).start();
             Process running = process;
+            // 三条管道同时处理，避免子进程填满 stdout/stderr 后等待，而父进程还在写 stdin。
             Future<byte[]> output = pipes.submit(() -> readOutput(running.getInputStream()));
             Future<?> errors = pipes.submit(() -> { stderr.read(running.getErrorStream()); return null; });
             Future<?> input = pipes.submit(() -> {
@@ -83,6 +87,7 @@ public final class CodexClient {
                 }
                 return null;
             });
+            // 轮询既观察后代进程，也及时传播读取失败；所有轮次共用同一起点计算调用超时。
             while (true) {
                 running.descendants().forEach(descendants::add);
                 checkCompleted(output);
@@ -112,6 +117,8 @@ public final class CodexClient {
             throw new IllegalStateException("Codex 进程通信失败。", failure);
         } finally {
             if (process != null) {
+                // 先请求强制结束已观察到的后代及主进程，再关闭管道；这里只能处理观察到的进程，
+                // ProcessHandle 枚举不提供操作系统进程组级别的完整隔离保证。
                 process.descendants().forEach(descendants::add);
                 descendants.forEach(handle -> { if (handle.isAlive()) handle.destroyForcibly(); });
                 if (process.isAlive()) process.destroyForcibly();
@@ -121,6 +128,7 @@ public final class CodexClient {
             }
             pipes.shutdownNow();
             // 不使用 ExecutorService.close()，避免故障管道无限延长已超时的调用。
+            // 暂存并清除中断标志，为有限收尾留出机会，最后恢复给上层判断是否继续任务。
             boolean interrupted = Thread.interrupted();
             try {
                 if (process != null) process.waitFor(2, TimeUnit.SECONDS);
@@ -143,6 +151,7 @@ public final class CodexClient {
 
     private long remaining(long start) { return timeout.toNanos() - (System.nanoTime() - start); }
 
+    /** 已结束的读取任务也可能失败；提前提取异常，避免主进程仍等待时只能靠总超时退出。 */
     private static void checkCompleted(Future<?> future) throws ExecutionException, InterruptedException {
         if (future.isDone()) future.get();
     }
@@ -152,6 +161,7 @@ public final class CodexClient {
             byte[] buffer = new byte[8192];
             int count;
             while ((count = stream.read(buffer)) != -1) {
+                // stdout 是待解析的协议，超限即失败，不能截断后仍把残缺 JSON 当作可信结果。
                 if (bytes.size() + count > OUTPUT_LIMIT) throw new IOException("Codex 输出超过处理上限。");
                 bytes.write(buffer, 0, count);
             }
@@ -166,6 +176,7 @@ public final class CodexClient {
         }
     }
 
+    /** 协议完成事件与最后一条 Agent 消息共同决定可否接受回复，不以退出码或单条消息代替。 */
     private static Response decode(String lines) {
         JsonNode lastMessage = null;
         Long tokens = null;
@@ -174,10 +185,12 @@ public final class CodexClient {
             if (line.isBlank()) continue;
             JsonNode event = CodexJson.JSON.readTree(line);
             String type = event.path("type").asString("");
+            // 完成事件之后再出现事件、显式错误或缺类型都视为异常，避免失败流被当作成功流。
             if (completed || type.isEmpty() || type.equals("turn.failed") || type.equals("error")) {
                 throw new IllegalStateException("Codex 事件流未正常结束。");
             }
             if (type.equals("item.completed") && event.path("item").path("type").asString("").equals("agent_message")) {
+                // 过程消息可能出现多次，只取正常完成前最后一条 Agent 消息作为结构化结果。
                 lastMessage = event.path("item").get("text");
             }
             if (type.equals("turn.completed")) {
@@ -185,6 +198,7 @@ public final class CodexClient {
                 var usage = event.path("usage");
                 JsonNode input = usage.get("input_tokens");
                 JsonNode output = usage.get("output_tokens");
+                // 只累计输入与输出；缓存输入已包含在输入中。缺失、负数或溢出均保留未知值 null。
                 if (input != null && output != null && input.isIntegralNumber() && output.isIntegralNumber()
                         && input.canConvertToLong() && output.canConvertToLong()
                         && input.longValue() >= 0 && output.longValue() >= 0) {
@@ -201,6 +215,7 @@ public final class CodexClient {
 
     record Response(JsonNode value, Long tokens) { }
 
+    /** stderr 可以截断存储，但仍须持续读取，防止诊断管道反压阻塞进程。 */
     private static final class DiagnosticBuffer {
         private static final int LIMIT = 64 * 1024;
         private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -214,6 +229,7 @@ public final class CodexClient {
             }
         }
 
+        // 读取线程与调用线程的固定收尾诊断共享缓冲区；同一锁也保护最终文本快照。
         private synchronized void append(byte[] buffer, int count) {
             int kept = Math.min(count, LIMIT - bytes.size());
             bytes.write(buffer, 0, kept);

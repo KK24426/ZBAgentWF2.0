@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-26
+ * 更新日期：2026-09-27
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：通过只读 Codex 调用规划需求，在完整校验后生成项目数据对象。
@@ -36,6 +36,8 @@ public final class CodexRequirementPlanner {
 
     /** 仅生成尚未执行的数据；调用方在本方法全部成功后才加入项目。 */
     public List<Requirement> plan(Path directory, String content) {
+        // 同步规划也占用全工厂并发额度；附着调用线程，让关闭操作能中断阻塞中的进程调用。
+        // 票据仅覆盖本次调用，结束就归还，不能等待可能长期存活的调用线程退出。
         try (var ticket = resources.reserve(owner)) {
             ticket.attach(Thread.currentThread());
             ticket.checkRunning();
@@ -58,6 +60,7 @@ public final class CodexRequirementPlanner {
             CodexJson.fields(response.value(), "requirements");
             JsonNode nodes = response.value().get("requirements");
             if (!nodes.isArray() || nodes.isEmpty()) throw new IllegalStateException("规划未产生需求。");
+            // 先在局部列表完成全部解析；任何一项无效都整体失败，由上层在成功后统一追加。
             var result = new ArrayList<Requirement>();
             for (JsonNode node : nodes) {
                 CodexJson.fields(node, "agentUnderstanding", "acceptanceCriteria", "userConfirmMsg", "tasks");
@@ -68,6 +71,7 @@ public final class CodexRequirementPlanner {
                 requirement.setUserConfirmMsg(CodexJson.text(node, "userConfirmMsg", true));
                 JsonNode tasks = node.get("tasks");
                 if (!tasks.isArray()) throw new IllegalStateException("规划 Task 列表无效。");
+                // 信息不足时只能留下确认问题；不能同时提供可执行任务让调用方误启动开发。
                 if (tasks.isEmpty() && (requirement.getUserConfirmMsg() == null || requirement.getUserConfirmMsg().isBlank())) {
                     throw new IllegalStateException("空任务需求必须说明待确认事项。");
                 }
@@ -77,6 +81,7 @@ public final class CodexRequirementPlanner {
                 for (JsonNode taskNode : tasks) {
                     CodexJson.fields(taskNode, "content", "acceptanceCriteria");
                     var task = new RequirementTask();
+                    // 规划标识由本机生成，与之后每次执行返回的 taskId 分开；初始状态由 Bean 保持 PENDING。
                     task.setId(UUID.randomUUID().toString());
                     task.setContent(CodexJson.text(taskNode, "content", false));
                     task.setAcceptanceCriteria(CodexJson.text(taskNode, "acceptanceCriteria", false));

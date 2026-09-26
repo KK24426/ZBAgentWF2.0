@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-22
- * 更新日期：2026-09-26
+ * 更新日期：2026-09-27
  * 做 成 者：zebiao
  * 版    本：v0.4
  * 功能概要：对消息和异常完整渲染结果统一脱敏后编码。
@@ -30,12 +30,15 @@ public class SanitizingEncoder extends PatternLayoutEncoder {
         // 聊天异常和 Spring 绑定诊断可能含任意自然语言输入，不能仅按凭据关键词脱敏。
         boolean chatDiagnostic = (chatRoute || chatComponent) && event.getThrowableProxy() != null
                 || chatRoute && logger.startsWith("org.springframework.");
+        // 进程、规划和资源异常可能携带模型输出或路径；这些组件带异常时统一隐藏自由文本，
+        // 不带异常的固定阶段、生成标识等受控日志仍走常规脱敏渲染。
         boolean agentDiagnostic = event.getThrowableProxy() != null
                 && (logger.startsWith("com.kk24426.zbagentwf.agent.codex.")
                     || logger.startsWith("com.kk24426.zbagentwf.agent.registry.")
                     || logger.startsWith("com.kk24426.zbagentwf.agent.runtime.")
                     || logger.startsWith("com.kk24426.zbagentwf.agent.project."));
         if (protocol || chatDiagnostic || agentDiagnostic) {
+            // 构造独立安全事件，避免修改日志框架共享的原事件；保留定位所需时间、级别与 MDC。
             IThrowableProxy safeThrowable = wrap(event.getThrowableProxy());
             LoggingEvent safe = new LoggingEvent() {
                 @Override public IThrowableProxy getThrowableProxy() { return safeThrowable; }
@@ -50,6 +53,7 @@ public class SanitizingEncoder extends PatternLayoutEncoder {
                     : agentDiagnostic ? "Agent 组件诊断：原始内容已隐藏。" : "聊天请求诊断：原始内容已隐藏。");
             event = safe;
         }
+        // 最后对整个渲染结果再脱敏，覆盖格式化消息及异常链，不能只处理原始 message 模板。
         return SecretRedactor.redact(getLayout().doLayout(event)).getBytes(getCharset());
     }
 
@@ -63,6 +67,7 @@ public class SanitizingEncoder extends PatternLayoutEncoder {
         public String getClassName() { return original.getClassName(); }
         public StackTraceElementProxy[] getStackTraceElementProxyArray() { return original.getStackTraceElementProxyArray(); }
         public int getCommonFrames() { return original.getCommonFrames(); }
+        // cause/suppressed 逐层包装而不直接暴露原代理；循环标记与公共帧数仍交由原代理提供。
         public IThrowableProxy getCause() { return wrap(original.getCause()); }
         public IThrowableProxy[] getSuppressed() {
             var suppressed = original.getSuppressed();
