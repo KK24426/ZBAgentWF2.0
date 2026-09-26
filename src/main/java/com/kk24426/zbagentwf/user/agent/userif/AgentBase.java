@@ -31,9 +31,10 @@ public abstract class AgentBase implements UserInterface {
 	 *
 	 * @param brand 提供方
 	 * @param name 模型名
+	 * @param ver 版本号
 	 * @return Agent工具
 	 */
-	public abstract AgentBean getActiveAgent(String brand, String name);
+	public abstract AgentBean getActiveAgent(String brand, String name, String ver);
 
 	/**
 	 * 刷新并返回当前本机所有可用的Agent工具并更新全局变量

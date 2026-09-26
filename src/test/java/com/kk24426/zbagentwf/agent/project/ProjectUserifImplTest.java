@@ -186,7 +186,7 @@ class ProjectUserifImplTest {
         assertTrue(executor.calls.isEmpty());
     }
 
-    private ProjectUserifImpl service(CodexRequirementPlanner planner, AgentExec executor) {
+    private ProjectUserifImpl service(CodexRequirementPlanner planner, AgentExecutor executor) {
         return new ProjectUserifImpl(new ProjectSettings(temp.resolve("projects")), planner, executor);
     }
 
@@ -207,7 +207,7 @@ class ProjectUserifImplTest {
         return requirement;
     }
 
-    private static final class ManualExecutor extends AgentExec {
+    private static final class ManualExecutor extends AgentExecutor {
         final BlockingQueue<Invocation> calls = new LinkedBlockingQueue<>();
         boolean reject;
         ManualExecutor() { super(new AgentBean()); }

@@ -14,10 +14,10 @@ import com.kk24426.zbagentwf.user.UserInterface;
 import java.util.concurrent.RejectedExecutionException;
 
 /** 用户定义的执行契约；具体 Codex 实现位于 agent.codex，由调用方显式组合。 */
-public abstract class AgentExec implements UserInterface{
+public abstract class AgentExecutor implements UserInterface{
     private final AgentBean agent;
 
-    public AgentExec(AgentBean agent) {
+    public AgentExecutor(AgentBean agent) {
         this.agent = agent;
     }
 

@@ -11,7 +11,7 @@ import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
 import com.kk24426.zbagentwf.common.logging.SecretRedactor;
 import com.kk24426.zbagentwf.common.project.bean.Project;
-import com.kk24426.zbagentwf.user.agent.userif.AgentExec;
+import com.kk24426.zbagentwf.user.agent.userif.AgentExecutor;
 import com.kk24426.zbagentwf.user.agent.userif.AgentExecCallback;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
  * 每个实例最多同时执行四次，不排队；受理后的每次执行恰有一次最终回调。
  * 诊断保留至 close，调用方应明确管理实例生命周期；尚未自动注册为长驻 Spring Bean。
  */
-public final class CodexAgentExec extends AgentExec implements AutoCloseable {
+public final class CodexAgentExec extends AgentExecutor implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(CodexAgentExec.class);
     private final CodexClient client;
     private final Object lifecycle = new Object();

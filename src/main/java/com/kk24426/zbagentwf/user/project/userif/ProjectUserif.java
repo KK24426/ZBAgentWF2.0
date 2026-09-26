@@ -39,4 +39,6 @@ public abstract class ProjectUserif implements UserInterface {
      * @return 带有 Task 状态和执行结果的需求列表，不是异步批次标识
      */
     public abstract List<Requirement> execTask(Project project, List<Requirement> requirements);
+    
+    public abstract void CodexRequirementPlanner();
 }

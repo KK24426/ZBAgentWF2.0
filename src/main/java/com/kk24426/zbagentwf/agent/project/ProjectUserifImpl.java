@@ -10,7 +10,7 @@ package com.kk24426.zbagentwf.agent.project;
 import com.kk24426.zbagentwf.agent.codex.CodexRequirementPlanner;
 import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
 import com.kk24426.zbagentwf.common.project.bean.*;
-import com.kk24426.zbagentwf.user.agent.userif.AgentExec;
+import com.kk24426.zbagentwf.user.agent.userif.AgentExecutor;
 import com.kk24426.zbagentwf.user.project.userif.ProjectUserif;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,10 +25,10 @@ import java.util.concurrent.RejectedExecutionException;
 public final class ProjectUserifImpl extends ProjectUserif {
     private final ProjectSettings settings;
     private final CodexRequirementPlanner planner;
-    private final AgentExec executor;
+    private final AgentExecutor executor;
     private final Map<Path, Object> locks = new ConcurrentHashMap<>();
 
-    public ProjectUserifImpl(ProjectSettings settings, CodexRequirementPlanner planner, AgentExec executor) {
+    public ProjectUserifImpl(ProjectSettings settings, CodexRequirementPlanner planner, AgentExecutor executor) {
         this.settings = Objects.requireNonNull(settings);
         this.planner = Objects.requireNonNull(planner);
         this.executor = Objects.requireNonNull(executor);
