@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
+import com.kk24426.zbagentwf.common.agent.bean.Prompt;
 import com.kk24426.zbagentwf.common.logging.SecretRedactor;
 import com.kk24426.zbagentwf.common.project.bean.Project;
 import com.kk24426.zbagentwf.user.agent.userif.AgentExecCallback;

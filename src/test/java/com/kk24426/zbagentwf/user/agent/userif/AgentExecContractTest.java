@@ -13,7 +13,8 @@ import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
 import com.kk24426.zbagentwf.common.project.bean.Project;
 import com.kk24426.zbagentwf.common.project.bean.Requirement;
 import com.kk24426.zbagentwf.user.UserInterface;
-import com.kk24426.zbagentwf.user.project.userif.ProjectUserif;
+import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -76,7 +77,7 @@ class AgentExecContractTest {
 
     @Test
     void projectPortCarriesProjectAndSelectedRequirements() {
-        var port = new ProjectUserif() {
+        var port = new ProjectDomain() {
             @Override public Project newProject(String content, AgentBean planning, AgentBean development, AgentBean review) { return project(content); }
             @Override public List<Requirement> createRequirements(Project project, String content) {
                 var requirement = new Requirement();

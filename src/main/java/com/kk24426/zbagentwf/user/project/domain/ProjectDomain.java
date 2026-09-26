@@ -5,7 +5,7 @@
  * 版    本：v0.1
  * 功能概要：定义项目创建、项目内需求规划与任务结果汇总的契约。
  */
-package com.kk24426.zbagentwf.user.project.userif;
+package com.kk24426.zbagentwf.user.project.domain;
 
 import com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum;
 import com.kk24426.zbagentwf.common.project.bean.Project;
@@ -15,7 +15,7 @@ import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import java.util.List;
 
 /** 项目包含多条需求，需求包含多个 Task；具体实现位于 agent.project。 */
-public abstract class ProjectUserif implements UserInterface {
+public abstract class ProjectDomain implements UserInterface {
 	/**
 	 * 根据用户输入建立 UUID 项目目录，并生成首批需求。
 	 *
@@ -25,30 +25,30 @@ public abstract class ProjectUserif implements UserInterface {
 	 * @param reviewAgent      审核模型，当前仅绑定，不自动启动审核
 	 * @return 包含项目标识、工作目录和需求列表的项目对象
 	 */
-	public abstract Project newProject(String content, AgentBean planningAgent, AgentBean developmentAgent,
+	public abstract Project newProject(String content, AgentBean planAgent, AgentBean developmentAgent,
 			AgentBean reviewAgent);
 
-	/*
-	 * public Project newProject(String content) {
+	public Project newProject(String content) {
+		return newProject(content, getAgent(AgentTypeEnum.planning), getAgent(AgentTypeEnum.development),
+				getAgent(AgentTypeEnum.review));
+
+	}
+
+	/**
+	 * 添加项目提示词
 	 * 
-	 * return newProject(); }
-	 * 
-	 * public AgentBean getDefualtAgent(AgentTypeEnum agentTypeEnum){
-	 * 
-	 * }
+	 * @param projectId
+	 * @param Prompt
 	 */
+	public abstract void addProjectPrompt(String projectId, String Prompt);
 	
 	/**
+	 * 根据不同的类型生成对应的Agent实体并注入角色提示词
 	 * 
+	 * @param agentTypeEnum Agent类型
 	 * @return
 	 */
-	/*
-	 * private AgentBean getPlanAgent() {
-	 * 
-	 * 
-	 * }
-	 */
-	
+	protected abstract AgentBean getAgent(AgentTypeEnum agentTypeEnum);
 
 	/**
 	 * 将用户需求规划为项目内的需求列表，每条需求包含可执行 Task。
@@ -66,5 +66,7 @@ public abstract class ProjectUserif implements UserInterface {
 	 * @param requirements 从该项目中选定的本次需求范围，其中 Task 均属于对应需求
 	 * @return 带有 Task 状态和执行结果的需求列表，不是异步批次标识
 	 */
-	public abstract List<Requirement> execTask(Project project, List<Requirement> requirements);
+	public abstract List<Requirement> execTask(Project project);
+	
+	public abstract Project getProject(String projectId);
 }

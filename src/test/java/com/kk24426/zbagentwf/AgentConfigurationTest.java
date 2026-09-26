@@ -9,7 +9,8 @@ package com.kk24426.zbagentwf;
 
 import static org.junit.jupiter.api.Assertions.*;
 import com.kk24426.zbagentwf.user.agent.userif.*;
-import com.kk24426.zbagentwf.user.project.userif.ProjectUserif;
+import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
+
 import java.nio.file.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,7 @@ class AgentConfigurationTest {
                     assertNull(context.getStartupFailure());
                     var catalog = context.getBean(AgentBase.class);
                     model[0] = catalog.getActiveAgent("fixture-provider", "fixture-model", "overridden");
-                    assertNotNull(context.getBean(ProjectUserif.class));
+                    assertNotNull(context.getBean(ProjectDomain.class));
                     holder[0] = context.getBean(AgentExecFactory.class);
                     assertSame(holder[0].getExecutor(model[0]), holder[0].getExecutor(model[0]));
                     assertFalse(Files.exists(temp.resolve("projects")));

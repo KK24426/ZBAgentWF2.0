@@ -7,19 +7,82 @@
  */
 package com.kk24426.zbagentwf.user.agent.userif;
 
+import java.util.concurrent.RejectedExecutionException;
+
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
+import com.kk24426.zbagentwf.common.agent.bean.Prompt;
 import com.kk24426.zbagentwf.common.project.bean.Project;
 import com.kk24426.zbagentwf.user.UserInterface;
-
-import java.util.concurrent.RejectedExecutionException;
 
 /** 用户定义的执行契约；通过 AgentExecFactory 按已注册模型获取实现。 */
 public abstract class AgentExecutor implements UserInterface {
 	private final AgentBean agent;
 
+	/** 所有Agent执行时的默认规则 */
+	private Prompt defluatPrompt;
+
+	/** 安全相关的规则 */
+	private Prompt securityPrompt;
+
+	/** 用户配置的提示词 */
+	private Prompt userPrompt;
+
+	/** 项目中使用的提示词 */
+	private Prompt projectPrompt;
+
 	public AgentExecutor(AgentBean agent) {
+		super();
 		this.agent = agent;
+		this.userPrompt = null;
+		this.projectPrompt = null;
+		if (defluatPrompt == null)
+			defluatPrompt = getDefluatPrompt();
+		if (securityPrompt == null)
+			securityPrompt = getSecurityPrompt();
 	}
+
+	/**
+	 * 
+	 * @param agent
+	 * @param userPrompt    用户提示词
+	 * @param projectPrompt 项目提示词
+	 */
+	public AgentExecutor(AgentBean agent, Prompt userPrompt, Prompt projectPrompt) {
+		super();
+		this.agent = agent;
+		this.userPrompt = userPrompt;
+		this.projectPrompt = projectPrompt;
+		if (defluatPrompt == null)
+			defluatPrompt = getDefluatPrompt();
+		if (securityPrompt == null)
+			securityPrompt = getSecurityPrompt();
+	}
+
+	private Prompt getUserPrompt() {
+		return userPrompt;
+	}
+
+	private void setUserPrompt(Prompt userPrompt) {
+		this.userPrompt = userPrompt;
+	}
+
+	private Prompt getProjectPrompt() {
+		return projectPrompt;
+	}
+
+	private void setProjectPrompt(Prompt projectPrompt) {
+		this.projectPrompt = projectPrompt;
+	}
+
+	/**
+	 * 通过Prompt配置文件获取默认的提示词
+	 */
+	protected abstract Prompt getDefluatPrompt();
+
+	/**
+	 * 通过Prompt配置文件获取安全相关的提示词
+	 */
+	protected abstract Prompt getSecurityPrompt();
 
 	/** 供实现类读取构造时传入的模型信息，不触发模型发现或执行。 */
 	protected AgentBean getAgent() {

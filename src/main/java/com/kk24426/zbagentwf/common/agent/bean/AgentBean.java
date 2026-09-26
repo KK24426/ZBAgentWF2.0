@@ -9,34 +9,41 @@ package com.kk24426.zbagentwf.common.agent.bean;
 
 /** 普通数据对象；三个属性独立保存，允许 null 和空字符串，不校验或转换输入。 */
 public class AgentBean {
-    /** Agent 模型提供方，如 ChatGPT、Claude、Deepseek 等。 */
-    private String brand;
-    /** 具体的模型，如 chatGPT、deepseek、豆包等。 */
-    private String name;
-    /** 具体的版本，如 GPT-5.6 sol。 */
-    private String ver;
+	/** Agent 模型提供方，如 ChatGPT、Claude、Deepseek 等。 */
+	private String brand;
+	/** 具体的模型，如 chatGPT、deepseek、豆包等。 */
+	private String name;
+	/** 具体的版本，如 GPT-5.6 sol。 */
+	private String ver;
 
-    public String getBrand() {
-        return brand;
-    }
+	/** 该角色的提示词(规划、开发、审核等) */
+	private Prompt rolePrompt;
 
-    public void setBrand(String brand) {
-        this.brand = brand;
-    }
 
-    public String getName() {
-        return name;
-    }
+	/** 使用哪个skill */
+	private Skill skill;
 
-    public void setName(String name) {
-        this.name = name;
-    }
+	public String getBrand() {
+		return brand;
+	}
 
-    public String getVer() {
-        return ver;
-    }
+	public void setBrand(String brand) {
+		this.brand = brand;
+	}
 
-    public void setVer(String ver) {
-        this.ver = ver;
-    }
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getVer() {
+		return ver;
+	}
+
+	public void setVer(String ver) {
+		this.ver = ver;
+	}
 }

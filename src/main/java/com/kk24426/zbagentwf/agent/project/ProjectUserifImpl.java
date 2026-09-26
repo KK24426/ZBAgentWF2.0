@@ -12,8 +12,9 @@ import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
 import com.kk24426.zbagentwf.common.project.bean.*;
 import com.kk24426.zbagentwf.user.agent.userif.AgentExecutor;
+import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
 import com.kk24426.zbagentwf.user.agent.userif.AgentExecFactory;
-import com.kk24426.zbagentwf.user.project.userif.ProjectUserif;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,7 +25,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 
 /** 创建时绑定三角色，后续操作读取项目中的绑定；实例本身不保存当前项目或默认模型。 */
-public final class ProjectUserifImpl extends ProjectUserif {
+public final class ProjectUserifImpl extends ProjectDomain {
     private final ProjectSettings settings;
     private final AgentRequirementPlanner planner;
     private final AgentExecFactory factory;

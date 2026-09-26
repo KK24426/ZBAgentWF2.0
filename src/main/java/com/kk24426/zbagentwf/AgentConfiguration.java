@@ -10,7 +10,8 @@ package com.kk24426.zbagentwf;
 import com.kk24426.zbagentwf.agent.project.ProjectUserifImpl;
 import com.kk24426.zbagentwf.agent.registry.*;
 import com.kk24426.zbagentwf.common.project.bean.ProjectSettings;
-import com.kk24426.zbagentwf.user.project.userif.ProjectUserif;
+import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
+
 import java.util.ArrayList;
 import java.util.Map;
 import org.springframework.boot.context.properties.bind.Bindable;
@@ -39,7 +40,7 @@ public class AgentConfiguration {
     AgentRequirementPlanner agentRequirementPlanner(AgentExecFactoryImpl factory) { return new AgentRequirementPlanner(factory); }
 
     @Bean
-    ProjectUserif projectUserif(ProjectSettings settings, AgentExecFactoryImpl factory, AgentRequirementPlanner planner) {
+    ProjectDomain projectDomain(ProjectSettings settings, AgentExecFactoryImpl factory, AgentRequirementPlanner planner) {
         return new ProjectUserifImpl(settings, factory, planner);
     }
 

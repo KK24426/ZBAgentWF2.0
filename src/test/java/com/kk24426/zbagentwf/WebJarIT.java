@@ -141,7 +141,7 @@ class WebJarIT {
                 assertFalse(output.contains("普通隐私"));
                 assertTrue(output.contains("AgentUnavailableException"));
                 assertTrue(output.contains("HttpMessageNotReadableException"));
-                assertTrue(output.contains("ChatController.java"));
+                assertTrue(output.contains("ProjectController.java"));
                 assertTrue(output.contains("Caused by:"));
             }
             assertTrue(readLog(server.directory).contains("method=POST route=CHAT"));
@@ -214,7 +214,7 @@ class WebJarIT {
             }
             assertTrue(names.contains("BOOT-INF/classes/static/chat.js"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.class"));
-            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/CodexAgentExec.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/AgentExecutorImpl.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/project/ProjectUserifImpl.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/userif/AgentExecutor.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/registry/AgentExecFactoryImpl.class"));
