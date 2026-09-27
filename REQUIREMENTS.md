@@ -4,7 +4,7 @@
 单 Maven JAR 工程；Java 26、Spring Boot 4.1.1、MyBatis Starter 4.1.0。
 用户调用契约位于 user.<业务>.api；共享模型位于 common.agent.model、common.project.model，HTTP 数据位于 common.chat.dto、common.project.dto，ProjectSettings 位于 common.project.config；执行器公共实现位于 agent.runtime。该目录调整保留 user/agent/common 原有职责。
 启动入口初始化日志、读取必填项目根目录配置并启动 Spring Web，扫描 user/agent/common，持续运行。
-当前有简单首页及单次聊天调用骨架；配置驱动的模型注册、执行器工厂与项目三角色绑定已由 Spring 装配。已补充项目 HTTP 操作、内存登记、角色默认选择和提示词配置；网页聊天仍未接入；业务表和持久化未实现，原应用 CLI 已移除。
+当前有简单首页及单次聊天调用骨架；配置驱动的模型注册、执行器工厂与项目三角色绑定已由 Spring 装配。已补充项目 HTTP 操作、项目工作台、内存登记、角色默认选择和提示词配置；网页聊天仍未接入；业务表和持久化未实现，原应用 CLI 已移除。
 
 ## 用户骨架与最小补充
 
@@ -103,7 +103,13 @@ mysql-it 仅接受回环地址 zbagentwf_test 和独立环境变量，可经 SSH
 common.memory.MemoryStore 是应用单例，以分类+ID保存任意非空对象引用，支持 put/get(Class)->Optional/remove；空键或类型错误明确失败，无TTL、自动淘汰或持久化。Project 完整创建成功后登记在 project 分类；未知/空白 ID 抛 IllegalArgumentException，不自动重建；重启后原数据无法恢复。登记后 projectId 不应改变。
 zb.agent-roles.<planning/development/review>.brand/name/ver 提供显式默认选择；用户完整选择三个模型时优先使用其选择。默认缺失/不完整时仅创建失败，Web仍可启动。默认配置在启动时快照，新项目绑定后不会自动换模型。
 config/prompts/{default,security,planning,development,review}.txt 为 UTF-8 规则，由用户提供。启动显式加载，缺失/空白/占位规则在使用时拒绝；非法UTF8/不可读文件使初始化失败。构造器和getter不读文件，也不调用子类初始化方法。执行器构造完成后显式初始化通用/安全规则，缺规则不能启动子进程；规划与开发都注入分段规则，项目追加规则在下一次调用生效，已受理调用保留快照。Skill本次仅保存名称。具体规则内容不由应用自动生成，也不替代原进程权限限制。
-agent.project.controller.ProjectController -> user.project.service.ProjectService -> user.project.api.ProjectDomain，后续请求仅提交项目ID及文本，不接受工作目录或执行器。响应为项目ID、需求、Task和结果的不可变快照，同项目修改/复制使用对象锁；目录锁继续保护实际目录。错误区分400/404/503/500并通过msg返回三语固定提示；PROJECT异常与Spring绑定日志隐藏自由文本并保留完整调用链。未增加项目页面、数据库或部署；有限真实模型验收见上述记录。
+agent.project.controller.ProjectController -> user.project.service.ProjectService -> user.project.api.ProjectDomain，后续请求仅提交项目ID及文本，不接受工作目录或执行器。响应为项目ID、需求、Task和结果的不可变快照，同项目修改/复制使用对象锁；目录锁继续保护实际目录。错误区分400/404/503/500并通过msg返回三语固定提示；PROJECT异常与Spring绑定日志隐藏自由文本并保留完整调用链。未增加数据库或部署；有限真实模型验收见上述记录。
 
 2026-09-27按用户追加要求，聊天和项目Controller归入agent下对应功能包，Service仍留在user，common保留共享数据和工具；HTTP/JSON、组件名称和业务行为保持一致，见ADR0013。
 验收覆盖通用异类存储、原对象取回、失败不登记、角色任意绑定与显式选择优先、规则缺失/变更/嵌套隔离、并发快照、五个HTTP操作及真实JAR无配置错误路径。
+
+## 项目工作台
+
+2026-09-27用户批准新增项目页面与相关按钮。GET/HEAD /projects、/projects.html 提供项目工作台，首页提供入口。页面复用已有创建、按ID查询/刷新、追加提示词、追加需求、执行待办任务五项HTTP接口；创建使用服务端默认三角色或完整显式的brand/name/ver。不存在全量项目列表、删除、重置、取消或自动审核按钮，不扩展业务契约。
+展示需求原文、理解、验收、待确认内容和任务状态/结果，所有业务内容按纯文本输出；项目仅本次服务运行有效，页面不持久化业务数据。单页请求单飞，长操作不自动超时重发；已知项目写入的503/500/连接或格式错误保留旧快照，成功查询前锁定写入，避免把部分执行当作完全未执行。200响应按Task实际状态展示。
+共用原三语Cookie及安全模板机制，语言切换保留表单/结果/进行中调用。新增静态资源为messages.js、projects.js、projects.css，精确路由白名单与原CSP不变。验收覆盖三语模板、路由/HEAD、安全文本、五按钮、模型选择、等待/错误恢复、窄屏、聊天回归及真实JAR；浏览器替身不等于真实模型验收。

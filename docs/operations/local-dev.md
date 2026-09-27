@@ -123,6 +123,13 @@ AgentExecutor executor = agentExecFactory.getExecutor(development);
 ## 角色默认值、规则与内存项目
 
 在config/agents.properties中按示例补充zb.agent-roles.planning/development/review的brand/name/ver，指向已注册模型；不同角色可选同一模型，也可完全不同。HTTP或Java调用显式提供完整三个模型时覆盖默认；无默认值只影响需要默认的项目创建，不影响Web启动。
-将config/prompts/五个.txt.example复制为同名.txt，替换YOUR_占位为你自己的UTF-8规则；示例不能直接用于调用。default/security为通用必要规则，planning/development/review供对应角色绑定使用。文件在启动时读取，修改后重启；不要在规则中保存凭据。真实文件被忽略。未准备配置时项目创建返回固定503，不调用模型；已有有限真实验收仅使用独立临时配置，不替代用户填写正式规则及运行配置。
+将config/prompts/五个.txt.example复制为同名.txt，替换YOUR_占位为你自己的UTF-8规则；示例不能直接用于调用。default/security为通用必要规则，planning/development/review供对应角色绑定使用。文件在启动时读取，修改后重启；不要在规则中保存凭据。真实文件被忽略。未准备配置时项目创建返回固定503，不调用模型。用户本机已补齐所选Codex注册及角色配置，项目页面的有限真实验收见[验收记录](./codex-live-validation.md#项目页面补充验收)；新克隆仍须准备自己的本地配置。
 项目HTTP操作、请求格式及状态码见[项目契约](../contracts/project-agent.md#项目-http-入口)。例如向POST /api/projects发送 {"content":"项目需求"}，成功后保留返回的projectId；之后GET /api/projects/{projectId}取回快照，POST相应子路径追加提示词/需求或执行任务。创建和规划会实际调用配置的Agent；不要把接口可达当作真实模型验收。
 MemoryStore保存任意类别对象；项目仅在本次服务运行内有效。没有自动淘汰或恢复，应用重启会丢失登记。配置修改不会热替换已绑定模型；停机后项目目录可能仍在，但仅目录和ID不足以恢复原需求/执行器。
+
+## 项目工作台
+
+启动后访问 http://127.0.0.1:8080/projects，也可从首页进入“项目工作台”。填写目标并“创建并规划”，核对需求与任务后“执行待办任务”；支持按ID打开/刷新、追加需求和提示词。默认模型来自agents.properties的三角色配置，也可在创建时展开模型选项填写完整的三角色标识。审核角色仅绑定，不会自动执行。
+创建或规划会实际调用模型，执行可能修改项目目录中的文件。项目当前仅存在于本次服务运行；重启后无法仅凭原ID恢复。运行中显示等待，不自动重发；错误后的旧结果不代表最新状态，按页面提示先刷新。此页面没有项目列表、删除、任务重置或取消接口。
+修改页面或本地模型配置后重新构建并重启服务。旧进程不会自动加载新资源和配置；不要用仍在运行的旧服务判断新页面是否已发布。
+浏览器回归：先用隔离配置启动本机JAR，再运行python -X utf8 src/test/browser/project_fixture.py --upstream-port <JAR端口>，使用该脚本打印的回环地址执行node src/test/browser/project_page_test.cjs <fixture URL> <本地证据目录>（需本机Playwright浏览器环境）。fixture只代理页面资源，业务请求全部本地模拟，不进入JAR，不调用真实模型。结束后停止自建进程；真实模型的功能验证另行记录。

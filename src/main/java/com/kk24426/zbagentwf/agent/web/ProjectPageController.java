@@ -3,7 +3,7 @@
  * 更新日期：2026-09-27
  * 做 成 者：zebiao
  * 版    本：v0.2
- * 功能概要：提供聊天首页，委派共享的安全消息模板渲染。
+ * 功能概要：提供项目操作页面，不新增项目业务API。
  */
 package com.kk24426.zbagentwf.agent.web;
 
@@ -16,16 +16,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** 固定页面入口；模板和消息数据均通过共享渲染器转义。 */
 @RestController
-public class HomePageController {
+public class ProjectPageController {
     private final LocalizedPageRenderer renderer;
 
-    public HomePageController(MsgCatalog messages, MsgLocaleResolver locales,
-                              @Qualifier("homePageTemplate") String template) {
+    public ProjectPageController(MsgCatalog messages, MsgLocaleResolver locales,
+                              @Qualifier("projectPageTemplate") String template) {
         renderer = new LocalizedPageRenderer(messages, locales, template);
     }
 
-    @GetMapping(value = {"/", "/index.html"}, produces = "text/html;charset=UTF-8")
-    public ResponseEntity<String> home(HttpServletRequest request) {
+    @GetMapping(value = {"/projects", "/projects.html"}, produces = "text/html;charset=UTF-8")
+    public ResponseEntity<String> projects(HttpServletRequest request) {
         return renderer.render(request);
     }
 }

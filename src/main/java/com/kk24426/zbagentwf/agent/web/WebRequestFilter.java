@@ -32,7 +32,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class WebRequestFilter extends OncePerRequestFilter {
     private static final Logger LOG = LoggerFactory.getLogger(WebRequestFilter.class);
-    private static final Set<String> PATHS = Set.of("/", "/index.html", "/app.css", "/favicon.svg", "/chat.js");
+    private static final Set<String> PATHS = Set.of("/", "/index.html", "/app.css", "/favicon.svg", "/chat.js",
+            "/projects", "/projects.html", "/projects.css", "/projects.js", "/messages.js");
     private final MsgCatalog messages;
     private final MsgLocaleResolver locales;
 
@@ -57,7 +58,7 @@ public class WebRequestFilter extends OncePerRequestFilter {
         boolean projectAction = path.matches("/api/projects/[A-Za-z0-9-]+/(prompts|requirements|tasks/execute)");
         boolean project = projectCollection || projectItem || projectAction;
         boolean write = chat || projectCollection || projectAction;
-        String route = project ? "PROJECT" : chat ? "CHAT" : Set.of("/", "/index.html").contains(path) ? "HOME"
+        String route = project ? "PROJECT" : chat ? "CHAT" : Set.of("/", "/index.html", "/projects", "/projects.html").contains(path) ? "HOME"
                 : PATHS.contains(path) ? "ASSET" : "OTHER";
         MDC.put("route", route);
         Locale locale = locales.resolveLocale(request);

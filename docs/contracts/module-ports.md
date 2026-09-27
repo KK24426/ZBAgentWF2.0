@@ -9,9 +9,9 @@ stderr包含日志、固定错误提示及脱敏异常链，stdout无业务输�
 
 ## HTTP入口
 
-聊天和项目Controller分别位于agent.chat.controller、agent.project.controller，调用user.chat.service、user.project.service；首页Controller仍位于agent.web。此归包不改变HTTP路径、消息、状态码或DTO字段。
+聊天和项目Controller分别位于agent.chat.controller、agent.project.controller，调用user.chat.service、user.project.service；首页和项目页面Controller位于agent.web。此归包不改变HTTP路径、消息、状态码或DTO字段。
 
-GET/HEAD访问 /、/index.html、/app.css、/favicon.svg、/chat.js；POST /api/chat 见聊天契约。项目五个精确入口见[项目HTTP契约](./project-agent.md#项目-http-入口)；其余路径/方法仍拒绝。
+GET/HEAD访问 /、/index.html、/projects、/projects.html、/app.css、/favicon.svg、/chat.js、/messages.js、/projects.js、/projects.css；POST /api/chat 见聊天契约。项目五个精确入口见[项目HTTP契约](./project-agent.md#项目-http-入口)；其余路径/方法仍拒绝。
 错误体为按请求语言查询的固定文字，HEAD无响应体；每次请求返回服务端生成的X-Request-ID。页面与接口的消息文件、配置和语言选择见[本地化契约](./msg.md)。
 页面包含CSP、nosniff、no-referrer保护，资源不依赖外部站点，禁用缓存。
 请求日志只含白名单方法、固定类别、状态和耗时；不记录原始URL/查询/正文。

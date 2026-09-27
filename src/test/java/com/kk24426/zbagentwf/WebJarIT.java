@@ -133,6 +133,37 @@ class WebJarIT {
         }
     }
 
+    @Test
+    void projectPageAndAssetsArePackagedWithHeadSupportAndPrivateTemplates() throws Exception {
+        try (Pending server = start(Map.of()); HttpClient client = HttpClient.newHttpClient()) {
+            int port = awaitReady(server);
+            assertTrue(get(client, port, "/").body().contains("href=\"/projects\""));
+            for (String language : List.of("zh-CN", "en", "ja")) {
+                for (String path : List.of("/projects", "/projects.html")) {
+                    var response = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+                            .timeout(Duration.ofSeconds(5)).header("Accept-Language", language).build(),
+                            HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                    assertEquals(200, response.statusCode());
+                    assertEquals(language, response.headers().firstValue("Content-Language").orElseThrow());
+                    assertTrue(response.body().contains("id=\"create-project-form\""));
+                    assertFalse(response.body().contains("{{"));
+                }
+            }
+            for (String path : List.of("/projects", "/projects.html", "/projects.js", "/projects.css", "/messages.js")) {
+                assertEquals(200, get(client, port, path).statusCode());
+                var head = client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+                        .timeout(Duration.ofSeconds(5)).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(),
+                        HttpResponse.BodyHandlers.ofString());
+                assertEquals(200, head.statusCode());
+                assertEquals("", head.body());
+                assertEquals(405, projectPost(client, port, path, "{}").statusCode());
+            }
+            for (String path : List.of("/web/projects.html", "/projects/private", "/config/agents.properties")) {
+                assertEquals(404, get(client, port, path).statusCode());
+            }
+        }
+    }
+
     private static HttpResponse<String> projectPost(HttpClient client, int port, String path, String json) throws Exception {
         return client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
                 .timeout(Duration.ofSeconds(5)).header("Content-Type", "application/json")

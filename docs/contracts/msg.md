@@ -4,7 +4,7 @@
 
 ## 文件和查询
 
-内置消息为`src/main/resources/msg/msg_zh_CN.properties`、`msg_en.properties`、`msg_ja.properties`，UTF-8，无需Unicode转义。稳定key按`page.*`、`language.*`、`chat.*`、`http.*`分类。技术工具`common.msg.MsgCatalog.get(String key, Locale locale, String... args)`返回纯文本；缺key或参数明确抛异常，不将key当作成功结果。未知语言查询回落简体中文。
+内置消息为`src/main/resources/msg/msg_zh_CN.properties`、`msg_en.properties`、`msg_ja.properties`，UTF-8，无需Unicode转义。稳定key按`page.*`、`language.*`、`chat.*`、`project.*`、`http.*`分类。技术工具`common.msg.MsgCatalog.get(String key, Locale locale, String... args)`返回纯文本；缺key或参数明确抛异常，不将key当作成功结果。未知语言查询回落简体中文。
 
 参数只支持从零连续编号的`{0}`、`{1}`等，允许重复和调整顺序；不支持MessageFormat数字/日期/复数规则、HTML或嵌套展开。普通单引号原样保留。译文不得空白，不能把花括号用作普通文字。
 
@@ -27,3 +27,8 @@ MsgLocaleResolver把选择缓存在当前request属性中。WebRequestFilter在�
 翻译、输入及模型输出均不作为HTML执行；沿用CSP、自有脚本、无缓存与请求隐私保护。没有翻译下载API、设置写API、数据库或外部翻译调用。模板、内置消息和外部配置路径不可通过HTTP访问。无JavaScript时首屏与启用脚本提示仍按请求语言渲染。
 
 项目HTTP固定提示新增http.project.invalid、http.project.notFound、http.project.unavailable，使用同一三语查询与覆盖规则；业务文本与模型输出仍保持原文。
+
+## 项目工作台消息
+
+项目页面新增project.*固定文案及page.nav.projects/home导航，沿用三语参数校验及可选外部覆盖。LocalizedPageRenderer由首页和项目页共同使用，校验各自模板并转义所有消息和inert JSON。MsgConfiguration启动读取web/projects.html，模板本身不公开。
+messages.js统一管理两页语言Cookie及固定DOM翻译；chat.js/projects.js分别维护业务状态。切换语言不重建项目表单、需求/任务节点或正在等待的请求，用户输入和模型结果保持原文。projects.js不读取任意错误正文，而以HTTP状态码显示固定project.error.*及请求编号；写入结果不确定时提示先刷新核对。

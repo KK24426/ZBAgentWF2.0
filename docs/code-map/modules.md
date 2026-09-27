@@ -18,3 +18,5 @@
 开始任务先读根AGENTS.md、就近AGENTS.md和根REQUIREMENTS.md。
 
 新增路由：通用内存/快照看common.memory、common.project.dto（MemoryStoreTest/ProjectHttpTest）；规则与绑定看agent.prompt、agent.runtime.AbstractAgentExecutor、RoleAgentResolver（AgentPromptTest/AgentRegistryTest）；项目HTTP看agent.project.controller、user.project.service（ProjectControllerTest/WebJarIT）。
+
+项目工作台：agent.web.ProjectPageController/LocalizedPageRenderer、web/projects.html、static/projects.js/projects.css/messages.js；验证ProjectPageControllerTest、WebJarIT及src/test/browser项目行为回归。共享渲染和语言选择同时回归聊天首页。

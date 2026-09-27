@@ -7,12 +7,13 @@
   <title data-msg="page.title">{{page.title}}</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/app.css">
+  <script src="/messages.js" defer></script>
   <script src="/chat.js" defer></script>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/" data-msg-aria-label="page.brandLabel" aria-label="{{page.brandLabel}}"><span class="mark">ZB</span> AgentWF <span class="edition">2.0</span></a>
-    <nav data-msg-aria-label="page.navLabel" aria-label="{{page.navLabel}}"><a href="#chat" data-msg="page.nav.chat">{{page.nav.chat}}</a><a href="#structure" data-msg="page.nav.structure">{{page.nav.structure}}</a></nav>
+    <nav data-msg-aria-label="page.navLabel" aria-label="{{page.navLabel}}"><a href="/projects" data-msg="page.nav.projects">{{page.nav.projects}}</a><a href="#chat" data-msg="page.nav.chat">{{page.nav.chat}}</a><a href="#structure" data-msg="page.nav.structure">{{page.nav.structure}}</a></nav>
     <span class="environment" data-msg="page.environment">{{page.environment}}</span>
     <label class="language-setting"><span data-msg="language.label">{{language.label}}</span>
       <select id="language-select" disabled>
@@ -28,7 +29,7 @@
       <div class="eyebrow"><span class="dot"></span><span data-msg="page.hero.eyebrow">{{page.hero.eyebrow}}</span></div>
       <h1 id="title"><span data-msg="page.hero.titleFirst">{{page.hero.titleFirst}}</span><br><span data-msg="page.hero.titleSecond">{{page.hero.titleSecond}}</span><span class="accent" data-msg="page.hero.punctuation">{{page.hero.punctuation}}</span></h1>
       <p class="intro"><span data-msg="page.hero.introFirst">{{page.hero.introFirst}}</span><br><span data-msg="page.hero.introSecond">{{page.hero.introSecond}}</span></p>
-      <a class="primary" href="#chat"><span data-msg="page.hero.action">{{page.hero.action}}</span><span aria-hidden="true">↗</span></a>
+      <a class="primary" href="/projects"><span data-msg="page.nav.projects">{{page.nav.projects}}</span><span aria-hidden="true">↗</span></a>
       <div class="hero-note"><span data-msg="page.hero.foundation">{{page.hero.foundation}}</span><p><span data-msg="page.hero.noteFirst">{{page.hero.noteFirst}}</span><br><span data-msg="page.hero.noteSecond">{{page.hero.noteSecond}}</span></p></div>
     </section>
     <section class="chat" id="chat" aria-labelledby="chat-title">

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="{{_locale}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" data-msg-content="project.description" content="{{project.description}}">
+  <title data-msg="project.pageTitle">{{project.pageTitle}}</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/projects.css">
+  <script src="/messages.js" defer></script>
+  <script src="/projects.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" data-msg-aria-label="page.brandLabel" aria-label="{{page.brandLabel}}"><span class="mark">ZB</span> AgentWF <span class="edition">2.0</span></a>
+    <nav data-msg-aria-label="page.navLabel" aria-label="{{page.navLabel}}"><a href="/projects" aria-current="page" data-msg="page.nav.projects">{{page.nav.projects}}</a><a href="/" data-msg="page.nav.home">{{page.nav.home}}</a></nav>
+    <label class="language-setting"><span data-msg="language.label">{{language.label}}</span>
+      <select id="language-select" disabled>
+        <option value="auto" data-msg="language.auto">{{language.auto}}</option>
+        <option value="zh-CN" data-msg="language.zh">{{language.zh}}</option>
+        <option value="en" data-msg="language.en">{{language.en}}</option>
+        <option value="ja" data-msg="language.ja">{{language.ja}}</option>
+      </select>
+    </label>
+  </header>
+  <main class="project-page">
+    <header class="project-hero">
+      <div class="eyebrow"><span class="dot"></span><span data-msg="project.eyebrow">{{project.eyebrow}}</span></div>
+      <h1 data-msg="project.title">{{project.title}}</h1>
+      <p data-msg="project.intro">{{project.intro}}</p>
+      <p class="memory-note" data-msg="project.memoryNotice">{{project.memoryNotice}}</p>
+    </header>
+    <div class="project-notice" id="project-notice" role="status" aria-live="polite" aria-atomic="true">
+      <span id="project-status">{{project.status.ready}}</span><small id="project-request-id"></small>
+    </div>
+    <div class="project-layout">
+      <aside class="project-sidebar">
+        <section class="project-panel" aria-labelledby="create-title">
+          <h2 id="create-title" data-msg="project.createTitle">{{project.createTitle}}</h2>
+          <form id="create-project-form" novalidate>
+            <label for="project-goal" data-msg="project.goal">{{project.goal}}</label>
+            <textarea id="project-goal" rows="5" required data-project-control data-msg-placeholder="project.goalPlaceholder" placeholder="{{project.goalPlaceholder}}"></textarea>
+            <details class="model-options">
+              <summary data-msg="project.modelOptions">{{project.modelOptions}}</summary>
+              <p class="form-hint" data-msg="project.defaultModels">{{project.defaultModels}}</p>
+              <label class="checkbox-label"><input id="explicit-models" type="checkbox" data-project-control><span data-msg="project.explicitModels">{{project.explicitModels}}</span></label>
+              <fieldset id="model-fields" hidden disabled>
+                <legend class="visually-hidden" data-msg="project.modelOptions">{{project.modelOptions}}</legend>
+                <div id="role-model-fields"></div>
+                <p class="form-hint" data-msg="project.modelHint">{{project.modelHint}}</p>
+              </fieldset>
+            </details>
+            <p class="form-hint" data-msg="project.createHint">{{project.createHint}}</p>
+            <button id="project-create" type="submit" disabled data-project-control data-msg="project.create">{{project.create}}</button>
+          </form>
+        </section>
+        <section class="project-panel" aria-labelledby="open-title">
+          <h2 id="open-title" data-msg="project.openTitle">{{project.openTitle}}</h2>
+          <form id="open-project-form" novalidate>
+            <label for="project-lookup-id" data-msg="project.id">{{project.id}}</label>
+            <input id="project-lookup-id" type="text" autocomplete="off" spellcheck="false" data-project-control data-msg-placeholder="project.idPlaceholder" placeholder="{{project.idPlaceholder}}">
+            <button id="project-open" type="submit" class="secondary" disabled data-project-control data-msg="project.open">{{project.open}}</button>
+          </form>
+        </section>
+      </aside>
+      <section class="project-workspace" aria-labelledby="workspace-title">
+        <div id="project-empty" class="project-empty">
+          <span class="empty-mark" aria-hidden="true">＋</span>
+          <h2 id="workspace-title" data-msg="project.emptyTitle">{{project.emptyTitle}}</h2>
+          <p data-msg="project.emptyBody">{{project.emptyBody}}</p>
+        </div>
+        <div id="project-current" hidden>
+          <section class="project-panel project-overview">
+            <div class="overview-heading"><h2 data-msg="project.current">{{project.current}}</h2><button id="project-refresh" type="button" class="secondary" data-project-control data-msg="project.refresh">{{project.refresh}}</button></div>
+            <div class="project-id-row"><span data-msg="project.id">{{project.id}}</span><output id="project-current-id"></output><button id="project-copy-id" type="button" class="text-button" data-project-control data-msg="project.copyId">{{project.copyId}}</button></div>
+            <p id="project-stale" class="attention-note" hidden data-msg="project.stale">{{project.stale}}</p>
+            <dl class="project-metrics">
+              <div><dt data-msg="project.requirements">{{project.requirements}}</dt><dd id="metric-requirements">0</dd></div>
+              <div><dt data-msg="project.pendingTasks">{{project.pendingTasks}}</dt><dd id="metric-pending">0</dd></div>
+              <div><dt data-msg="project.completedTasks">{{project.completedTasks}}</dt><dd id="metric-completed">0</dd></div>
+              <div><dt data-msg="project.attentionTasks">{{project.attentionTasks}}</dt><dd id="metric-attention">0</dd></div>
+            </dl>
+            <button id="project-execute" type="button" disabled data-project-control data-msg="project.execute">{{project.execute}}</button>
+            <p class="form-hint" data-msg="project.executeHint">{{project.executeHint}}</p>
+          </section>
+          <section class="requirements-section" aria-labelledby="requirements-title">
+            <h2 id="requirements-title" data-msg="project.requirementsTitle">{{project.requirementsTitle}}</h2>
+            <div id="project-requirements"></div>
+          </section>
+          <div class="project-additions">
+            <section class="project-panel" aria-labelledby="requirement-add-title">
+              <h2 id="requirement-add-title" data-msg="project.addRequirementTitle">{{project.addRequirementTitle}}</h2>
+              <form id="add-requirement-form" novalidate>
+                <label class="visually-hidden" for="project-requirement" data-msg="project.addRequirementTitle">{{project.addRequirementTitle}}</label>
+                <textarea id="project-requirement" rows="4" data-project-control data-msg-placeholder="project.addRequirementPlaceholder" placeholder="{{project.addRequirementPlaceholder}}"></textarea>
+                <button id="project-add-requirement" type="submit" disabled data-project-control data-msg="project.addRequirement">{{project.addRequirement}}</button>
+              </form>
+            </section>
+            <section class="project-panel" aria-labelledby="prompt-add-title">
+              <h2 id="prompt-add-title" data-msg="project.addPromptTitle">{{project.addPromptTitle}}</h2>
+              <form id="add-prompt-form" novalidate>
+                <label class="visually-hidden" for="project-prompt" data-msg="project.addPromptTitle">{{project.addPromptTitle}}</label>
+                <textarea id="project-prompt" rows="4" data-project-control data-msg-placeholder="project.addPromptPlaceholder" placeholder="{{project.addPromptPlaceholder}}"></textarea>
+                <button id="project-add-prompt" type="submit" class="secondary" disabled data-project-control data-msg="project.addPrompt">{{project.addPrompt}}</button>
+                <p class="form-hint" data-msg="project.promptHint">{{project.promptHint}}</p>
+              </form>
+            </section>
+          </div>
+        </div>
+      </section>
+    </div>
+    <noscript><p class="attention-note">{{project.noScript}}</p></noscript>
+  </main>
+  <footer><span>ZBAgentWF 2.0</span><span data-msg="page.footer">{{page.footer}}</span></footer>
+  <template id="msg-catalog">{{_catalog}}</template>
+</body>
+</html>

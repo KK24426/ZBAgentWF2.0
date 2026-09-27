@@ -3,7 +3,7 @@
  * 更新日期：2026-09-27
  * 做 成 者：zebiao
  * 版    本：v0.1
- * 功能概要：启动时显式读取消息和首页模板，装配请求语言解析。
+ * 功能概要：启动时显式读取消息和页面模板，装配请求语言解析。
  */
 package com.kk24426.zbagentwf;
 
@@ -33,5 +33,9 @@ public class MsgConfiguration {
     @Bean(name = "homePageTemplate")
     String homePageTemplate() throws IOException {
         return new ClassPathResource("web/index.html").getContentAsString(StandardCharsets.UTF_8);
+    }
+    @Bean(name = "projectPageTemplate")
+    String projectPageTemplate() throws IOException {
+        return new ClassPathResource("web/projects.html").getContentAsString(StandardCharsets.UTF_8);
     }
 }

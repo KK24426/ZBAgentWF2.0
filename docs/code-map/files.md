@@ -118,3 +118,17 @@ agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging�
 | `src/test/java/com/kk24426/zbagentwf/common/project/dto/ProjectHttpTest.java` | 验证项目响应是独立且一致的不可变数据快照。 |
 | `src/test/java/com/kk24426/zbagentwf/agent/project/ProjectMemoryTest.java` | 验证项目登记、角色选择、提示词追加及失败不发布。 |
 | `config/prompts/*.txt.example` | 五类UTF-8规则占位，实际.txt不入仓 |
+
+## 项目工作台文件
+
+| 文件 | 职责 |
+| --- | --- |
+| `src/main/java/com/kk24426/zbagentwf/agent/web/LocalizedPageRenderer.java` | 首页与项目页共用的固定消息校验、HTML转义和inert JSON渲染 |
+| `src/main/java/com/kk24426/zbagentwf/agent/web/ProjectPageController.java` | 项目页GET/HEAD入口，不实现业务操作 |
+| `src/main/resources/web/projects.html` | 非公开项目工作台模板与五项操作表单 |
+| `src/main/resources/static/messages.js` | 两页面共用的语言切换及固定文案更新 |
+| `src/main/resources/static/projects.js` | 项目快照、单飞请求、状态展示和不确定写入恢复 |
+| `src/main/resources/static/projects.css` | 响应式项目布局与任务状态样式 |
+| `src/test/java/com/kk24426/zbagentwf/agent/web/ProjectPageControllerTest.java` | 项目三语模板、恶意文案转义与精确路由验证 |
+| `src/test/browser/project_fixture.py` | 回环浏览器测试替身，只代理只读页面，业务请求全部本地模拟 |
+| `src/test/browser/project_page_test.cjs` | 浏览器行为回归：按钮载荷、错误恢复、语言保留、纯文本与窄屏 |

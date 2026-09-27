@@ -1,0 +1,150 @@
+/* 项目页面浏览器回归；只连接 project_fixture.py，绝不用于真实模型服务。 */
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const {chromium} = require("playwright");
+
+(async () => {
+  const base = new URL(process.argv[2]);
+  assert.equal(base.protocol, "http:");
+  assert.ok(["127.0.0.1", "localhost"].includes(base.hostname));
+  const evidence = path.resolve(process.argv[3]);
+  fs.mkdirSync(evidence, {recursive: true});
+  const response = await fetch(new URL("/fixture/stats", base));
+  assert.ok(response.ok && Array.isArray(await response.json()), "Must target the test fixture");
+  const browser = await chromium.launch({headless: true, channel: process.env.PLAYWRIGHT_CHANNEL || "msedge"});
+  const context = await browser.newContext({viewport: {width: 1440, height: 1000}, locale: "zh-CN"});
+  const page = await context.newPage();
+  const errors = [], dialogs = [], checks = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("dialog", dialog => { dialogs.push(dialog.message()); dialog.dismiss(); });
+  const stats = async () => (await fetch(new URL("/fixture/stats", base))).json();
+  const finished = async () => page.waitForFunction(() => document.getElementById("project-notice").dataset.state !== "pending");
+  const create = async content => {
+    await page.locator("#project-goal").fill(content);
+    await page.locator("#project-create").click();
+    await finished();
+  };
+  try {
+    await page.goto(new URL("/projects", base).href);
+    assert.ok(await page.locator("#project-create").isDisabled());
+    await page.locator(".model-options summary").click();
+    await page.locator("#explicit-models").check();
+    await create("fixture:slow fixture:partial <img src=x onerror=alert(1)>");
+    assert.equal((await stats()).length, 0, "Incomplete models must not submit");
+    for (const role of ["planning", "development", "review"]) {
+      for (const key of ["brand", "name", "ver"]) await page.locator(`#${role}-${key}`).fill(`${role}-${key}`);
+    }
+    await page.locator("#project-create").click();
+    assert.ok(await page.locator("#project-create").isDisabled());
+    assert.ok(await page.locator("#project-open").isDisabled());
+    await page.locator("#language-select").selectOption("en");
+    assert.ok((await page.locator("#project-goal").inputValue()).includes("fixture:slow"));
+    assert.ok((await page.locator("#project-status").textContent()).includes("Processing"));
+    await finished();
+    const projectId = await page.locator("#project-current-id").textContent();
+    assert.equal(projectId, "fixture-1");
+    let calls = await stats();
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0].body.planningAgent, {brand: "planning-brand", name: "planning-name", ver: "planning-ver"});
+    assert.deepEqual(Object.keys(calls[0].body).sort(), ["content", "developmentAgent", "planningAgent", "reviewAgent"]);
+    assert.equal(await page.locator("main img").count(), 0);
+    assert.ok((await page.locator("#project-requirements").textContent()).includes("<img src=x"));
+    checks.push("complete explicit models; duplicate suppression; pending language switch; text-only content");
+
+    await page.locator("#project-prompt").fill("后续输出遵守项目规则");
+    await page.locator("#project-add-prompt").click(); await finished();
+    assert.equal(await page.locator("#project-prompt").inputValue(), "");
+    calls = await stats();
+    assert.deepEqual(calls.at(-1).body, {content: "后续输出遵守项目规则"});
+    assert.equal(calls.at(-1).path, `/api/projects/${projectId}/prompts`);
+    await page.locator("#project-requirement").fill("第二个任务");
+    await page.locator("#project-add-requirement").click(); await finished();
+    assert.equal(await page.locator("#metric-requirements").textContent(), "2");
+    await page.locator("#project-prompt").fill("保留规则草稿");
+    await page.locator("#project-requirement").fill("保留需求草稿");
+    await page.locator("#project-execute").click(); await finished();
+    assert.ok(await page.locator("#project-stale").isVisible());
+    assert.equal(await page.locator("#metric-completed").textContent(), "0", "Keep old snapshot after partial 503");
+    for (const id of ["project-execute", "project-add-prompt", "project-add-requirement"]) assert.ok(await page.locator("#" + id).isDisabled());
+    assert.equal((await stats()).filter(c => c.path.endsWith("/tasks/execute")).length, 1);
+    await page.locator("#project-refresh").click(); await finished();
+    assert.equal(await page.locator("#metric-completed").textContent(), "1");
+    assert.equal(await page.locator("#metric-pending").textContent(), "1");
+    assert.ok(await page.locator("#project-execute").isEnabled());
+    assert.equal(await page.locator("#project-prompt").inputValue(), "保留规则草稿");
+    const beforeLanguage = (await stats()).length;
+    await page.locator(".task-card summary").first().click();
+    await page.locator("#language-select").selectOption("ja");
+    assert.equal(await page.locator("#project-requirement").inputValue(), "保留需求草稿");
+    assert.equal(await page.locator(".task-card").first().getAttribute("open"), null);
+    assert.equal((await stats()).length, beforeLanguage);
+    await page.locator("#project-execute").click(); await finished();
+    assert.equal(await page.locator("#metric-completed").textContent(), "2");
+    assert.ok(await page.locator("#project-execute").isDisabled());
+    assert.deepEqual((await stats()).filter(c => c.path.endsWith("/tasks/execute")).at(-1).body, {});
+    await page.locator("#language-select").selectOption("zh-CN");
+    await page.screenshot({path: path.join(evidence, "projects-desktop.png"), fullPage: true});
+    checks.push("all five operations; partial execution 503 locks writes until GET; drafts retained; task result status");
+
+    await page.locator("#project-requirement").fill("fixture:invalid");
+    await page.locator("#project-add-requirement").click(); await finished();
+    assert.equal(await page.locator("#metric-requirements").textContent(), "2");
+    assert.ok(await page.locator("#project-add-requirement").isDisabled());
+    assert.equal(await page.locator("#project-requirement").inputValue(), "fixture:invalid");
+    await page.locator("#project-refresh").click(); await finished();
+    assert.equal(await page.locator("#metric-requirements").textContent(), "3");
+    await page.route("**/api/projects/*/prompts", route => route.abort("failed"));
+    await page.locator("#project-add-prompt").click(); await finished();
+    assert.ok(await page.locator("#project-stale").isVisible());
+    await page.unroute("**/api/projects/*/prompts");
+    await page.locator("#project-refresh").click(); await finished();
+    assert.ok(await page.locator("#project-add-prompt").isEnabled());
+    await page.locator("#project-lookup-id").fill("missing");
+    await page.locator("#project-open").click(); await finished();
+    assert.equal(await page.locator("#project-current-id").textContent(), projectId);
+    assert.ok((await page.locator("#project-status").textContent()).includes("项目不存在"));
+    await create("fixture:unavailable");
+    assert.ok((await page.locator("#project-status").textContent()).includes("未就绪"));
+    assert.ok(!(await page.locator("body").textContent()).includes("private-server-error"));
+    checks.push("malformed response and network recovery; unknown ID; configuration error privacy");
+
+    await page.locator("#explicit-models").uncheck();
+    await create("fixture:failure");
+    assert.deepEqual(Object.keys((await stats()).filter(c => c.path === "/api/projects").at(-1).body), ["content"]);
+    await page.locator("#project-execute").click(); await finished();
+    assert.equal(await page.locator("#metric-attention").textContent(), "1");
+    assert.equal(await page.locator("#project-notice").getAttribute("data-state"), "error");
+    await create("fixture:confirm");
+    await page.locator("#project-execute").click(); await finished();
+    assert.equal(await page.locator(".task-status").getAttribute("data-status"), "NEEDS_CONFIRMATION");
+    assert.ok((await page.locator("#project-requirements").textContent()).includes("请确认目标"));
+    checks.push("default model request; failed and confirmation task states on HTTP 200");
+
+    await page.setViewportSize({width: 390, height: 844});
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await page.screenshot({path: path.join(evidence, "projects-mobile.png"), fullPage: true});
+    await page.reload();
+    assert.ok(await page.locator("#project-empty").isVisible());
+    assert.equal(await page.locator("#project-goal").inputValue(), "");
+    checks.push("mobile layout without horizontal overflow; no persisted business data");
+
+    await page.goto(new URL("/", base).href);
+    await page.locator("#chat-message").fill("保留聊天输入");
+    await page.locator("#chat-send").click();
+    await page.waitForFunction(() => document.getElementById("chat-result").dataset.state === "success");
+    await page.locator("#language-select").selectOption("en");
+    assert.equal(await page.locator("#chat-message").inputValue(), "保留聊天输入");
+    assert.ok((await page.locator("#chat-reply").textContent()).includes("<img src=x"));
+    assert.equal(await page.locator("#chat-result img").count(), 0);
+    assert.equal((await stats()).filter(c => c.path === "/api/chat").length, 1);
+    checks.push("shared language script preserves chat behavior and plain-text replies");
+    assert.deepEqual(errors, []);
+    assert.deepEqual(dialogs, []);
+    fs.writeFileSync(path.join(evidence, "browser-results.json"), JSON.stringify({success: true, checks, requests: await stats()}, null, 2));
+    console.log(JSON.stringify({success: true, checks}, null, 2));
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+})().catch(error => { console.error(error); process.exitCode = 1; });

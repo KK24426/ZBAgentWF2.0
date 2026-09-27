@@ -39,7 +39,21 @@ public final class MsgCatalog {
             "chat.error.generic", "chat.error.timeout", "chat.error.connection",
             "http.unavailable", "http.methodNotAllowed", "http.notFound", "http.jsonRequired",
             "http.internalError", "http.chat.invalid", "http.chat.unavailable",
-            "http.project.invalid", "http.project.notFound", "http.project.unavailable");
+            "http.project.invalid", "http.project.notFound", "http.project.unavailable",
+            "project.requirementNumber", "project.taskNumber", "project.original",
+            "project.understanding", "project.acceptance", "project.confirmation",
+            "project.noTasks", "project.noRequirements", "project.resultSummary",
+            "project.resultError", "project.executionId", "project.tokens",
+            "project.unknown", "project.task.pending", "project.task.running",
+            "project.task.succeeded", "project.task.failed", "project.task.confirmation",
+            "project.status.ready", "project.status.pending", "project.status.longRunning",
+            "project.status.created", "project.status.loaded", "project.status.requirementAdded",
+            "project.status.promptAdded", "project.status.executed", "project.status.attention",
+            "project.status.copied", "project.error.copy", "project.error.required",
+            "project.error.id", "project.error.models", "project.error.400",
+            "project.error.404", "project.error.503", "project.error.generic",
+            "project.error.connection", "project.error.uncertain", "project.error.createUncertain",
+            "project.requestId");
 
     private final Map<String, Map<String, String>> messages;
 

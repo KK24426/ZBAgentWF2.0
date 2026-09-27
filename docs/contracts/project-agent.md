@@ -122,4 +122,10 @@ Java 请求类型为 ProjectHttp.CreateProjectRequest、ProjectHttp.ProjectConte
 
 文本必须非空白，三个模型全给或全省略，不把部分null暗示为按角色补齐。未知项目404，不从请求反序列化Project，不接受目录、执行器或运行时规则对象。读取与域内修改按同一Project对象锁协调，快照复制后序列化；同项目同步执行期间查询/追加会等待，未引入进度流或取消功能。响应只含projectId和requirements，需求保留userContent/agentUnderstanding/acceptanceCriteria/userConfirmMsg/tasks，Task保留id/content/acceptanceCriteria/status/result，result沿用执行结果字段；不包含工作目录、执行器、模型配置、Prompt或stderr。模型生成的正文保持为业务文本，不等同于内部对象序列化。
 输入/JSON错误400；未知ID404；配置/模型未就绪和受理额度拒绝503；内部错误500。内部IllegalArgumentException不一概映射400。错误使用http.project.invalid/notFound/unavailable及既有http.internalError，通过MsgCatalog返回固定三语纯文本。GET的HEAD错误也无正文。Filter仅放行上述精确路由/方法，保留CSP、无缓存、请求编号和默认回环监听。日志使用PROJECT固定类别，不记录URL、ID、正文；项目异常及请求中的Spring诊断隐藏自由文本并保留完整类型、栈、cause和suppressed。
-没有新增项目网页、登录/权限模型、后台批次或真实数据库；项目接口已完成上述有限真实模型验收；原聊天页面和/api/chat继续独立保持原行为。
+没有新增登录/权限模型、后台批次或真实数据库；项目接口已完成上述有限真实模型验收；原聊天页面和/api/chat继续独立保持原行为。
+
+## 项目页面
+
+2026-09-27用户批准 /projects 和 /projects.html 的项目工作台，首页提供导航入口。按钮直接消费上述五项HTTP契约，创建可使用默认模型或填写完整三角色标识。页面仅按ID打开单个项目，不提供后端尚无的项目列表、删除、任务重置、取消或自动审核功能。
+项目与结果仅在服务本次运行中存在；页面不保存业务数据，项目ID不是重启恢复凭据。提示词追加成功只显示回执，不返回或展示服务器保存的提示词。执行结果通过完整快照显示，失败/待确认不能因HTTP200被标为全部成功。
+单页面操作串行，请求期间禁用项目控制，语言切换不会丢失输入或重发调用。长操作保留等待，不以固定30秒中断。服务503可能发生在部分Task成功之后；已知项目写请求503/500/网络或结构异常均保留旧快照并锁住写按钮，成功GET后解锁。不自动重试POST；创建结果不明时明确提示核对日志，避免盲目重复创建。
