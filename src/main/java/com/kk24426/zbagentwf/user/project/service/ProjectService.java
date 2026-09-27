@@ -9,10 +9,10 @@ package com.kk24426.zbagentwf.user.project.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
+import com.kk24426.zbagentwf.common.agent.model.AgentBean;
 
-import com.kk24426.zbagentwf.common.project.bean.Project;
-import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
+import com.kk24426.zbagentwf.common.project.model.Project;
+import com.kk24426.zbagentwf.user.project.api.ProjectDomain;
 
 @Service
 public class ProjectService {

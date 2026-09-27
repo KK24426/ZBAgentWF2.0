@@ -12,9 +12,10 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import com.kk24426.zbagentwf.agent.codex.*;
 import com.kk24426.zbagentwf.agent.registry.AgentRequirementPlanner;
-import com.kk24426.zbagentwf.common.agent.bean.*;
-import com.kk24426.zbagentwf.common.project.bean.*;
-import com.kk24426.zbagentwf.user.agent.userif.*;
+import com.kk24426.zbagentwf.common.agent.model.*;
+import com.kk24426.zbagentwf.common.project.model.*;
+import com.kk24426.zbagentwf.common.project.config.ProjectSettings;
+import com.kk24426.zbagentwf.user.agent.api.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -253,8 +254,8 @@ class ProjectDomainImplTest {
         final BlockingQueue<Invocation> calls = new LinkedBlockingQueue<>();
         boolean reject;
         ManualExecutor() { super(new AgentBean()); }
-        @Override protected Prompt getDefaultPrompt() { return com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture-default"); }
-        @Override protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture-security"); }
+        @Override protected Prompt getDefaultPrompt() { return com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("fixture-default"); }
+        @Override protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("fixture-security"); }
         @Override public String exec(Project project, String content, String memory, AgentExecutionCallback callback) {
             if (reject) throw new RejectedExecutionException("fixture");
             String id = UUID.randomUUID().toString();

@@ -9,8 +9,8 @@ package com.kk24426.zbagentwf;
 
 import com.kk24426.zbagentwf.agent.project.ProjectDomainImpl;
 import com.kk24426.zbagentwf.agent.registry.*;
-import com.kk24426.zbagentwf.common.project.bean.ProjectSettings;
-import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
+import com.kk24426.zbagentwf.common.project.config.ProjectSettings;
+import com.kk24426.zbagentwf.user.project.api.ProjectDomain;
 
 import java.util.ArrayList;
 import java.nio.file.Path;

@@ -8,7 +8,7 @@
 package com.kk24426.zbagentwf.agent.codex;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.kk24426.zbagentwf.common.project.bean.TaskStatus;
+import com.kk24426.zbagentwf.common.project.model.TaskStatus;
 import java.nio.file.Path;
 import java.util.HashSet;
 import org.junit.jupiter.api.Test;

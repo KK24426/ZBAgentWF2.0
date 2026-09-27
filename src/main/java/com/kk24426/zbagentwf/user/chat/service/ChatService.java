@@ -8,6 +8,7 @@
 package com.kk24426.zbagentwf.user.chat.service;
 
 import com.kk24426.zbagentwf.user.UserService;
+import com.kk24426.zbagentwf.user.chat.api.AgentChat;
 import org.springframework.stereotype.Service;
 
 /** 用户侧编排，不依赖 HTTP、数据库或具体 Agent 实现。 */

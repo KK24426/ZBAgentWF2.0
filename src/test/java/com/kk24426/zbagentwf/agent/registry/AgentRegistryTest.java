@@ -11,9 +11,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.kk24426.zbagentwf.agent.codex.CodexFixtureSupport;
 import com.kk24426.zbagentwf.agent.project.ProjectDomainImpl;
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
-import com.kk24426.zbagentwf.common.agent.bean.*;
-import com.kk24426.zbagentwf.common.project.bean.*;
-import com.kk24426.zbagentwf.user.agent.userif.AgentExecutor;
+import com.kk24426.zbagentwf.common.agent.model.*;
+import com.kk24426.zbagentwf.common.project.model.*;
+import com.kk24426.zbagentwf.common.project.config.ProjectSettings;
+import com.kk24426.zbagentwf.user.agent.api.AgentExecutor;
 import java.nio.file.*;
 import java.time.Duration;
 import java.util.*;
@@ -111,9 +112,9 @@ class AgentRegistryTest {
             assertTrue(second.getRequirements().stream().flatMap(value -> value.getTasks().stream())
                     .allMatch(task -> task.getStatus() == TaskStatus.PENDING));
             first.setPlanningAgent(new AgentExecutor(new AgentBean()) {
-                protected Prompt getDefaultPrompt() { return com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture"); }
-                protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture"); }
-                public String exec(Project p, String c, String m, com.kk24426.zbagentwf.user.agent.userif.AgentExecutionCallback cb) { throw new AssertionError(); }
+                protected Prompt getDefaultPrompt() { return com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("fixture"); }
+                protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("fixture"); }
+                public String exec(Project p, String c, String m, com.kk24426.zbagentwf.user.agent.api.AgentExecutionCallback cb) { throw new AssertionError(); }
                 public String getStderr(String id) { return null; }
             });
             assertThrows(IllegalArgumentException.class, () -> service.createRequirements(first, "unknown binding"));
@@ -151,11 +152,11 @@ class AgentRegistryTest {
         var catalog = new AgentCatalog(List.of(definition)); catalog.initialize();
         try (var resources = new ExecutionResources(); var factory = fixtureFactory(catalog, resources, "success")) {
             var bean = definition.bean();
-            bean.setRolePrompt(com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("original-role"));
+            bean.setRolePrompt(com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("original-role"));
             var skill = new Skill(); skill.setSkillName("original-skill"); bean.setSkill(skill);
             var executor = factory.getExecutor(bean);
             assertSame(executor, factory.getExecutor(bean));
-            assertNotSame(executor, factory.getExecutor(com.kk24426.zbagentwf.agent.AbstractAgentExecutor.copyAgent(bean)));
+            assertNotSame(executor, factory.getExecutor(com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.copyAgent(bean)));
             bean.getRolePrompt().setPrompt("changed-role");
             assertThrows(IllegalArgumentException.class, () -> factory.getExecutor(bean));
             bean.getRolePrompt().setPrompt("original-role"); skill.setSkillName("changed-skill");

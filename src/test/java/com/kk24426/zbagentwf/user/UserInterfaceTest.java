@@ -15,8 +15,8 @@ class UserInterfaceTest {
     void parentIsAnInterfaceWithoutDeclaredMethods() {
         assertTrue(UserInterface.class.isInterface());
         assertEquals(0, UserInterface.class.getDeclaredMethods().length);
-        assertTrue(UserInterface.class.isAssignableFrom(com.kk24426.zbagentwf.user.agent.userif.AgentExecutor.class));
-        assertTrue(UserInterface.class.isAssignableFrom(com.kk24426.zbagentwf.user.agent.userif.AgentExecutorFactory.class));
+        assertTrue(UserInterface.class.isAssignableFrom(com.kk24426.zbagentwf.user.agent.api.AgentExecutor.class));
+        assertTrue(UserInterface.class.isAssignableFrom(com.kk24426.zbagentwf.user.agent.api.AgentExecutorFactory.class));
     }
 
     @Test

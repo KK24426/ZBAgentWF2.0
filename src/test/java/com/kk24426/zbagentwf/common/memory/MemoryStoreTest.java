@@ -8,7 +8,7 @@
 package com.kk24426.zbagentwf.common.memory;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.kk24426.zbagentwf.common.project.bean.Project;
+import com.kk24426.zbagentwf.common.project.model.Project;
 import java.util.ArrayList;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;

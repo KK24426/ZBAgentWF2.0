@@ -7,11 +7,11 @@
  */
 package com.kk24426.zbagentwf.agent.registry;
 
-import com.kk24426.zbagentwf.agent.AbstractAgentExecutor;
+import com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor;
 import com.kk24426.zbagentwf.agent.prompt.PromptCatalog;
-import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
+import com.kk24426.zbagentwf.common.agent.model.AgentBean;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
-import com.kk24426.zbagentwf.common.project.bean.AgentRole;
+import com.kk24426.zbagentwf.common.project.model.AgentRole;
 import java.util.Map;
 import java.util.Objects;
 

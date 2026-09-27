@@ -4,14 +4,14 @@
 
 ## 包含关系与数据
 
-Project → List<Requirement> → List<RequirementTask>，均是独立 Java 类，位于 common.project.bean。没有父对象反向引用、持久化字段或外键。
+Project → List<Requirement> → List<RequirementTask>，均是独立 Java 类，位于 common.project.model。没有父对象反向引用、持久化字段或外键。
 
 | 类型 | 字段 |
 | --- | --- |
 | Project | String projectId、Path workingDirectory、List<Requirement> requirements；AgentExecutor planningAgent/developmentAgent/reviewAgent；Prompt projectPrompt |
 | Requirement | String userContent、agentUnderstanding、acceptanceCriteria、userConfirmMsg；List<RequirementTask> tasks |
 | RequirementTask | String id、content、acceptanceCriteria；TaskStatus status；AgentExecutionResult result |
-| common.agent.bean.AgentExecutionResult | String taskId、errorMessage、summary、confirmationMessage；boolean success、confirmationRequired；Long tokenCount |
+| common.agent.model.AgentExecutionResult | String taskId、errorMessage、summary、confirmationMessage；boolean success、confirmationRequired；Long tokenCount |
 
 所有 Bean 提供无参构造与标准 getter/setter，属性原样存取，不自动校验或推断业务状态。requirements/tasks 各自默认 new ArrayList，每个实例独立；setter 原样接收传入列表（包括 null），不复制、不自动建立父子绑定。其它引用默认 null，boolean 默认 false；Task 默认 PENDING。
 
@@ -20,7 +20,7 @@ RequirementTask.id 是规划任务标识，AgentExecutionResult.taskId 是一次
 
 ## 用户接口
 
-user.project.domain.ProjectDomain implements UserInterface：
+user.project.api.ProjectDomain implements UserInterface：
 
 - Project newProject(String content, AgentBean planningAgent, AgentBean developmentAgent, AgentBean reviewAgent)：先解析三个模型，绑定到新项目后建立 UUID 目录并规划首批需求。
 - List<Requirement> createRequirements(Project project, String content)：成功后追加需求，返回本次新增需求及 Task。
@@ -31,7 +31,7 @@ user.project.domain.ProjectDomain implements UserInterface：
 
 项目具体实现规则见下文；包含关系仍通过 Bean 列表表达。
 
-user.agent.userif.AgentExecutor implements UserInterface，通过构造函数保存 private final AgentBean，protected getAgent() 供实现类读取；工作目录从本次传入的 Project 获取：
+user.agent.api.AgentExecutor implements UserInterface，通过构造函数保存 private final AgentBean，protected getAgent() 供实现类读取；工作目录从本次传入的 Project 获取：
 
 - String exec(Project project, String content, String memory, AgentExecutionCallback callback)：异步受理，返回单次执行标识。memory 没有时可为空。
 - String getStderr(String taskId)：读取该次执行的诊断文本；stderr 不决定执行成败，不能原样公开或写日志。

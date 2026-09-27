@@ -28,28 +28,28 @@
 | `src/main/java/com/kk24426/zbagentwf/common/logging/SanitizingEncoder.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/common/logging/SecretRedactor.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/common/package-info.java` | 运行代码 |
-| `src/main/java/com/kk24426/zbagentwf/common/agent/bean/AgentBean.java` | Agent 数据骨架及属性访问 |
-| `src/main/java/com/kk24426/zbagentwf/common/agent/bean/AgentExecutionResult.java` | 单次执行结果及待确认内容 |
-| `src/main/java/com/kk24426/zbagentwf/common/project/bean/Project.java` | 项目标识、工作目录、三角色执行器和需求列表 |
-| `src/main/java/com/kk24426/zbagentwf/common/project/bean/Requirement.java` | 项目内需求及Task列表 |
-| `src/main/java/com/kk24426/zbagentwf/common/project/bean/RequirementTask.java` | 规划任务、状态与单次执行结果 |
-| `src/main/java/com/kk24426/zbagentwf/common/project/bean/TaskStatus.java` | 已批准的任务状态值，不实现状态转换 |
-| `src/main/java/com/kk24426/zbagentwf/common/project/bean/ProjectSettings.java` | 初始化后的只读项目根目录 |
+| `src/main/java/com/kk24426/zbagentwf/common/agent/model/AgentBean.java` | Agent 数据骨架及属性访问 |
+| `src/main/java/com/kk24426/zbagentwf/common/agent/model/AgentExecutionResult.java` | 单次执行结果及待确认内容 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/Project.java` | 项目标识、工作目录、三角色执行器和需求列表 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/Requirement.java` | 项目内需求及Task列表 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/RequirementTask.java` | 规划任务、状态与单次执行结果 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/TaskStatus.java` | 已批准的任务状态值，不实现状态转换 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/config/ProjectSettings.java` | 初始化后的只读项目根目录 |
 | `src/main/java/com/kk24426/zbagentwf/user/package-info.java` | 运行代码 |
-| `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentRegistry.java` | 本机Agent发现、查询和刷新抽象契约 |
-| `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentExecutor.java` | 项目内单次异步执行与诊断查询契约 |
-| `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentExecutionCallback.java` | 执行最终结果回调契约 |
-| `src/main/java/com/kk24426/zbagentwf/user/project/domain/ProjectDomain.java` | 项目创建、需求规划和任务结果汇总契约 |
+| `src/main/java/com/kk24426/zbagentwf/user/agent/api/AgentRegistry.java` | 本机Agent发现、查询和刷新抽象契约 |
+| `src/main/java/com/kk24426/zbagentwf/user/agent/api/AgentExecutor.java` | 项目内单次异步执行与诊断查询契约 |
+| `src/main/java/com/kk24426/zbagentwf/user/agent/api/AgentExecutionCallback.java` | 执行最终结果回调契约 |
+| `src/main/java/com/kk24426/zbagentwf/user/project/api/ProjectDomain.java` | 项目创建、需求规划和任务结果汇总契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/UserInterface.java` | 用户接口的空父接口 |
 | `src/main/java/com/kk24426/zbagentwf/user/UserService.java` | 用户服务父类占位，未定义行为 |
 | `src/main/java/com/kk24426/zbagentwf/user/chat/controller/ChatController.java` | 聊天HTTP入口与固定错误映射 |
 | `src/main/java/com/kk24426/zbagentwf/user/chat/service/ChatService.java` | 用户侧请求校验与Agent调用编排 |
-| `src/main/java/com/kk24426/zbagentwf/user/chat/service/AgentChat.java` | 单次Agent调用公共接口 |
+| `src/main/java/com/kk24426/zbagentwf/user/chat/api/AgentChat.java` | 单次Agent调用公共接口 |
 | `src/main/java/com/kk24426/zbagentwf/common/exception/AgentUnavailableException.java` | Agent实现与调用层共用的不可用异常 |
 | `src/main/java/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.java` | 正式Agent占位实现，明确不可用 |
-| `src/main/java/com/kk24426/zbagentwf/common/chat/ChatRequest.java` | 聊天请求与字段类型绑定 |
-| `src/main/java/com/kk24426/zbagentwf/common/chat/ChatResponse.java` | 聊天回复数据载体 |
-| `src/test/java/com/kk24426/zbagentwf/user/chat/service/ChatAgentFixture.java` | 可控Agent测试替身，不进入JAR |
+| `src/main/java/com/kk24426/zbagentwf/common/chat/dto/ChatRequest.java` | 聊天请求与字段类型绑定 |
+| `src/main/java/com/kk24426/zbagentwf/common/chat/dto/ChatResponse.java` | 聊天回复数据载体 |
+| `src/test/java/com/kk24426/zbagentwf/user/chat/api/ChatAgentFixture.java` | 可控Agent测试替身，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/user/chat/service/ChatServiceTest.java` | 输入边界、原样委派、生产占位测试 |
 | `src/test/java/com/kk24426/zbagentwf/user/chat/controller/ChatControllerTest.java` | Controller/Service/替身HTTP与隐私失败路径测试 |
 | `src/test/java/com/kk24426/zbagentwf/agent/web/WebRequestFilterTest.java` | 测试，不进入JAR |
@@ -60,10 +60,10 @@
 | `src/test/java/com/kk24426/zbagentwf/agent/persistence/mapper/ProbeMapper.java` | 测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/common/logging/LoggingTest.java` | 测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/user/InjectionFixture.java` | 测试，不进入JAR |
-| `src/test/java/com/kk24426/zbagentwf/common/AgentBeanTest.java` | 属性契约测试，不进入JAR |
+| `src/test/java/com/kk24426/zbagentwf/common/agent/model/AgentBeanTest.java` | 属性契约测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/user/UserInterfaceTest.java` | 父接口关系测试，不进入JAR |
-| `src/test/java/com/kk24426/zbagentwf/common/project/bean/ProjectModelTest.java` | 多层包含、独立列表与属性契约 |
-| `src/test/java/com/kk24426/zbagentwf/user/agent/userif/AgentExecutionContractTest.java` | 测试替身的项目传递、执行标识及回调关联 |
+| `src/test/java/com/kk24426/zbagentwf/common/project/model/ProjectModelTest.java` | 多层包含、独立列表与属性契约 |
+| `src/test/java/com/kk24426/zbagentwf/user/agent/api/AgentExecutionContractTest.java` | 测试替身的项目传递、执行标识及回调关联 |
 | `src/test/java/com/kk24426/zbagentwf/ProjectConfigurationTest.java` | 必填目录、规范化、错误与无建目录副作用 |
 | `src/main/java/com/kk24426/zbagentwf/agent/codex/CodexAgentExecutor.java` | Codex 执行、规划或项目具体实现，显式构造组合 |
 | `src/main/java/com/kk24426/zbagentwf/agent/codex/CodexClient.java` | Codex 执行、规划或项目具体实现，显式构造组合 |
@@ -82,7 +82,7 @@
 | `src/main/java/com/kk24426/zbagentwf/agent/registry/AgentRequirementPlanner.java` | 模型注册、工厂装配或共享资源实现 |
 | `src/main/java/com/kk24426/zbagentwf/agent/runtime/ExecutionResources.java` | 模型注册、工厂装配或共享资源实现 |
 | `src/main/java/com/kk24426/zbagentwf/AgentConfiguration.java` | 模型注册、工厂装配或共享资源实现 |
-| `src/main/java/com/kk24426/zbagentwf/user/agent/userif/AgentExecutorFactory.java` | 模型注册、工厂装配或共享资源实现 |
+| `src/main/java/com/kk24426/zbagentwf/user/agent/api/AgentExecutorFactory.java` | 模型注册、工厂装配或共享资源实现 |
 | `src/test/java/com/kk24426/zbagentwf/agent/registry/AgentRegistryTest.java` | 测试，不进入正式JAR |
 | `src/test/java/com/kk24426/zbagentwf/agent/runtime/ExecutionResourcesTest.java` | 测试，不进入正式JAR |
 | `src/test/java/com/kk24426/zbagentwf/AgentConfigurationTest.java` | 测试，不进入正式JAR |
@@ -100,21 +100,21 @@ agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging�
 
 | 文件 | 职责 |
 | --- | --- |
-| `src/main/java/com/kk24426/zbagentwf/agent/AbstractAgentExecutor.java` | 保存 Agent 绑定快照并在显式初始化后组合通用与角色规则。 |
+| `src/main/java/com/kk24426/zbagentwf/agent/runtime/AbstractAgentExecutor.java` | 保存 Agent 绑定快照并在显式初始化后组合通用与角色规则。 |
 | `src/main/java/com/kk24426/zbagentwf/user/project/controller/ProjectController.java` | 接收项目操作，通过服务查找内存项目并返回安全快照及本地化错误。 |
 | `src/main/java/com/kk24426/zbagentwf/user/project/service/ProjectService.java` | 校验项目输入并通过用户定义的领域接口编排操作。 |
 | `src/main/java/com/kk24426/zbagentwf/common/exception/AgentConfigurationUnavailableException.java` | 区分模型或规则尚未配置与执行中的内部错误。 |
 | `src/main/java/com/kk24426/zbagentwf/common/memory/MemoryStore.java` | 按分类和标识保存本进程内的对象引用。 |
-| `src/main/java/com/kk24426/zbagentwf/common/project/bean/AgentRole.java` | 项目角色类型或相关验证。 |
-| `src/main/java/com/kk24426/zbagentwf/common/project/bean/ProjectHttp.java` | 定义项目 HTTP 输入及不含运行时引用的响应快照。 |
-| `src/main/java/com/kk24426/zbagentwf/common/agent/bean/AgentReviewResult.java` | 项目角色类型或相关验证。 |
-| `src/main/java/com/kk24426/zbagentwf/common/agent/bean/Prompt.java` | 保存提示词文本。 |
-| `src/main/java/com/kk24426/zbagentwf/common/agent/bean/Skill.java` | 保存Skill 名称，不自动加载或执行。 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/AgentRole.java` | 项目角色类型或相关验证。 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/dto/ProjectHttp.java` | 定义项目 HTTP 输入及不含运行时引用的响应快照。 |
+| `src/main/java/com/kk24426/zbagentwf/common/agent/model/AgentReviewResult.java` | 项目角色类型或相关验证。 |
+| `src/main/java/com/kk24426/zbagentwf/common/agent/model/Prompt.java` | 保存提示词文本。 |
+| `src/main/java/com/kk24426/zbagentwf/common/agent/model/Skill.java` | 保存Skill 名称，不自动加载或执行。 |
 | `src/main/java/com/kk24426/zbagentwf/agent/prompt/PromptCatalog.java` | 显式加载 UTF-8 规则快照，查询时不进行文件访问。 |
 | `src/main/java/com/kk24426/zbagentwf/agent/registry/RoleAgentResolver.java` | 将任意已选择模型与角色规则绑定，缺省选择由显式配置提供。 |
-| `src/test/java/com/kk24426/zbagentwf/agent/AgentPromptTest.java` | 验证提示词显式初始化、输入快照和缺规则时不启动进程。 |
+| `src/test/java/com/kk24426/zbagentwf/agent/runtime/AgentPromptTest.java` | 验证提示词显式初始化、输入快照和缺规则时不启动进程。 |
 | `src/test/java/com/kk24426/zbagentwf/user/project/controller/ProjectControllerTest.java` | 验证项目 Controller、Service、精确路由及三语隐私边界。 |
 | `src/test/java/com/kk24426/zbagentwf/common/memory/MemoryStoreTest.java` | 验证共享内存存储的类型、分类、引用和并发边界。 |
-| `src/test/java/com/kk24426/zbagentwf/common/project/bean/ProjectHttpTest.java` | 验证项目响应是独立且一致的不可变数据快照。 |
+| `src/test/java/com/kk24426/zbagentwf/common/project/dto/ProjectHttpTest.java` | 验证项目响应是独立且一致的不可变数据快照。 |
 | `src/test/java/com/kk24426/zbagentwf/agent/project/ProjectMemoryTest.java` | 验证项目登记、角色选择、提示词追加及失败不发布。 |
 | `config/prompts/*.txt.example` | 五类UTF-8规则占位，实际.txt不入仓 |

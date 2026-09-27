@@ -9,7 +9,7 @@ Spring Boot 4.1.1；MyBatis Starter 4.1.0；Java26；Maven Wrapper3.9.16。
 未激活 mysql 时没有 DataSource；激活后验证配置和连接，失败退出1。
 当前首页包含单次聊天入口：ChatController -> ChatService -> AgentChat -> agent.chat.AgentChatImpl。正式实现明确尚未接入；成功路径由测试替身验证，无业务表或真实Agent执行。
 ProjectConfiguration 在根包初始化只读 ProjectSettings；zb.project.root 必填，初始化只读配置及目录元数据，不创建目录。
-common.project.bean 保存 Project→Requirement→RequirementTask；user.project.domain 和 user.agent.userif 保存用户接口。agent.codex 提供 CodexClient、CodexAgentExecutor 和只读规划器，agent.project.ProjectDomainImpl 实现项目操作和串行执行。AgentConfiguration装配配置驱动的AgentCatalog、AgentExecutorFactoryImpl及项目服务；Project绑定规划/开发/审核三个执行器，agent.runtime共享额度和诊断缓存；未验收真实模型。AgentChatImpl 仅实现 AgentChat，不继承 AgentRegistry，网页仍未接入。
+common.project.model 保存 Project→Requirement→RequirementTask；user.project.api 和 user.agent.api 保存用户接口。agent.codex 提供 CodexClient、CodexAgentExecutor 和只读规划器，agent.project.ProjectDomainImpl 实现项目操作和串行执行。AgentConfiguration装配配置驱动的AgentCatalog、AgentExecutorFactoryImpl及项目服务；Project绑定规划/开发/审核三个执行器，agent.runtime共享额度和诊断缓存；未验收真实模型。AgentChatImpl 仅实现 AgentChat，不继承 AgentRegistry，网页仍未接入。
 WebRequestFilter限制固定资源和/api/chat POST、记录安全请求摘要；后续路由仍须按批准契约同步调整。
 MsgConfiguration启动时显式加载三语msg及可选外部覆盖；common.msg.MsgCatalog提供只读消息查询，agent.web.MsgLocaleResolver共享请求级语言，HomePageController在原首页路径渲染非公开模板。页面脚本从inert template读取三语消息并即时切换，ChatController/Filter查询同一消息目录。详见[本地化契约](../contracts/msg.md)与[ADR0011](../decisions/0011-message-localization.md)。
 远程测试服务与专用MySQL库部署在同一已批准服务器，Web只绑定回环地址，通过SSH隧道访问。

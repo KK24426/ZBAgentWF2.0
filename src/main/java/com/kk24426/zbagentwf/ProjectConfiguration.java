@@ -7,7 +7,7 @@
  */
 package com.kk24426.zbagentwf;
 
-import com.kk24426.zbagentwf.common.project.bean.ProjectSettings;
+import com.kk24426.zbagentwf.common.project.config.ProjectSettings;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;

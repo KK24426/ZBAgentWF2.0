@@ -8,8 +8,8 @@
 package com.kk24426.zbagentwf;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.kk24426.zbagentwf.user.agent.userif.*;
-import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
+import com.kk24426.zbagentwf.user.agent.api.*;
+import com.kk24426.zbagentwf.user.project.api.ProjectDomain;
 
 import java.nio.file.*;
 import java.util.*;
@@ -28,7 +28,7 @@ class AgentConfigurationTest {
         Properties values = properties();
         try (var out = Files.newOutputStream(file)) { values.store(out, "fixture"); }
         var holder = new AgentExecutorFactory[1];
-        var model = new com.kk24426.zbagentwf.common.agent.bean.AgentBean[1];
+        var model = new com.kk24426.zbagentwf.common.agent.model.AgentBean[1];
         runner().withInitializer(new ConfigDataApplicationContextInitializer())
                 .withPropertyValues("spring.config.location=optional:file:" + temp.resolve("absent.properties").toUri(),
                         "spring.config.import=" + file.toUri(), "zb.agents[0].ver=overridden")
@@ -73,13 +73,13 @@ class AgentConfigurationTest {
                 .run(context -> {
                     assertNull(context.getStartupFailure());
                     var roles = context.getBean(com.kk24426.zbagentwf.agent.registry.RoleAgentResolver.class);
-                    var planning = roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentRole.PLANNING);
+                    var planning = roles.defaultFor(com.kk24426.zbagentwf.common.project.model.AgentRole.PLANNING);
                     assertEquals("shared", planning.getName()); assertEquals("one", planning.getVer());
                     assertEquals("fixture-planning-规则", planning.getRolePrompt().getPrompt());
                     assertThrows(com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException.class,
-                            () -> roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentRole.DEVELOPMENT));
+                            () -> roles.defaultFor(com.kk24426.zbagentwf.common.project.model.AgentRole.DEVELOPMENT));
                     assertThrows(com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException.class,
-                            () -> roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentRole.REVIEW));
+                            () -> roles.defaultFor(com.kk24426.zbagentwf.common.project.model.AgentRole.REVIEW));
                     assertFalse(Files.exists(temp.resolve("projects")));
                 });
     }

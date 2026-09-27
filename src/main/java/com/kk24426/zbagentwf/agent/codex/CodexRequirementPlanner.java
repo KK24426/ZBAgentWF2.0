@@ -7,12 +7,12 @@
  */
 package com.kk24426.zbagentwf.agent.codex;
 
-import com.kk24426.zbagentwf.common.project.bean.Requirement;
-import com.kk24426.zbagentwf.common.project.bean.Project;
-import com.kk24426.zbagentwf.common.agent.bean.Prompt;
-import com.kk24426.zbagentwf.agent.AbstractAgentExecutor;
+import com.kk24426.zbagentwf.common.project.model.Requirement;
+import com.kk24426.zbagentwf.common.project.model.Project;
+import com.kk24426.zbagentwf.common.agent.model.Prompt;
+import com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
-import com.kk24426.zbagentwf.common.project.bean.RequirementTask;
+import com.kk24426.zbagentwf.common.project.model.RequirementTask;
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
 import java.nio.file.Path;
 import java.util.ArrayList;

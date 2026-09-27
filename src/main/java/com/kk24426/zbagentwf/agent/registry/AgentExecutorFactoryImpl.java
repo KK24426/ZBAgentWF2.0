@@ -8,11 +8,11 @@
 package com.kk24426.zbagentwf.agent.registry;
 
 import com.kk24426.zbagentwf.agent.codex.*;
-import com.kk24426.zbagentwf.agent.AbstractAgentExecutor;
+import com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor;
 import com.kk24426.zbagentwf.agent.prompt.PromptCatalog;
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
-import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
-import com.kk24426.zbagentwf.user.agent.userif.*;
+import com.kk24426.zbagentwf.common.agent.model.AgentBean;
+import com.kk24426.zbagentwf.user.agent.api.*;
 import java.util.*;
 import java.util.function.Function;
 

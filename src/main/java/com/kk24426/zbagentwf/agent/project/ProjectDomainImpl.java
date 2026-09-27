@@ -9,14 +9,15 @@ package com.kk24426.zbagentwf.agent.project;
 
 import com.kk24426.zbagentwf.agent.registry.AgentRequirementPlanner;
 import com.kk24426.zbagentwf.agent.registry.RoleAgentResolver;
-import com.kk24426.zbagentwf.agent.AbstractAgentExecutor;
+import com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor;
 import com.kk24426.zbagentwf.common.memory.MemoryStore;
-import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
-import com.kk24426.zbagentwf.common.agent.bean.AgentExecutionResult;
-import com.kk24426.zbagentwf.common.project.bean.*;
-import com.kk24426.zbagentwf.user.agent.userif.AgentExecutor;
-import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
-import com.kk24426.zbagentwf.user.agent.userif.AgentExecutorFactory;
+import com.kk24426.zbagentwf.common.agent.model.AgentBean;
+import com.kk24426.zbagentwf.common.agent.model.AgentExecutionResult;
+import com.kk24426.zbagentwf.common.project.model.*;
+import com.kk24426.zbagentwf.common.project.config.ProjectSettings;
+import com.kk24426.zbagentwf.user.agent.api.AgentExecutor;
+import com.kk24426.zbagentwf.user.project.api.ProjectDomain;
+import com.kk24426.zbagentwf.user.agent.api.AgentExecutorFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;

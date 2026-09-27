@@ -7,7 +7,7 @@
  */
 package com.kk24426.zbagentwf.agent.prompt;
 
-import com.kk24426.zbagentwf.common.agent.bean.Prompt;
+import com.kk24426.zbagentwf.common.agent.model.Prompt;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
 import java.io.IOException;
 import java.nio.file.Files;

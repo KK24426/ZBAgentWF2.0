@@ -10,6 +10,7 @@ package com.kk24426.zbagentwf.user.chat.service;
 import static org.junit.jupiter.api.Assertions.*;
 import com.kk24426.zbagentwf.agent.chat.AgentChatImpl;
 import com.kk24426.zbagentwf.common.exception.AgentUnavailableException;
+import com.kk24426.zbagentwf.user.chat.api.ChatAgentFixture;
 import org.junit.jupiter.api.Test;
 
 class ChatServiceTest {

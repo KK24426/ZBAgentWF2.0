@@ -7,8 +7,8 @@
  */
 package com.kk24426.zbagentwf.agent.registry;
 
-import com.kk24426.zbagentwf.common.project.bean.Project;
-import com.kk24426.zbagentwf.common.project.bean.Requirement;
+import com.kk24426.zbagentwf.common.project.model.Project;
+import com.kk24426.zbagentwf.common.project.model.Requirement;
 import java.util.List;
 import java.util.Objects;
 

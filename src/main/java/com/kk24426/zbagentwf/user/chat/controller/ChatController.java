@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.kk24426.zbagentwf.common.chat.ChatRequest;
-import com.kk24426.zbagentwf.common.chat.ChatResponse;
+import com.kk24426.zbagentwf.common.chat.dto.ChatRequest;
+import com.kk24426.zbagentwf.common.chat.dto.ChatResponse;
 import com.kk24426.zbagentwf.common.exception.AgentUnavailableException;
 import com.kk24426.zbagentwf.common.msg.MsgCatalog;
 import com.kk24426.zbagentwf.user.chat.service.ChatService;

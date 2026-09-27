@@ -16,13 +16,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
-import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
-import com.kk24426.zbagentwf.common.agent.bean.AgentExecutionResult;
-import com.kk24426.zbagentwf.common.agent.bean.Prompt;
+import com.kk24426.zbagentwf.common.agent.model.AgentBean;
+import com.kk24426.zbagentwf.common.agent.model.AgentExecutionResult;
+import com.kk24426.zbagentwf.common.agent.model.Prompt;
 import com.kk24426.zbagentwf.common.logging.SecretRedactor;
-import com.kk24426.zbagentwf.common.project.bean.Project;
-import com.kk24426.zbagentwf.user.agent.userif.AgentExecutionCallback;
-import com.kk24426.zbagentwf.agent.AbstractAgentExecutor;
+import com.kk24426.zbagentwf.common.project.model.Project;
+import com.kk24426.zbagentwf.user.agent.api.AgentExecutionCallback;
+import com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor;
 
 /**
  * 工厂实例共享四个执行额度；诊断按共享资源的容量和保留时间查询。

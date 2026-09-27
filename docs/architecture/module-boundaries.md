@@ -9,7 +9,7 @@
 | agent | Agent实现，含agent.chat占位实现、Web请求保护与日志、persistence配置、Mapper与SQL诊断 |
 | common | 共享Bean、DTO、工具、日志辅助，以及common.exception中的Agent不可用异常 |
 
-根包 ProjectConfiguration 负责项目根目录初始化；common.project.bean 包含项目/需求/Task/状态及只读配置，common.agent.bean 包含模型信息与结果；user.project.domain、user.agent.userif 声明用户契约。agent.codex 实现本机 Codex 进程、异步执行及只读规划，agent.project 实现项目目录、需求追加和串行 Task 执行；agent.registry 实现用户新增 AgentExecutorFactory、AgentRegistry 和规划适配，agent.runtime 管理共享额度及关闭，根包 AgentConfiguration 负责装配。用户批准 Project 通过 user.agent.userif.AgentExecutor 绑定三个角色；common 项目实体对该用户抽象的运行时引用是本次明确授权的依赖，不推广为其它包依赖许可。
+根包 ProjectConfiguration 负责项目根目录初始化；common.project.model 包含项目/需求/Task/状态及角色，common.project.config 保存只读项目配置，common.project.dto 保存 HTTP 输入与响应快照，common.agent.model 包含模型信息与结果；user.project.api、user.agent.api、user.chat.api 声明用户契约。agent.codex 实现本机 Codex 进程、异步执行及只读规划，agent.project 实现项目目录、需求追加和串行 Task 执行；agent.registry 实现用户新增 AgentExecutorFactory、AgentRegistry 和规划适配，agent.runtime 保存执行器公共实现并管理共享额度及关闭，根包 AgentConfiguration 负责装配。用户批准 Project 通过 user.agent.api.AgentExecutor 绑定三个角色；common 项目实体对该用户抽象的运行时引用是本次明确授权的依赖，不推广为其它包依赖许可。
 
 这些是协作边界，不强制字节码依赖隔离。通过用户接口注入实现。
 2026-09-27批准本地化：根包MsgConfiguration装配；common.msg提供消息读取、校验和纯文本查询；agent.web承担请求语言与首页适配；user.chat.controller仅注入共用MsgCatalog查询固定提示，不依赖agent.web具体类型。无业务接口/DTO调整。

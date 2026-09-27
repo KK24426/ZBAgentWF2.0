@@ -8,8 +8,8 @@
 package com.kk24426.zbagentwf.agent.codex;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.kk24426.zbagentwf.common.agent.bean.*;
-import com.kk24426.zbagentwf.common.project.bean.Project;
+import com.kk24426.zbagentwf.common.agent.model.*;
+import com.kk24426.zbagentwf.common.project.model.Project;
 import java.nio.file.*;
 import java.time.Duration;
 import java.util.*;

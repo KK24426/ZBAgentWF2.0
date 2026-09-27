@@ -1,0 +1,148 @@
+/*
+ * 创建日期：2026-09-25
+ * 更新日期：2026-09-26
+ * 做 成 者：zebiao
+ * 版    本：v0.1
+ * 功能概要：用手动完成的测试替身验证执行接口、项目传递和结果关联。
+ */
+package com.kk24426.zbagentwf.user.agent.api;
+
+import static org.junit.jupiter.api.Assertions.*;
+import com.kk24426.zbagentwf.common.agent.model.AgentBean;
+import com.kk24426.zbagentwf.common.agent.model.Prompt;
+import com.kk24426.zbagentwf.common.project.model.AgentRole;
+import com.kk24426.zbagentwf.common.agent.model.AgentExecutionResult;
+import com.kk24426.zbagentwf.common.project.model.Project;
+import com.kk24426.zbagentwf.common.project.model.Requirement;
+import com.kk24426.zbagentwf.user.UserInterface;
+import com.kk24426.zbagentwf.user.project.api.ProjectDomain;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.RejectedExecutionException;
+import org.junit.jupiter.api.Test;
+
+class AgentExecutionContractTest {
+    @Test
+    void callerAssociatesEachFinalResultAndDiagnosticsWithTheSubmittedProject() {
+        var model = new AgentBean();
+        var executor = new ManualExecutor(model);
+        var first = project("project-1");
+        var second = project("project-2");
+        var results = new ArrayList<AgentExecutionResult>();
+        String firstId = executor.exec(first, "  原始内容  ", null, results::add);
+        String secondId = executor.exec(second, "另一任务", "先前记忆", results::add);
+        assertTrue(results.isEmpty());
+        assertNotEquals(firstId, secondId);
+        assertSame(model, executor.getAgent());
+        assertSame(first, executor.pending.get(firstId).project());
+        assertSame(second, executor.pending.get(secondId).project());
+        assertEquals("  原始内容  ", executor.pending.get(firstId).content());
+        assertNull(executor.pending.get(firstId).memory());
+        assertEquals("先前记忆", executor.pending.get(secondId).memory());
+        var confirm = new AgentExecutionResult();
+        confirm.setConfirmationRequired(true);
+        confirm.setConfirmationMessage("请确认范围");
+        executor.complete(secondId, confirm, "第二次执行诊断");
+        var success = new AgentExecutionResult();
+        success.setSuccess(true);
+        executor.complete(firstId, success, "第一次执行诊断");
+        assertEquals(List.of(secondId, firstId), results.stream().map(AgentExecutionResult::getTaskId).toList());
+        assertEquals("第二次执行诊断", executor.getStderr(secondId));
+        assertEquals("第一次执行诊断", executor.getStderr(firstId));
+        assertFalse(confirm.isSuccess());
+        assertTrue(executor.pending.isEmpty());
+    }
+
+    @Test
+    void rejectedSubmissionHasNoCompletionAndAcceptedFailureUsesAResult() {
+        var executor = new ManualExecutor(new AgentBean());
+        var results = new ArrayList<AgentExecutionResult>();
+        executor.reject = true;
+        assertThrows(RejectedExecutionException.class,
+                () -> executor.exec(project("p"), "内容", "", results::add));
+        assertTrue(results.isEmpty());
+        assertTrue(executor.pending.isEmpty());
+        executor.reject = false;
+        String id = executor.exec(project("p"), "内容", "", results::add);
+        var failure = new AgentExecutionResult();
+        failure.setErrorMessage("测试失败");
+        executor.complete(id, failure, "");
+        assertEquals(1, results.size());
+        assertEquals(id, results.getFirst().getTaskId());
+        assertFalse(results.getFirst().isSuccess());
+        assertFalse(results.getFirst().isConfirmationRequired());
+    }
+
+    @Test
+    void projectPortCarriesProjectAndSelectedRequirements() {
+        var port = new ProjectDomain() {
+            private final Map<String, Project> projects = new HashMap<>();
+            @Override protected AgentBean getAgent(AgentRole role) { return new AgentBean(); }
+            @Override public Project getProject(String id) { return projects.get(id); }
+            @Override public void addProjectPrompt(String id, String content) {
+                projects.get(id).setProjectPrompt(com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt(content));
+            }
+            @Override public Project newProject(String content, AgentBean planning, AgentBean development, AgentBean review) { var p = project(content); projects.put(content, p); return p; }
+            @Override public List<Requirement> createRequirements(Project project, String content) {
+                var requirement = new Requirement();
+                requirement.setUserContent(content);
+                project.getRequirements().add(requirement);
+                return project.getRequirements();
+            }
+            @Override public List<Requirement> execTask(Project project) {
+                return project.getRequirements();
+            }
+        };
+        assertInstanceOf(UserInterface.class, port);
+        Project project = port.newProject("项目", new AgentBean(), new AgentBean(), new AgentBean());
+        var requirements = port.createRequirements(project, "需求");
+        assertSame(project.getRequirements(), requirements);
+        assertSame(project, port.getProject("项目"));
+        port.addProjectPrompt("项目", "项目规则");
+        assertEquals("项目规则", project.getProjectPrompt().getPrompt());
+        assertSame(requirements, port.execTask(project));
+    }
+
+    private static Project project(String id) {
+        var project = new Project();
+        project.setProjectId(id);
+        project.setWorkingDirectory(Path.of(id));
+        return project;
+    }
+
+    // 只用于表达调用契约：测试手动触发完成，不注册组件，不证明生产异步执行或任务调度。
+    private static final class ManualExecutor extends AgentExecutor {
+        private final Map<String, Submission> pending = new HashMap<>();
+        private final Map<String, String> diagnostics = new HashMap<>();
+        private int sequence;
+        private boolean reject;
+
+        private ManualExecutor(AgentBean agent) { super(agent); }
+        @Override protected Prompt getDefaultPrompt() { return com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("fixture-default"); }
+        @Override protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("fixture-security"); }
+
+        @Override
+        public String exec(Project project, String content, String memory, AgentExecutionCallback callback) {
+            if (reject) throw new RejectedExecutionException("测试拒绝提交");
+            String id = "execution-" + ++sequence;
+            pending.put(id, new Submission(project, content, memory, callback));
+            return id;
+        }
+
+        @Override public String getStderr(String taskId) { return diagnostics.get(taskId); }
+
+        private void complete(String id, AgentExecutionResult result, String diagnostic) {
+            Submission submission = pending.remove(id);
+            assertNotNull(submission);
+            result.setTaskId(id);
+            diagnostics.put(id, diagnostic);
+            submission.callback().onCompleted(result);
+        }
+    }
+
+    private record Submission(Project project, String content, String memory, AgentExecutionCallback callback) { }
+}

@@ -8,7 +8,7 @@
 package com.kk24426.zbagentwf.agent.chat;
 
 import com.kk24426.zbagentwf.common.exception.AgentUnavailableException;
-import com.kk24426.zbagentwf.user.chat.service.AgentChat;
+import com.kk24426.zbagentwf.user.chat.api.AgentChat;
 import org.springframework.stereotype.Component;
 
 /** 正式环境不模拟成功、不执行模型或外部进程；成功链路仅由测试替身验证。 */

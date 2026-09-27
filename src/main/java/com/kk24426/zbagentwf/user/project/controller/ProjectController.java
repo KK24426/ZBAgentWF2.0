@@ -7,8 +7,8 @@
  */
 package com.kk24426.zbagentwf.user.project.controller;
 
-import com.kk24426.zbagentwf.common.project.bean.Project;
-import com.kk24426.zbagentwf.common.project.bean.ProjectHttp;
+import com.kk24426.zbagentwf.common.project.model.Project;
+import com.kk24426.zbagentwf.common.project.dto.ProjectHttp;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
 import com.kk24426.zbagentwf.common.msg.MsgCatalog;
 import com.kk24426.zbagentwf.user.project.service.ProjectService;

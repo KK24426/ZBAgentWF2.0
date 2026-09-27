@@ -246,9 +246,21 @@ class WebJarIT {
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/CodexAgentExecutor.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/project/ProjectDomainImpl.class"));
-            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/userif/AgentExecutor.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/api/AgentExecutor.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/registry/AgentExecutorFactoryImpl.class"));
-            assertFalse(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/userif/AgentExec.class"));
+            // 验证实际发布产物采用新包，避免旧编译产物掩盖迁移遗漏。
+            for (String relocated : List.of("user/project/api/ProjectDomain", "user/chat/api/AgentChat",
+                    "common/agent/model/AgentBean", "common/project/model/Project",
+                    "common/project/dto/ProjectHttp", "common/project/config/ProjectSettings",
+                    "common/chat/dto/ChatRequest", "common/chat/dto/ChatResponse", "agent/runtime/AbstractAgentExecutor")) {
+                assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/" + relocated + ".class"), relocated);
+            }
+            for (String retired : List.of("user/agent/userif/", "user/project/domain/", "common/agent/bean/",
+                    "common/project/bean/", "user/chat/service/AgentChat.class", "agent/AbstractAgentExecutor.class",
+                    "common/chat/ChatRequest", "common/chat/ChatResponse")) {
+                assertFalse(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/classes/com/kk24426/zbagentwf/" + retired)), retired);
+            }
+            assertFalse(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/api/AgentExec.class"));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/tomcat-embed-core")));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/mysql-connector-j")));
             assertFalse(names.stream().anyMatch(n -> n.contains("CliApplication") || n.contains("ZbAgentWfCli")

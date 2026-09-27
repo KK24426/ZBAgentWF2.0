@@ -7,9 +7,9 @@
  */
 package com.kk24426.zbagentwf.agent.registry;
 
-import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
+import com.kk24426.zbagentwf.common.agent.model.AgentBean;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
-import com.kk24426.zbagentwf.user.agent.userif.AgentRegistry;
+import com.kk24426.zbagentwf.user.agent.api.AgentRegistry;
 import java.nio.file.Files;
 import java.util.*;
 
