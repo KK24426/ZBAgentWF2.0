@@ -15,7 +15,8 @@ public class AgentBean {
 	private String name;
 	/** 具体的版本，如 GPT-5.6 sol。 */
 	private String ver;
-
+	/** 思考深度*/
+	private String think;
 	/** 该角色的提示词(规划、开发、审核等) */
 	private Prompt rolePrompt;
 
