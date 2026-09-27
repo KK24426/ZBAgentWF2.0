@@ -1,6 +1,6 @@
 # 项目、需求与 Agent 执行契约
 
-用户于 2026-09-25 批准本轮数据结构、方法签名及配置初始化。随后用户批准先接入 Codex 及项目操作规则；2026-09-26进一步批准配置注册、Spring工厂、项目角色绑定和资源限制，真实模型验收延后。
+用户于 2026-09-25 批准本轮数据结构、方法签名及配置初始化。随后用户批准先接入 Codex 及项目操作规则；2026-09-26进一步批准配置注册、Spring工厂、项目角色绑定和资源限制，当时将真实模型验收延后；2026-09-27按用户要求完成有限项目功能验收，见[验收记录](../operations/codex-live-validation.md)。
 
 ## 包含关系与数据
 
@@ -40,7 +40,7 @@ user.agent.api.AgentExecutor implements UserInterface，通过构造函数保存
 提交失败同步抛 RejectedExecutionException，不触发回调；受理后的失败通过结果表达。成功为 success=true、confirmationRequired=false；普通失败两者 false；待确认为 success=false、confirmationRequired=true 并提供确认内容。
 待确认意味着本次执行已经结束，调用方获得用户答复后重新提交，取得新的执行标识。本轮没有暂停恢复或取消接口，也不把成功和待确认同时设置为 true。
 
-AgentExecutionContractTest 的手动替身仅说明契约；具体 Codex 实现通过真实 Java 子进程 fixture 验证，尚未运行真实模型账号验收。
+AgentExecutionContractTest 的手动替身仅说明契约；具体 Codex 实现通过真实 Java 子进程 fixture 验证，另已通过当前本机Codex的有限真实模型验收，范围见上述记录。
 
 ## 项目根目录配置
 
@@ -92,7 +92,7 @@ execTask 开始前按对象身份检查需求归属，拒绝重复需求、共�
 
 ## 实现验证边界
 
-真实 Java fixture 子进程验证协议、中文 stdin/cwd、并发管道、非零退出、错误结果、确认、超时、回调一次、关闭及后代管道收尾；项目测试验证创建、追加、串行、停止、人工重试和数据隔离。fixture 不进入正式 JAR，完整 verify 继续覆盖 Web/JAR。未运行真实 Codex 登录、账号模型可用性或端到端模型验收，没有新增持久化、业务 Git 操作或部署；项目 HTTP 入口按下文用户批准范围实现。
+真实 Java fixture 子进程验证协议、中文 stdin/cwd、并发管道、非零退出、错误结果、确认、超时、回调一次、关闭及后代管道收尾；项目测试验证创建、追加、串行、停止、人工重试和数据隔离。fixture 不进入正式 JAR，完整 verify 继续覆盖 Web/JAR。2026-09-27已验证本机已有登录、所选gpt-6-astra的实际调用及两文件项目成功链路；真实复杂任务、失败/确认和并发场景仍未验收，没有新增持久化、业务 Git 操作或部署；项目 HTTP 入口按下文用户批准范围实现。
 
 ## 内存登记及规则绑定
 
@@ -122,4 +122,4 @@ Java 请求类型为 ProjectHttp.CreateProjectRequest、ProjectHttp.ProjectConte
 
 文本必须非空白，三个模型全给或全省略，不把部分null暗示为按角色补齐。未知项目404，不从请求反序列化Project，不接受目录、执行器或运行时规则对象。读取与域内修改按同一Project对象锁协调，快照复制后序列化；同项目同步执行期间查询/追加会等待，未引入进度流或取消功能。响应只含projectId和requirements，需求保留userContent/agentUnderstanding/acceptanceCriteria/userConfirmMsg/tasks，Task保留id/content/acceptanceCriteria/status/result，result沿用执行结果字段；不包含工作目录、执行器、模型配置、Prompt或stderr。模型生成的正文保持为业务文本，不等同于内部对象序列化。
 输入/JSON错误400；未知ID404；配置/模型未就绪和受理额度拒绝503；内部错误500。内部IllegalArgumentException不一概映射400。错误使用http.project.invalid/notFound/unavailable及既有http.internalError，通过MsgCatalog返回固定三语纯文本。GET的HEAD错误也无正文。Filter仅放行上述精确路由/方法，保留CSP、无缓存、请求编号和默认回环监听。日志使用PROJECT固定类别，不记录URL、ID、正文；项目异常及请求中的Spring诊断隐藏自由文本并保留完整类型、栈、cause和suppressed。
-没有新增项目网页、登录/权限模型、后台批次、真实数据库或真实模型验收；原聊天页面和/api/chat继续独立保持原行为。
+没有新增项目网页、登录/权限模型、后台批次或真实数据库；项目接口已完成上述有限真实模型验收；原聊天页面和/api/chat继续独立保持原行为。

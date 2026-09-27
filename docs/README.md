@@ -7,6 +7,7 @@
 - [code-map/modules.md](code-map/modules.md)、[files.md](code-map/files.md)：职责、验证入口和源码定位。
 - [decisions/](decisions/)：长期技术决定及取舍。
 - [operations/local-dev.md](operations/local-dev.md)、[remote-test.md](operations/remote-test.md)、[asset-policy.md](operations/asset-policy.md)：构建、运行环境与资产规则。
+- [operations/codex-live-validation.md](operations/codex-live-validation.md)：本机 Codex 五项项目功能的真实验收结果和局限。
 - 审核空白模板随审核技能维护；具体任务记录位置和使用规则见该技能。
 
 真实代码和 Maven 配置是最终依据；不一致须报告并修正，待确认事项不能写成事实。

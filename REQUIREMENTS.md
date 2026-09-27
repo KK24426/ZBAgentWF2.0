@@ -8,7 +8,7 @@
 
 ## 用户骨架与最小补充
 
-用户已提供 AgentBean、UserInterface、AgentRegistry、UserService 及项目/执行契约；实现进度见下文，真实模型账号验收仍未运行。
+用户已提供 AgentBean、UserInterface、AgentRegistry、UserService 及项目/执行契约；实现进度见下文，已于2026-09-27完成当前本机Codex与gpt-6-astra的有限项目功能验收，见[验收记录](docs/operations/codex-live-validation.md)。
 AgentBean 保存 brand/name/ver、rolePrompt 和 skill，Prompt 保存 prompt 文本、Skill 保存 skillName；均为普通 Bean，原字段原样存取、默认 null。Skill 名称不会触发自动安装或调用。
 UserInterface 是由 UserImpl 更名的公共空父接口，用户接口通过 extends 继承；不新增业务方法。
 AgentRegistry 位于 user.agent.api，声明列表、brand/name/ver 精确查询与刷新；agent.registry.AgentCatalog 保存配置和本机文件可执行性快照，返回防御性复制的 Bean。UserService 保留原占位行为。
@@ -42,7 +42,7 @@ newProject 三个模型全部解析成功后才创建 root/UUID，绑定规划/�
 Spring工厂共享ExecutionResources，规划和开发共用4个票据、不排队；异步执行满额或关闭同步抛RejectedExecutionException且不回调，受理后最终回调一次。同步规划也消耗额度；回调前归还票据，支持回调重入关闭。
 诊断是按执行ID查询的stderr，不是Task结果。单次stderr至多64KiB并脱敏、标明截断；stdout上限8MiB。全工厂完成诊断最多256条、保留30分钟，先淘汰最早完成记录，运行中条目不淘汰；未知、其他执行器所有或过期ID返回null。定时清理与读时校验共同管理到期，不清除Task状态/结果/摘要。同步规划没有公开执行ID，失败仍通过既有安全异常链保留受限诊断。
 ContextClosedEvent停止工厂和票据受理、同时中断执行与规划；销毁阶段等待票据归还，总等待沿用开始关闭时的单一20秒预算，不等待同步调用线程结束。此预算只约束Agent资源，既有Spring Web按phase配置20秒，不承诺全应用所有Bean总退出时长。单任务timeout独立按模型条目配置。关闭后诊断清空且不接收迟到写入；直接构造的低层实例拥有独立资源作用域，应由调用方close。
-验证注册/配置覆盖/刷新、工厂版本与复用、Spring接口注入、项目三角色和隔离、共享额度、关闭竞态、容量/TTL、锁回收，并运行真实Java fixture子进程和完整verify。没有访问真实模型账号；用户决定初期功能完成后另行验收。MySQL仍按显式环境测试单独启用。
+验证注册/配置覆盖/刷新、工厂版本与复用、Spring接口注入、项目三角色和隔离、共享额度、关闭竞态、容量/TTL、锁回收，并运行真实Java fixture子进程和完整verify。2026-09-27按用户要求完成真实模型的五项项目HTTP及两文件生成验收；复杂任务、真实失败/确认、并发与多模型仍未验收。MySQL仍按显式环境测试单独启用。
 
 ## 项目根目录配置
 
@@ -94,7 +94,7 @@ mysql-it 仅接受回环地址 zbagentwf_test 和独立环境变量，可经 SSH
 缺配置时显式测试失败；普通构建跳过该环境测试。
 
 ## 待用户提供
-真实 Codex 验收、审核 Agent 业务流程；后续业务表结构、事务边界及会话功能；
+真实 Codex 复杂任务及失败/确认/并发场景验收、审核 Agent 业务流程；后续业务表结构、事务边界及会话功能；
 生产环境与权限模型（当前仅批准远程测试环境、专用测试库和受限账号）；
 日志历史保留策略若需要自动清理，由后续任务定义。
 
@@ -103,7 +103,7 @@ mysql-it 仅接受回环地址 zbagentwf_test 和独立环境变量，可经 SSH
 common.memory.MemoryStore 是应用单例，以分类+ID保存任意非空对象引用，支持 put/get(Class)->Optional/remove；空键或类型错误明确失败，无TTL、自动淘汰或持久化。Project 完整创建成功后登记在 project 分类；未知/空白 ID 抛 IllegalArgumentException，不自动重建；重启后原数据无法恢复。登记后 projectId 不应改变。
 zb.agent-roles.<planning/development/review>.brand/name/ver 提供显式默认选择；用户完整选择三个模型时优先使用其选择。默认缺失/不完整时仅创建失败，Web仍可启动。默认配置在启动时快照，新项目绑定后不会自动换模型。
 config/prompts/{default,security,planning,development,review}.txt 为 UTF-8 规则，由用户提供。启动显式加载，缺失/空白/占位规则在使用时拒绝；非法UTF8/不可读文件使初始化失败。构造器和getter不读文件，也不调用子类初始化方法。执行器构造完成后显式初始化通用/安全规则，缺规则不能启动子进程；规划与开发都注入分段规则，项目追加规则在下一次调用生效，已受理调用保留快照。Skill本次仅保存名称。具体规则内容不由应用自动生成，也不替代原进程权限限制。
-agent.project.controller.ProjectController -> user.project.service.ProjectService -> user.project.api.ProjectDomain，后续请求仅提交项目ID及文本，不接受工作目录或执行器。响应为项目ID、需求、Task和结果的不可变快照，同项目修改/复制使用对象锁；目录锁继续保护实际目录。错误区分400/404/503/500并通过msg返回三语固定提示；PROJECT异常与Spring绑定日志隐藏自由文本并保留完整调用链。未增加项目页面、数据库、真实模型验收或部署。
+agent.project.controller.ProjectController -> user.project.service.ProjectService -> user.project.api.ProjectDomain，后续请求仅提交项目ID及文本，不接受工作目录或执行器。响应为项目ID、需求、Task和结果的不可变快照，同项目修改/复制使用对象锁；目录锁继续保护实际目录。错误区分400/404/503/500并通过msg返回三语固定提示；PROJECT异常与Spring绑定日志隐藏自由文本并保留完整调用链。未增加项目页面、数据库或部署；有限真实模型验收见上述记录。
 
 2026-09-27按用户追加要求，聊天和项目Controller归入agent下对应功能包，Service仍留在user，common保留共享数据和工具；HTTP/JSON、组件名称和业务行为保持一致，见ADR0013。
 验收覆盖通用异类存储、原对象取回、失败不登记、角色任意绑定与显式选择优先、规则缺失/变更/嵌套隔离、并发快照、五个HTTP操作及真实JAR无配置错误路径。

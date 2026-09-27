@@ -1,7 +1,7 @@
 # 接口与配置
 
-已提供[单次聊天骨架](./chat.md)，真实 Agent 与持久化 schema 尚未接入；原空父接口及数据骨架见[用户骨架契约](./user-ports.md)。根包启动入口为 com.kk24426.zbagentwf.ZbAgentWfApplication。
-项目包含需求、需求包含 Task 的实体及执行行为见[项目与执行契约](./project-agent.md)。已有配置驱动的模型注册、执行器工厂与项目三角色装配；尚未运行真实模型验收。
+已提供[单次聊天骨架](./chat.md)，该聊天入口的真实 Agent 与持久化 schema 尚未接入；原空父接口及数据骨架见[用户骨架契约](./user-ports.md)。根包启动入口为 com.kk24426.zbagentwf.ZbAgentWfApplication。
+项目包含需求、需求包含 Task 的实体及执行行为见[项目与执行契约](./project-agent.md)。已有配置驱动的模型注册、执行器工厂与项目三角色装配；已完成当前本机Codex与gpt-6-astra的有限项目功能验收，见[验收记录](../operations/codex-live-validation.md)。
 聊天调用的共享技术异常为 common.exception.AgentUnavailableException，供实现层与调用层共同引用。
 正式调用为 java -jar target/zbagentwf-web-<version>.jar，无命令参数，持续运行。
 stderr包含日志、固定错误提示及脱敏异常链，stdout无业务输出。
