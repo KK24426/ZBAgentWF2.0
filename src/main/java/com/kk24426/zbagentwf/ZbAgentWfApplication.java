@@ -22,6 +22,11 @@ import org.springframework.context.event.ContextClosedEvent;
 /** 唯一启动入口；无 CLI 命令，配置来自环境变量、JVM 属性或外部配置文件。 */
 @SpringBootApplication(proxyBeanMethods = false, exclude = DataSourceAutoConfiguration.class)
 public class ZbAgentWfApplication {
+    /**
+     * 准备日志后启动常驻Web服务，由Spring管理正常关闭；不接受命令行业务参数。
+     * 非空args退出2，日志准备或启动失败退出1；启动失败时尝试清理已创建的上下文。
+     * @param args 必须为空，运行配置通过环境变量、JVM属性或外部文件提供
+     */
     public static void main(String[] args) {
         if (args.length != 0) {
             System.err.println("Web 服务不接受命令参数，请使用环境变量或外部配置。");

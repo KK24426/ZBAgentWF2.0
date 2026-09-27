@@ -19,6 +19,9 @@ import org.springframework.core.env.Environment;
 /** 只读取配置与目录元数据；不创建项目目录，不初始化业务项目。 */
 @Configuration(proxyBeanMethods = false)
 public class ProjectConfiguration {
+    /**
+     * 读取必填根目录并规范化为绝对路径，校验已存在路径确为目录；允许尚不存在，初始化不创建目录。
+     */
     @Bean
     ProjectSettings projectSettings(Environment environment) {
         String configured = environment.getProperty("zb.project.root");

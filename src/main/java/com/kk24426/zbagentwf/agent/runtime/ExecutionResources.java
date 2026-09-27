@@ -21,15 +21,25 @@ public final class ExecutionResources implements AutoCloseable {
     // 运行名额和完成诊断分开保存：容量淘汰只作用于已完成记录，不能释放正在执行的名额。
     private final Map<String, Ticket> active = new HashMap<>();
     private final LinkedHashMap<String, Diagnostic> completed = new LinkedHashMap<>();
+    /**
+     * 按对象身份永久标记已关闭归属；相同模型的不同执行器仍可独立受理。
+     */
     private final Set<Object> closedOwners = Collections.newSetFromMap(new IdentityHashMap<>());
     private final ScheduledThreadPoolExecutor expiry = new ScheduledThreadPoolExecutor(1,
             Thread.ofPlatform().daemon(true).name("agent-diagnostic-expiry").factory());
     private boolean closed;
+    /**
+     * 首次全局关闭确定的 System.nanoTime 截止时刻；重复关闭不能重置等待预算。
+     */
     private long shutdownDeadline;
 
+    /**
+     * 建立四个并发额度、最多256条完成诊断、30分钟保留期的资源作用域；构造不启动调度线程。
+     */
     public ExecutionResources() { this(256, Duration.ofMinutes(30), System::nanoTime); }
 
     // 可控时钟仅用于验证到期行为；生产使用单调时钟。
+    /** 设置正值诊断容量、保留期和单调纳秒时钟；只配置取消任务的移除策略，尚不调度清理工作。 */
     ExecutionResources(int diagnosticLimit, Duration retention, LongSupplier time) {
         if (diagnosticLimit < 1 || retention == null || retention.isNegative() || retention.isZero()) {
             throw new IllegalArgumentException("诊断容量与保留时间必须为正。");
@@ -62,6 +72,9 @@ public final class ExecutionResources implements AutoCloseable {
         return saved != null && saved.owner == owner ? saved.text : null;
     }
 
+    /**
+     * 持有资源锁时按单调时钟淘汰到期诊断并取消对应定时任务；不触碰运行票据。
+     */
     private void prune() {
         long now = time.getAsLong();
         var entries = completed.values().iterator();
@@ -74,6 +87,9 @@ public final class ExecutionResources implements AutoCloseable {
         }
     }
 
+    /**
+     * 幂等归还票据；text 为 null 时不缓存诊断，关闭后的迟到完成也不能重新填入缓存。
+     */
     private synchronized void finish(Ticket ticket, String text) {
         // 移除成功的一方才执行后续动作，让拒绝清理、正常完成和重复关闭至多归还一次名额。
         if (!active.remove(ticket.id, ticket)) return;
@@ -93,6 +109,7 @@ public final class ExecutionResources implements AutoCloseable {
         notifyAll();
     }
 
+    /** 定时到期时仅移除仍对应此诊断对象的记录；已被清理或替换时不影响其他记录。 */
     private synchronized void expire(String id, Diagnostic saved) { completed.remove(id, saved); }
 
     /** 关闭事件先调用本方法；不等待工作完成，唯一截止时间从此刻开始。 */
@@ -122,11 +139,17 @@ public final class ExecutionResources implements AutoCloseable {
         await(owner, System.nanoTime() + TimeUnit.SECONDS.toNanos(5));
     }
 
+    /**
+     * 停止受理、中断工作并沿用首次关闭的20秒截止时间等待票据归还；重复调用不会重新计时。
+     */
     @Override public void close() {
         beginShutdown();
         await(null, shutdownDeadline);
     }
 
+    /**
+     * 仅等待匹配归属的活动票据至给定单调时钟截止时刻；排除当前线程以允许重入关闭，最终恢复中断标志。
+     */
     private void await(Object owner, long deadline) {
         // 先清除已有中断以完成有限回收，退出时再恢复，既不忙循环也不吞掉调用方中断信号。
         boolean interrupted = Thread.interrupted();
@@ -153,6 +176,11 @@ public final class ExecutionResources implements AutoCloseable {
         private Ticket(String id, Object owner) { this.id = id; this.owner = owner; }
         public String id() { return id; }
 
+        /**
+         * 将唯一工作线程绑定到尚未归还的票据；不启动线程。
+         * 若资源已在预留后关闭，立即中断此线程，消除关闭与附着之间的窗口。
+         * @throws IllegalStateException 已附着过线程或票据已经归还
+         */
         public void attach(Thread thread) {
             synchronized (ExecutionResources.this) {
                 if (this.thread != null || active.get(id) != this) throw new IllegalStateException("票据不能重复附着。");
@@ -171,12 +199,19 @@ public final class ExecutionResources implements AutoCloseable {
             }
         }
 
+        /** 持有资源锁时中断已附着线程；尚未附着时不操作，由attach复核关闭状态。 */
         private void interrupt() { if (thread != null) thread.interrupt(); }
+        /**
+         * 执行结束时归还额度并保存最终诊断（null 视为空串）；重复完成或已关闭归属不会重复登记。
+         */
         public void complete(String diagnostic) { finish(this, Objects.requireNonNullElse(diagnostic, "")); }
         /** 拒绝或同步规划结束只归还额度，不伪造公开执行诊断记录。 */
         @Override public void close() { finish(this, null); }
     }
 
+    /**
+     * 已完成诊断及其到期任务；finishedAt 使用注入的单调纳秒时钟，查询不续期。
+     */
     private static final class Diagnostic {
         final Object owner;
         final String text;

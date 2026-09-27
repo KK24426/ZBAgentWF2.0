@@ -57,6 +57,7 @@ public final class MsgCatalog {
 
     private final Map<String, Map<String, String>> messages;
 
+    /** 保存语言索引的不可变副本；各语言消息表由load预先复制，后续查询不重读外部文件。 */
     private MsgCatalog(Map<String, Map<String, String>> messages) {
         this.messages = Map.copyOf(messages);
     }
@@ -143,6 +144,9 @@ public final class MsgCatalog {
         return Map.copyOf(result);
     }
 
+    /**
+     * 将Locale归一到内置语言；en/ja使用各自目录，null及其他语言回落zh-CN，不读取系统默认值。
+     */
     public static String languageTag(Locale locale) {
         if (locale == null) return "zh-CN";
         return switch (locale.getLanguage()) {
@@ -152,8 +156,12 @@ public final class MsgCatalog {
         };
     }
 
+    /**
+     * 用严格UTF-8读取properties并拒绝重复key、非法消息名和占位符；流由调用方关闭，返回不可变文本表。
+     */
     private static Map<String, String> read(InputStream stream) throws IOException {
         var properties = new Properties() {
+            /** 禁止properties默认的后值覆盖前值，重复key必须在加载阶段明确失败。 */
             @Override
             public synchronized Object put(Object key, Object value) {
                 if (containsKey(key)) throw new IllegalArgumentException("msg 文件包含重复 key。");
@@ -175,12 +183,18 @@ public final class MsgCatalog {
         return Map.copyOf(values);
     }
 
+    /**
+     * 要求译文与基准使用相同参数编号集合；不要求顺序或重复次数相同，也不解释格式化表达式。
+     */
     private static void validateTranslation(String expected, String actual) {
         if (!parameters(expected).equals(parameters(actual))) {
             throw new IllegalStateException("msg 译文占位符不一致。");
         }
     }
 
+    /**
+     * 校验非空白文本只含从零连续编号的占位符并返回编号集合；拒绝其它花括号和超范围编号。
+     */
     private static Set<Integer> parameters(String value) {
         if (value.isBlank()) throw new IllegalStateException("msg 消息不能为空白。");
         Matcher matcher = ARGUMENT.matcher(value);

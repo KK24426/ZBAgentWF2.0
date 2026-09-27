@@ -23,6 +23,13 @@ public final class PromptCatalog {
     private final Map<String, String> rules;
     private PromptCatalog(Map<String, String> rules) { this.rules = Map.copyOf(rules); }
 
+    /**
+     * 在启动阶段读取固定五种UTF-8提示词并保存文本快照，不创建文件或热更新。
+     * 缺失、空白及YOUR_占位内容记为未配置；存在但不可读或编码非法则失败。
+     * @param directory 相对启动工作目录或绝对的提示词目录
+     * @return 只读目录，后续查询不访问磁盘
+     * @throws IOException 目录、读取或UTF-8解码失败
+     */
     public static PromptCatalog load(Path directory) throws IOException {
         if (!Files.notExists(directory, LinkOption.NOFOLLOW_LINKS) && !Files.isDirectory(directory)) {
             throw new IOException("提示词目录不可用。");
@@ -39,6 +46,9 @@ public final class PromptCatalog {
         return new PromptCatalog(rules);
     }
 
+    /**
+     * 读取已加载规则并返回新Prompt；未知、缺失或占位规则抛配置不可用异常，不提供内置替代文本。
+     */
     public Prompt require(String name) {
         String value = rules.get(name);
         if (value == null) throw new AgentConfigurationUnavailableException();

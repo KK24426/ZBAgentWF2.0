@@ -19,6 +19,12 @@ public final class RunLogging {
     private RunLogging() {
     }
 
+    /**
+     * 启动前创建本轮独立日志目录和空日志文件，登记已知敏感值，并设置供Logback读取的运行属性。
+     * 重置日志故障标志，但不重复初始化Logback；配置根目录依次取JVM属性、环境变量和logs。
+     * @return 本轮application.log的绝对路径
+     * @throws IOException 目录或新文件创建失败
+     */
     public static Path prepare() throws IOException {
         LogFailureMonitor.reset();
         String root = System.getProperty("zb.log-dir",

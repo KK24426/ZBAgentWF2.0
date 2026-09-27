@@ -36,6 +36,9 @@ public class ChatController {
         this.messages = messages;
     }
 
+    /**
+     * 校验非空白且不超过4000字符的输入后调用聊天服务；区分输入400、已知不可用503和内部500，成功仅返回reply。
+     */
     @PostMapping(value = "/api/chat", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> reply(@RequestBody ChatRequest request, Locale locale) {
@@ -56,6 +59,9 @@ public class ChatController {
         }
     }
 
+    /**
+     * 将JSON解析或字段类型错误映射本地化400；原始失败信息只进入脱敏日志。
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<String> malformedRequest(HttpMessageNotReadableException failure, Locale locale) {
         LOG.warn("聊天请求正文无效", failure);
@@ -66,6 +72,9 @@ public class ChatController {
         return error(400, "http.chat.invalid", locale);
     }
 
+    /**
+     * 按状态和固定消息key返回当前语言的纯文本错误，不暴露输入或异常消息。
+     */
     private ResponseEntity<String> error(int status, String key, Locale locale) {
         return ResponseEntity.status(status).contentType(MediaType.parseMediaType("text/plain;charset=UTF-8"))
                 .header("Content-Language", MsgCatalog.languageTag(locale)).body(messages.get(key, locale));

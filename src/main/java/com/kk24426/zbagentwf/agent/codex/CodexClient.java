@@ -41,11 +41,20 @@ public final class CodexClient {
     private final String model;
     private final Duration timeout;
 
+    /**
+     * 保存原生程序路径、模型参数及正值超时，不检查登录，也不启动进程。
+     * @param executable 单个可执行文件路径，保存为规范化绝对路径
+     * @param model 传给 CLI 的模型选择参数，不从品牌或版本推断
+     * @param timeout 包括通信在内的单次调用预算，收尾另有有限等待
+     * @throws IllegalArgumentException 模型为空白或超时不是正值
+     * @throws ArithmeticException 超时无法表示为纳秒
+     */
     public CodexClient(Path executable, String model, Duration timeout) {
         this(List.of(executable.toAbsolutePath().normalize().toString()), model, timeout);
     }
 
     // 仅同包进程测试替换启动前缀；正式调用只有独立可执行文件，不接受 shell 字符串。
+    /** 校验并快照结构化启动前缀、模型参数和正值超时；提前拒绝纳秒换算溢出，不创建进程。 */
     CodexClient(List<String> executable, String model, Duration timeout) {
         if (executable == null || executable.isEmpty() || model == null || model.isBlank()
                 || timeout == null || timeout.isZero() || timeout.isNegative()) {
@@ -57,7 +66,16 @@ public final class CodexClient {
         this.timeout = timeout;
     }
 
-    /** 单次调用拥有进程、管道和临时 schema；无论结果如何，均在收尾后交付受限诊断。 */
+    /**
+     * 同步执行一次 Codex 调用，拥有本次进程、管道和临时 schema，并在 finally 中收尾。
+     * @param directory 子进程工作目录；调用者负责业务目录边界
+     * @param prompt 只经 UTF-8 stdin 传递的完整输入
+     * @param schema 要求 CLI 返回的 JSON schema
+     * @param readOnly true 使用只读沙箱，false 使用工作目录可写沙箱
+     * @param diagnostics 收尾后的受限脱敏诊断接收方，不应抛异常
+     * @return 正常事件流中的最终 JSON 和用量；用量未知时为 null
+     * @throws IllegalStateException 非零退出、通信/协议失败、超时或中断
+     */
     Response run(Path directory, String prompt, String schema, boolean readOnly, Consumer<String> diagnostics) {
         Process process = null;
         Path schemaFile = null;
@@ -149,6 +167,7 @@ public final class CodexClient {
         }
     }
 
+    /** 按同一单调时钟起点计算调用剩余纳秒，允许返回非正值表示预算耗尽。 */
     private long remaining(long start) { return timeout.toNanos() - (System.nanoTime() - start); }
 
     /** 已结束的读取任务也可能失败；提前提取异常，避免主进程仍等待时只能靠总超时退出。 */
@@ -156,6 +175,9 @@ public final class CodexClient {
         if (future.isDone()) future.get();
     }
 
+    /**
+     * 持续读取协议输出并关闭输入流；超过字节上限直接失败，不把截断 JSON 交给解码器。
+     */
     private static byte[] readOutput(InputStream stream) throws IOException {
         try (stream; var bytes = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[8192];
@@ -169,6 +191,7 @@ public final class CodexClient {
         }
     }
 
+    /** 关闭单条进程管道；关闭失败交给脱敏日志，继续其余收尾步骤。 */
     private static void close(java.io.Closeable stream) {
         try { stream.close(); }
         catch (IOException failure) {
@@ -213,6 +236,9 @@ public final class CodexClient {
         return new Response(CodexJson.JSON.readTree(lastMessage.asString()), tokens);
     }
 
+    /**
+     * 通信层结果，不代表业务成功；tokens 为输入加输出用量，无法确定时为 null。
+     */
     record Response(JsonNode value, Long tokens) { }
 
     /** stderr 可以截断存储，但仍须持续读取，防止诊断管道反压阻塞进程。 */
@@ -221,6 +247,7 @@ public final class CodexClient {
         private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         private boolean truncated;
 
+        /** 持续排空诊断流并在结束时关闭；保存容量受限，但读取持续到流结束，IO失败向调用者传播。 */
         void read(InputStream stream) throws IOException {
             try (stream) {
                 byte[] buffer = new byte[4096];
@@ -230,17 +257,20 @@ public final class CodexClient {
         }
 
         // 读取线程与调用线程的固定收尾诊断共享缓冲区；同一锁也保护最终文本快照。
+        /** 只保留容量内的字节并记住截断状态；超出的诊断不保存，调用方仍须继续排空管道。 */
         private synchronized void append(byte[] buffer, int count) {
             int kept = Math.min(count, LIMIT - bytes.size());
             bytes.write(buffer, 0, kept);
             truncated |= kept < count;
         }
 
+        /** 将应用自身固定的收尾提示按UTF-8追加，仍受同一字节容量限制。 */
         void appendFixed(String text) {
             byte[] buffer = text.getBytes(StandardCharsets.UTF_8);
             append(buffer, buffer.length);
         }
 
+        /** 返回最终缓冲文本的脱敏快照，必要时补充截断标记；不会扩大已保存的原始诊断范围。 */
         synchronized String safeText() {
             return SecretRedactor.redact(bytes.toString(StandardCharsets.UTF_8))
                     + (truncated ? "\n[诊断已截断，最多保留 64 KiB]" : "");

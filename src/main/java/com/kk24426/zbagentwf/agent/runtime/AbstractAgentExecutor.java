@@ -17,7 +17,13 @@ import java.util.Objects;
 public abstract class AbstractAgentExecutor extends AgentExecutor {
     private volatile Rules rules;
 
+    /**
+     * 保存独立模型副本，不附加用户或项目规则；必要通用/安全规则仍须显式初始化。
+     */
     protected AbstractAgentExecutor(AgentBean agent) { this(agent, null, null); }
+    /**
+     * 复制模型及可选用户/项目提示词，隔离后续外部修改；不调用可覆写的初始化方法或读取文件。
+     */
     protected AbstractAgentExecutor(AgentBean agent, Prompt userPrompt, Prompt projectPrompt) {
         super(copyAgent(agent), copyPrompt(userPrompt), copyPrompt(projectPrompt));
     }
@@ -28,7 +34,9 @@ public abstract class AbstractAgentExecutor extends AgentExecutor {
         rules = new Rules(required(defaults), required(security));
     }
 
+    /** 返回已初始化通用规则的新Prompt，隔离调用方修改；未初始化时抛配置不可用异常。 */
     @Override protected final Prompt getDefaultPrompt() { return prompt(requireRules().defaults()); }
+    /** 返回已初始化安全规则的新Prompt，隔离调用方修改；未初始化时抛配置不可用异常。 */
     @Override protected final Prompt getSecurityPrompt() { return prompt(requireRules().security()); }
 
     /** 在受理前生成本次快照；项目追加规则只影响之后的调用。 */
@@ -52,22 +60,37 @@ public abstract class AbstractAgentExecutor extends AgentExecutor {
         return text.toString();
     }
 
+    /**
+     * 取得已发布的必要规则快照；未初始化时明确失败，不能以空规则开始规划或执行。
+     */
     private Rules requireRules() {
         Rules value = rules;
         if (value == null) throw new AgentConfigurationUnavailableException();
         return value;
     }
+    /** 读取必要提示词的非空白原文；缺失时报告配置未就绪，不生成默认规则。 */
     private static String required(Prompt prompt) {
         String value = value(prompt);
         if (value == null || value.isBlank()) throw new AgentConfigurationUnavailableException();
         return value;
     }
+    /** 仅为非空白规则追加有名称的段落；保持规则原文，缺省可选段落不写占位文本。 */
     private static void section(StringBuilder text, String name, String value) {
         if (value != null && !value.isBlank()) text.append("【").append(name).append("】\n").append(value).append("\n");
     }
     private static String value(Prompt prompt) { return prompt == null ? null : prompt.getPrompt(); }
+    /** 将原文包裹为新Prompt，可保留null；必要规则的校验由使用入口完成。 */
     public static Prompt prompt(String value) { var p = new Prompt(); p.setPrompt(value); return p; }
+    /**
+     * 复制提示词文本到独立Bean；null保持为null，不与调用方共享可变Prompt。
+     */
     public static Prompt copyPrompt(Prompt value) { return value == null ? null : prompt(value.getPrompt()); }
+    /**
+     * 复制当前绑定使用的模型三元组、角色提示词和 Skill 名称，隔离可变嵌套对象。
+     * 这是执行器绑定快照，不是 AgentBean 所有字段的通用克隆；当前不读取 think 字段。
+     * @param value 非空模型实体
+     * @return 用于绑定的新实体，未指定的可选对象保持 null
+     */
     public static AgentBean copyAgent(AgentBean value) {
         Objects.requireNonNull(value, "Agent 不能为空。");
         var copy = new AgentBean();
@@ -76,5 +99,6 @@ public abstract class AbstractAgentExecutor extends AgentExecutor {
         if (value.getSkill() != null) { var skill = new Skill(); skill.setSkillName(value.getSkill().getSkillName()); copy.setSkill(skill); }
         return copy;
     }
+    /** 一次性发布的必要规则文本快照，两个字段均已通过非空白校验。 */
     private record Rules(String defaults, String security) { }
 }

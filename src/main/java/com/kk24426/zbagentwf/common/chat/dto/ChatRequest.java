@@ -17,6 +17,9 @@ import tools.jackson.databind.annotation.JsonDeserialize;
 public record ChatRequest(@JsonDeserialize(using = MessageDeserializer.class) String message) {
     /** 仅约束本字段，不改变全局 Jackson 的转换契约。 */
     public static final class MessageDeserializer extends ValueDeserializer<String> {
+        /**
+         * 仅接受JSON字符串并原样返回；其他token交由Jackson报告字段类型错误，不宽松转换数字或布尔值。
+         */
         @Override
         public String deserialize(JsonParser parser, DeserializationContext context) {
             if (parser.currentToken() != JsonToken.VALUE_STRING) {

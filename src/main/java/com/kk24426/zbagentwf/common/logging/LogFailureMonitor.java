@@ -15,6 +15,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class LogFailureMonitor implements StatusListener {
     private static final AtomicBoolean FAILED = new AtomicBoolean();
 
+    /**
+     * 在新一轮日志准备前清除故障标志；运行期间不靠此方法掩盖已发生的日志写入失败。
+     */
     public static void reset() {
         FAILED.set(false);
     }
@@ -23,6 +26,9 @@ public class LogFailureMonitor implements StatusListener {
         return FAILED.get();
     }
 
+    /**
+     * 只在首次ERROR级状态将标志置为失败并向stderr输出固定提示；不转发可能含路径或凭据的Logback原文。
+     */
     @Override
     public void addStatusEvent(Status status) {
         if (status.getEffectiveLevel() >= Status.ERROR && FAILED.compareAndSet(false, true)) {

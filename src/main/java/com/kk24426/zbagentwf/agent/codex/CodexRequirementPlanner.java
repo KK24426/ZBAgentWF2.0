@@ -26,37 +26,85 @@ import tools.jackson.databind.JsonNode;
 public final class CodexRequirementPlanner {
     private final CodexClient client;
     private final ExecutionResources resources;
+    /**
+     * 额度与关闭操作使用的归属身份；Project 重载还要求它是持有规则的执行器。
+     */
     private final Object owner;
+    /**
+     * 仅供 Path 重载使用的一次性规则文本；volatile 使后续规划线程可见初始化结果。
+     */
     private volatile String initializedRules;
 
+    /**
+     * 建立独立额度作用域的只读规划器；构造不会运行 Codex。
+     * 使用 Path 重载前须调用 initializePrompts；本类不提供 close 入口。
+     * @param client 已配置可执行文件、模型与超时的进程适配器
+     */
     public CodexRequirementPlanner(CodexClient client) {
         this(client, new ExecutionResources(), new Object());
     }
 
+    /**
+     * 绑定外部提供的资源和归属身份，不占用额度，也不初始化规则。
+     * 工厂让每个规划器与其对应执行器共享归属身份，资源生命周期由装配方管理。
+     * @param client 本次规划使用的进程适配器
+     * @param resources 与其他执行器共享的并发额度和关闭状态
+     * @param owner 按对象身份区分的资源归属；Project 重载要求为 AbstractAgentExecutor
+     * @throws NullPointerException 任一依赖为空
+     */
     public CodexRequirementPlanner(CodexClient client, ExecutionResources resources, Object owner) {
         this.client = Objects.requireNonNull(client);
         this.resources = Objects.requireNonNull(resources);
         this.owner = Objects.requireNonNull(owner);
     }
 
-    /** 独立低层规划器也必须显式初始化；工厂规划使用已绑定执行器的规则。 */
+    /**
+     * 为 Path 重载一次性初始化必要规则，保存文本快照；不读取文件或调用模型。
+     * Project 重载从绑定执行器取规则，不使用此处的快照。
+     * @param defaults 非空白通用规则
+     * @param security 非空白安全规则
+     * @throws IllegalStateException 重复初始化
+     * @throws AgentConfigurationUnavailableException 必要规则缺失或为空白
+     */
     public synchronized void initializePrompts(Prompt defaults, Prompt security) {
         if (initializedRules != null) throw new IllegalStateException("规划规则已经初始化。");
         initializedRules = AbstractAgentExecutor.instructions(defaults, security, null, null, null);
     }
 
+    /**
+     * 按项目当前目录和绑定执行器的规则同步进行只读规划。
+     * 规则在调用前生成快照；项目提示词的后续追加不会改变本次输入。
+     * @param project 提供工作目录及当前项目提示词的项目
+     * @param content 本次原始需求；原样保存到每条返回需求中
+     * @return 全部解析成功的新需求及 PENDING 任务，尚未追加到项目
+     * @throws AgentConfigurationUnavailableException owner 不是执行器或其规则未就绪
+     * @throws java.util.concurrent.RejectedExecutionException 共享额度已满或资源正在关闭
+     * @throws IllegalStateException 进程、协议或规划内容校验失败
+     */
     public List<Requirement> plan(Project project, String content) {
         if (!(owner instanceof AbstractAgentExecutor executor)) throw new AgentConfigurationUnavailableException();
         return planWithRules(project.getWorkingDirectory(), content, executor.instructionsFor(project));
     }
 
-    /** 仅生成尚未执行的数据；调用方在本方法全部成功后才加入项目。 */
+    /**
+     * 使用 initializePrompts 保存的规则，在给定目录同步执行独立只读规划。
+     * 与 Project 重载不同，本入口没有项目、角色和用户规则来源。
+     * @param directory 交给 Codex 的工作目录，调用方负责项目目录归属校验
+     * @param content 本次需求原文
+     * @return 校验完整的新需求列表；由调用方在成功后统一加入项目
+     * @throws AgentConfigurationUnavailableException 尚未初始化规则
+     * @throws java.util.concurrent.RejectedExecutionException 资源关闭或并发额度已满
+     * @throws IllegalStateException 调用或规划结果校验失败
+     */
     public List<Requirement> plan(Path directory, String content) {
         String rules = initializedRules;
         if (rules == null) throw new AgentConfigurationUnavailableException();
         return planWithRules(directory, content, rules);
     }
 
+    /**
+     * 以 owner 预留单次额度并附着当前调用线程；退出时归还票据，不等待该线程生命周期结束。
+     */
     private List<Requirement> planWithRules(Path directory, String content, String rules) {
         // 同步规划也占用全工厂并发额度；附着调用线程，让关闭操作能中断阻塞中的进程调用。
         // 票据仅覆盖本次调用，结束就归还，不能等待可能长期存活的调用线程退出。
@@ -67,6 +115,9 @@ public final class CodexRequirementPlanner {
         }
     }
 
+    /**
+     * 在已占额度的范围内调用只读进程并完整校验需求/任务；任何失败均不发布局部列表，受限诊断附入异常链。
+     */
     private List<Requirement> planAccepted(Path directory, String content, String rules) {
         var diagnostics = new StringBuilder();
         try {

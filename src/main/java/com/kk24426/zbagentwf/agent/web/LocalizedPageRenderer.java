@@ -25,6 +25,9 @@ final class LocalizedPageRenderer {
     private final String template;
     private final JsonMapper json = JsonMapper.builder().build();
 
+    /**
+     * 保存已读取的模板并在启动阶段校验固定消息槽；未知key或非法占位符抛IllegalStateException，不执行模板表达式。
+     */
     LocalizedPageRenderer(MsgCatalog messages, MsgLocaleResolver locales,
                               String template) {
         this.messages = messages;
@@ -43,6 +46,9 @@ final class LocalizedPageRenderer {
         }
     }
 
+    /**
+     * 按当前请求语言替换固定消息，将HTML和inert JSON一并转义；返回Content-Language及按Cookie/语言头变化的HTML响应。
+     */
     ResponseEntity<String> render(HttpServletRequest request) {
         var choice = locales.choice(request);
         Locale locale = locales.resolveLocale(request);

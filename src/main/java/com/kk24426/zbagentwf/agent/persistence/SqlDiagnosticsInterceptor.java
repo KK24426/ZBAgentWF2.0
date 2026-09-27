@@ -35,6 +35,10 @@ import org.slf4j.LoggerFactory;
 public class SqlDiagnosticsInterceptor implements Interceptor {
     private static final Logger LOG = LoggerFactory.getLogger(SqlDiagnosticsInterceptor.class);
 
+    /**
+     * 调用原MyBatis执行入口并返回其原结果，记录statement标识、操作类型、耗时和失败元数据。
+     * 不记录SQL正文、参数或结果集；失败解包后原样抛出，不改变事务边界。
+     */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         MappedStatement statement = (MappedStatement) invocation.getArgs()[0];

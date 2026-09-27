@@ -31,19 +31,39 @@ import com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor;
 public final class CodexAgentExecutor extends AbstractAgentExecutor implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(CodexAgentExecutor.class);
     private final CodexClient client;
+    /**
+     * 仅协调受理与本实例关闭；工厂共享额度的并发保护由 ExecutionResources 负责。
+     */
     private final Object lifecycle = new Object();
     private final ExecutionResources resources;
+    /**
+     * 独立构造时拥有整个资源作用域；工厂注入时只拥有自身归属，不能关闭其他执行器。
+     */
     private final boolean ownsResources;
     private boolean closed;
 
+    /**
+     * 创建需由调用方关闭的独立执行器；构造只保存模型快照，不运行进程。
+     * 使用前须显式初始化通用和安全规则，关闭时回收其独立资源作用域。
+     * @param agent 模型身份及可选角色规则、Skill 名称，复制后保存
+     * @param client 已配置的 Codex 进程适配器
+     */
     public CodexAgentExecutor(AgentBean agent, CodexClient client) {
         this(agent, client, new ExecutionResources(), true);
     }
 
+    /**
+     * 创建使用外部共享资源的执行器；本实例关闭不关闭整个共享作用域。
+     * 工厂负责统一生命周期，初始化规则后才可受理任务。
+     * @param agent 本执行器保存副本的模型元数据
+     * @param client 已配置的 Codex 进程适配器
+     * @param resources 工厂共享的额度、诊断缓存和关闭控制
+     */
     public CodexAgentExecutor(AgentBean agent, CodexClient client, ExecutionResources resources) {
         this(agent, client, resources, false);
     }
 
+    /** 保存模型副本及非空依赖；ownsResources只决定关闭整个作用域还是仅关闭本实例归属。 */
     private CodexAgentExecutor(AgentBean agent, CodexClient client, ExecutionResources resources, boolean ownsResources) {
         super(Objects.requireNonNull(agent));
         this.client = Objects.requireNonNull(client);
@@ -51,6 +71,16 @@ public final class CodexAgentExecutor extends AbstractAgentExecutor implements A
         this.ownsResources = ownsResources;
     }
 
+    /**
+     * 快照目录与规则，预留额度并启动异步工作线程；本方法返回不代表任务完成。
+     * 受理前失败同步拒绝且不回调；受理后通过一次完成回调报告结果，回调可能早于本方法返回。
+     * @param project 本次工作目录和项目规则来源
+     * @param content 非空白任务正文
+     * @param memory 可为空的历史上下文，不恢复旧 CLI 会话
+     * @param callback 非空的最终结果接收方
+     * @return 本次执行的 UUID，与回调结果 taskId 一致
+     * @throws RejectedExecutionException 输入或目录无效、规则未就绪、额度已满、关闭或线程启动失败
+     */
     @Override
     public String exec(Project project, String content, String memory, AgentExecutionCallback callback) {
         // 在受理前快照真实目录，避免异步线程读取到调用方随后修改的 Project 路径。
@@ -86,6 +116,9 @@ public final class CodexAgentExecutor extends AbstractAgentExecutor implements A
         }
     }
 
+    /**
+     * 在已受理的工作线程中校验协议及业务结果；finally 先归还额度并保存诊断，再通知一次回调，回调异常不重发。
+     */
     private void execute(ExecutionResources.Ticket ticket, Path directory, String content, String memory, String instructions, AgentExecutionCallback callback) {
         String id = ticket.id();
         String[] diagnostic = {""};
@@ -142,6 +175,12 @@ public final class CodexAgentExecutor extends AbstractAgentExecutor implements A
         }
     }
 
+    /**
+     * 查询当前执行器归属的受限诊断；运行中可为空串，未知、过期或其他归属返回 null。
+     * 返回内容仅供本地排查，不能直接作为 HTTP 响应或原样记录到日志。
+     * @param taskId exec 返回的单次执行标识
+     * @return 诊断文本、空串或 null
+     */
     @Override
     public String getStderr(String taskId) {
         return resources.diagnostic(this, taskId);

@@ -29,6 +29,10 @@ final class CodexJson {
         }
     }
 
+    /**
+     * 读取指定文本字段，不做数值或布尔到字符串的转换。
+     * nullable 只允许显式 JSON null；非 nullable 文本还必须非空白，缺字段始终失败。
+     */
     static String text(JsonNode node, String name, boolean nullable) {
         JsonNode value = node.get(name);
         // nullable 只允许显式 JSON null，不代表字段可以缺失；必填文本还必须非空白。

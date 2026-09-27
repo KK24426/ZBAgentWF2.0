@@ -42,6 +42,10 @@ public class WebRequestFilter extends OncePerRequestFilter {
         this.locales = locales;
     }
 
+    /**
+     * 对精确路由执行方法及JSON校验，附加安全响应头、请求编号和固定错误提示。
+     * 日志只使用固定路由类别；失败响应已提交时继续抛异常，结束时恢复进入前的MDC，避免请求线程复用污染。
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
@@ -99,6 +103,9 @@ public class WebRequestFilter extends OncePerRequestFilter {
         }
     }
 
+    /**
+     * 仅接受application/json（可带合法参数）；缺失或格式非法返回false，由请求边界统一映射415。
+     */
     private static boolean isJson(String contentType) {
         if (contentType == null) return false;
         try {
@@ -110,6 +117,9 @@ public class WebRequestFilter extends OncePerRequestFilter {
         }
     }
 
+    /**
+     * 写入固定状态和本地化纯文本，不暴露内部异常；HEAD只写响应头，不输出正文。
+     */
     private void reject(HttpServletResponse response, int status, String key, String method, Locale locale)
             throws IOException {
         response.setStatus(status);

@@ -13,6 +13,9 @@ import java.nio.file.Path;
 public final class ProjectSettings {
     private final Path rootDirectory;
 
+    /**
+     * 保存装配方已校验、规范化的根目录；本构造器只赋值，不自行校验、创建或访问目录。
+     */
     public ProjectSettings(Path rootDirectory) {
         this.rootDirectory = rootDirectory;
     }

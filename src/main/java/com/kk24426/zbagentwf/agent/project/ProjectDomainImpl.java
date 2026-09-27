@@ -35,8 +35,14 @@ public final class ProjectDomainImpl extends ProjectDomain {
     private final AgentExecutorFactory factory;
     private final MemoryStore memory;
     private final RoleAgentResolver roles;
+    /**
+     * 按真实目录串行化本实例的项目操作；引用数包含等待者，最后一个使用者离开后回收锁。
+     */
     private final Map<Path, ProjectLock> locks = new HashMap<>();
 
+    /**
+     * 注入根目录、工厂、规划器、内存登记和角色规则；构造不创建目录，不调用模型。
+     */
     public ProjectDomainImpl(ProjectSettings settings, AgentExecutorFactory factory, AgentRequirementPlanner planner, MemoryStore memory, RoleAgentResolver roles) {
         this.settings = Objects.requireNonNull(settings);
         this.planner = Objects.requireNonNull(planner);
@@ -45,6 +51,18 @@ public final class ProjectDomainImpl extends ProjectDomain {
         this.roles = Objects.requireNonNull(roles);
     }
 
+    /**
+     * 解析并绑定三个角色后创建根目录下的 UUID 子目录，完成首次只读规划才登记项目。
+     * 创建失败只尝试删除本次创建且仍为空的子目录；不删除根目录或其他文件。
+     * @param content 非空白初始需求
+     * @param planningAgent 规划角色的显式模型选择
+     * @param developmentAgent 开发角色的显式模型选择
+     * @param reviewAgent 审核角色的显式模型选择；当前只绑定，不自动执行审核
+     * @return 已登记的项目原对象，首次规划任务尚未执行
+     * @throws IllegalArgumentException 输入无效或模型绑定参数不合法
+     * @throws RejectedExecutionException 规划额度拒绝受理
+     * @throws IllegalStateException 配置不可用、目录创建或规划失败
+     */
     @Override
     public Project newProject(String content, AgentBean planningAgent, AgentBean developmentAgent, AgentBean reviewAgent) {
         requireContent(content);
@@ -80,8 +98,12 @@ public final class ProjectDomainImpl extends ProjectDomain {
         }
     }
 
+    /** 委托角色解析器取得默认模型的新实体并绑定角色规则；缺少完整配置时明确失败，不推断候选模型。 */
     @Override protected AgentBean getAgent(AgentRole role) { return roles.defaultFor(role); }
 
+    /**
+     * 按ID读取本次进程登记的原对象；未知ID不重建，登记后的projectId被改动则报错，不从磁盘恢复。
+     */
     @Override public Project getProject(String projectId) {
         Project project = memory.get("project", projectId, Project.class)
                 .orElseThrow(() -> new IllegalArgumentException("项目不存在或服务已经重启。"));
@@ -89,6 +111,9 @@ public final class ProjectDomainImpl extends ProjectDomain {
         return project;
     }
 
+    /**
+     * 在项目对象锁和真实目录锁内换行追加非空白规则；仅更新内存提示词，后续模型调用才使用新文本。
+     */
     @Override public void addProjectPrompt(String projectId, String content) {
         requireContent(content);
         Project project = getProject(projectId);
@@ -101,6 +126,16 @@ public final class ProjectDomainImpl extends ProjectDomain {
         }
     }
 
+    /**
+     * 在对象锁及目录锁内进行只读规划，成功后整体替换“旧需求＋新需求”列表。
+     * 规划失败不追加部分结果；返回列表可独立修改，但其中需求对象与项目共享。
+     * @param project 具有本应用根目录下真实工作目录的项目
+     * @param content 非空白新增需求
+     * @return 本次新增需求的列表副本，不包含原有需求
+     * @throws IllegalArgumentException 项目、内容或目录边界无效
+     * @throws IllegalStateException 规划或模型配置失败
+     * @throws RejectedExecutionException 规划额度拒绝受理
+     */
     @Override
     public List<Requirement> createRequirements(Project project, String content) {
         if (project == null) throw new IllegalArgumentException("项目不能为空。");
@@ -120,6 +155,16 @@ public final class ProjectDomainImpl extends ProjectDomain {
         }
     }
 
+    /**
+     * 同步按需求/任务顺序执行 PENDING 项，等待异步回调并更新原 Task 的状态和结果。
+     * 遇到失败、待确认或中断停止后续任务；无自动审核、重置或取消。
+     * 受理拒绝恢复当前任务提交前状态，但此前完成的任务保留；异常不代表整批未执行。
+     * @param project 持有需求及开发执行器的项目，执行期间调用方不得绕过锁修改它
+     * @return 需求列表副本，其中对象与项目共享；返回不保证每项任务均已成功
+     * @throws IllegalArgumentException 目录、归属、任务或执行器无效
+     * @throws RejectedExecutionException 底层未受理当前任务
+     * @throws IllegalStateException 无法取得有效执行结果
+     */
     @Override
     public List<Requirement> execTask(Project project) {
         if (project == null) throw new IllegalArgumentException("项目不能为空。");
@@ -185,6 +230,9 @@ public final class ProjectDomainImpl extends ProjectDomain {
         }
     }
 
+    /**
+     * 校验现存目录的真实路径严格位于项目根下并返回它；不接受根目录本身，也不以表面路径绕过符号链接边界。
+     */
     private Path directory(Project project) {
         if (project == null || project.getProjectId() == null || project.getProjectId().isBlank()
                 || project.getWorkingDirectory() == null) throw new IllegalArgumentException("项目缺少标识或目录。");
@@ -201,6 +249,9 @@ public final class ProjectDomainImpl extends ProjectDomain {
         }
     }
 
+    /**
+     * 先为使用者（含等待者）加引用再等待目录锁；调用者须用 try-with-resources 释放，不在映射锁内阻塞。
+     */
     private ProjectLock lock(Path directory) {
         ProjectLock value;
         synchronized (locks) {
@@ -212,11 +263,15 @@ public final class ProjectDomainImpl extends ProjectDomain {
         return value;
     }
 
+    /**
+     * 目录互斥锁的单次使用句柄；close解锁并减引用，引用归零才移除映射，不负责删除项目目录。
+     */
     private final class ProjectLock implements AutoCloseable {
         private final Path directory;
         private final ReentrantLock lock = new ReentrantLock();
         private int users;
         private ProjectLock(Path directory) { this.directory = directory; }
+        /** 由当前持锁线程释放本次使用并回收零引用映射；每次成功获取必须恰好配对一次。 */
         @Override public void close() {
             lock.unlock();
             // 解锁与减引用之间进入的新调用者也会先加引用，因此不会出现同目录两把有效锁。
@@ -224,6 +279,9 @@ public final class ProjectDomainImpl extends ProjectDomain {
         }
     }
 
+    /**
+     * 在执行前完整验证对象归属、重复引用与任务字段，返回保留原对象的列表副本；不改变任何任务状态。
+     */
     private static List<Requirement> validateSelection(Project project, List<Requirement> requirements) {
         if (requirements == null || project.getRequirements() == null) throw new IllegalArgumentException("需求列表不能为空。");
         // 归属按实际对象身份判断；同内容的外部对象不属于项目，同一 Task 对象也不能被两条需求共享。
@@ -274,6 +332,7 @@ public final class ProjectDomainImpl extends ProjectDomain {
         return memory.toString();
     }
 
+    /** 拒绝null或空白业务输入，不裁剪或改写用户原文。 */
     private static void requireContent(String content) {
         if (content == null || content.isBlank()) throw new IllegalArgumentException("用户内容不能为空。");
     }

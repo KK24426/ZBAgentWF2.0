@@ -17,6 +17,9 @@ import ch.qos.logback.classic.spi.StackTraceElementProxy;
 
 /** 避免只处理 %msg 而遗漏 %ex 中的凭据；保留异常类型和调用链。 */
 public class SanitizingEncoder extends PatternLayoutEncoder {
+    /**
+     * 对协议、业务和Agent异常使用固定摘要与安全异常代理，再对完整渲染文本脱敏并编码；不修改传入的共享日志事件。
+     */
     @Override
     public byte[] encode(ILoggingEvent event) {
         // 容器解析失败发生在 Servlet Filter 前；异常原文可能携带任意路径、查询或请求头。
@@ -64,18 +67,24 @@ public class SanitizingEncoder extends PatternLayoutEncoder {
         return SecretRedactor.redact(getLayout().doLayout(event)).getBytes(getCharset());
     }
 
+    /** 为非空异常建立屏蔽自由文本的代理，保留null；嵌套异常在访问时继续包装。 */
     private static IThrowableProxy wrap(IThrowableProxy value) {
         return value == null ? null : new SafeThrowable(value);
     }
 
     /** 屏蔽请求异常自由文本，异常类型、堆栈及 cause/suppressed 关系保持不变。 */
     private record SafeThrowable(IThrowableProxy original) implements IThrowableProxy {
+        /** 始终返回固定摘要，避免原异常消息中的请求、路径或模型输出泄漏。 */
         public String getMessage() { return "[原始内容已隐藏]"; }
         public String getClassName() { return original.getClassName(); }
         public StackTraceElementProxy[] getStackTraceElementProxyArray() { return original.getStackTraceElementProxyArray(); }
         public int getCommonFrames() { return original.getCommonFrames(); }
         // cause/suppressed 逐层包装而不直接暴露原代理；循环标记与公共帧数仍交由原代理提供。
+        /** 包装下一层cause，使完整异常链的自由文本采用同一屏蔽规则。 */
         public IThrowableProxy getCause() { return wrap(original.getCause()); }
+        /**
+         * 逐个包装suppressed异常，使深层自由文本也被隐藏；保留null以及原有异常关系。
+         */
         public IThrowableProxy[] getSuppressed() {
             var suppressed = original.getSuppressed();
             return suppressed == null ? null : Arrays.stream(suppressed).map(SanitizingEncoder::wrap).toArray(IThrowableProxy[]::new);

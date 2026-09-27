@@ -23,12 +23,18 @@ public final class SecretRedactor {
     private SecretRedactor() {
     }
 
+    /**
+     * 登记需精确替换的已知敏感值，忽略null和空白；记录在本进程集合中，不输出原文。
+     */
     public static void register(String value) {
         if (value != null && !value.isBlank()) {
             KNOWN.add(value);
         }
     }
 
+    /**
+     * 先按长度降序替换已登记值，再处理常见敏感字段、Bearer和JDBC片段；null返回空串，不保证识别任意隐私文本。
+     */
     public static String redact(String text) {
         if (text == null) {
             return "";

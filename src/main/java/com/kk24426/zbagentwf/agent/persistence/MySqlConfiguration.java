@@ -29,6 +29,9 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableTransactionManagement
 @MapperScan(basePackages = "com.kk24426.zbagentwf.agent.persistence.mapper", annotationClass = Mapper.class)
 public class MySqlConfiguration {
+    /**
+     * 仅在mysql profile下验证必要连接配置并建立受限连接池对象，登记账号/密码供脱敏；连接验证在后续初始化阶段进行。
+     */
     @Bean(destroyMethod = "close")
     HikariDataSource dataSource(DataSourceProperties properties) {
         if (properties.getUrl() == null || !properties.getUrl().startsWith("jdbc:mysql://")
@@ -50,6 +53,9 @@ public class MySqlConfiguration {
         return dataSource;
     }
 
+    /**
+     * 提供启动阶段的实际连接检查，使用后归还连接；连接不可用即令初始化失败，不降级其它数据库。
+     */
     @Bean
     InitializingBean verifyDatabaseConnection(DataSource dataSource) {
         return () -> {
@@ -61,11 +67,17 @@ public class MySqlConfiguration {
         };
     }
 
+    /**
+     * 为同一数据源提供Spring事务管理器；这里不声明业务事务范围，也不执行SQL。
+     */
     @Bean
     JdbcTransactionManager transactionManager(DataSource dataSource) {
         return new JdbcTransactionManager(dataSource);
     }
 
+    /**
+     * 启用下划线转驼峰并关闭原生SQL/参数/结果日志；执行元数据由专用诊断拦截器记录。
+     */
     @Bean
     ConfigurationCustomizer mybatisConfiguration() {
         return configuration -> {
