@@ -7,8 +7,10 @@
  */
 package com.kk24426.zbagentwf.common.agent.model;
 
+import com.kk24426.zbagentwf.common.DataBean;
+
 /** 普通数据对象；属性独立保存，允许 null 和空字符串，不校验或转换输入。 */
-public class AgentBean {
+public class AgentBean extends DataBean{
 	/** Agent 模型提供方，如 ChatGPT、Claude、Deepseek 等。 */
 	private String brand;
 	/** 具体的模型，如 chatGPT、deepseek、豆包等。 */

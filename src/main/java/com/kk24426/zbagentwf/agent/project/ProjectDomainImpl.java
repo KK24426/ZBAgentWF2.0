@@ -15,7 +15,7 @@ import com.kk24426.zbagentwf.common.agent.model.AgentBean;
 import com.kk24426.zbagentwf.common.agent.model.AgentExecutionResult;
 import com.kk24426.zbagentwf.common.project.model.*;
 import com.kk24426.zbagentwf.common.project.config.ProjectSettings;
-import com.kk24426.zbagentwf.user.agent.api.AgentExecutor;
+import com.kk24426.zbagentwf.user.agent.api.ProjectAgentExecutor;
 import com.kk24426.zbagentwf.user.project.api.ProjectDomain;
 import com.kk24426.zbagentwf.user.agent.api.AgentExecutorFactory;
 
@@ -67,9 +67,9 @@ public final class ProjectDomainImpl extends ProjectDomain {
     public Project newProject(String content, AgentBean planningAgent, AgentBean developmentAgent, AgentBean reviewAgent) {
         requireContent(content);
         // 三个模型全部解析成功后才产生项目目录等外部副作用。
-        AgentExecutor planning = Objects.requireNonNull(factory.getExecutor(roles.bind(planningAgent, AgentRole.PLANNING)));
-        AgentExecutor development = Objects.requireNonNull(factory.getExecutor(roles.bind(developmentAgent, AgentRole.DEVELOPMENT)));
-        AgentExecutor review = Objects.requireNonNull(factory.getExecutor(roles.bind(reviewAgent, AgentRole.REVIEW)));
+        ProjectAgentExecutor planning = Objects.requireNonNull(factory.getExecutor(roles.bind(planningAgent, AgentRole.PLANNING)));
+        ProjectAgentExecutor development = Objects.requireNonNull(factory.getExecutor(roles.bind(developmentAgent, AgentRole.DEVELOPMENT)));
+        ProjectAgentExecutor review = Objects.requireNonNull(factory.getExecutor(roles.bind(reviewAgent, AgentRole.REVIEW)));
         Path created = null;
         try {
             Path root = settings.getRootDirectory();
@@ -173,7 +173,7 @@ public final class ProjectDomainImpl extends ProjectDomain {
             Path directory = directory(project);
             try (var ignored = lock(directory)) {
                 // 本批固定使用开始时绑定的开发执行器；审核角色不会在任务执行后被隐式调用。
-                AgentExecutor executor = project.getDevelopmentAgent();
+                ProjectAgentExecutor executor = project.getDevelopmentAgent();
                 if (executor == null) throw new IllegalArgumentException("项目未绑定开发 Agent。");
                 List<Requirement> selected = validateSelection(project, requirements);
                 boolean interrupted = false;

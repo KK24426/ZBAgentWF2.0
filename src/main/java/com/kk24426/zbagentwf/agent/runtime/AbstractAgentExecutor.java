@@ -10,11 +10,11 @@ package com.kk24426.zbagentwf.agent.runtime;
 import com.kk24426.zbagentwf.common.agent.model.*;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
 import com.kk24426.zbagentwf.common.project.model.Project;
-import com.kk24426.zbagentwf.user.agent.api.AgentExecutor;
+import com.kk24426.zbagentwf.user.agent.api.ProjectAgentExecutor;
 import java.util.Objects;
 
 /** 模型通用父类；构造和 getter 均不读取文件、不执行模型。 */
-public abstract class AbstractAgentExecutor extends AgentExecutor {
+public abstract class AbstractAgentExecutor extends ProjectAgentExecutor {
     private volatile Rules rules;
 
     /**

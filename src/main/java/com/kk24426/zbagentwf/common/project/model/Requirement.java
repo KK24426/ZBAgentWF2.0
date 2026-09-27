@@ -10,8 +10,12 @@ package com.kk24426.zbagentwf.common.project.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.kk24426.zbagentwf.common.DataBean;
+
 /** 保存项目内的一条需求及其规划任务。 普通属性原样存取，不自动执行业务校验。 */
-public class Requirement {
+public class Requirement extends DataBean{
+	
+	
     /** 用户原始需求。 */
     private String userContent;
 

@@ -197,7 +197,7 @@ class ProjectDomainImplTest {
         assertTrue(executor.calls.isEmpty());
     }
 
-    private ProjectDomainImpl service(AgentRequirementPlanner planner, AgentExecutor executor) {
+    private ProjectDomainImpl service(AgentRequirementPlanner planner, ProjectAgentExecutor executor) {
         existingProjects.forEach(project -> project.setDevelopmentAgent(executor));
         return new ProjectDomainImpl(new ProjectSettings(temp.resolve("projects")), ignored -> executor, planner, new com.kk24426.zbagentwf.common.memory.MemoryStore(),
                 new com.kk24426.zbagentwf.agent.registry.RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp)));
@@ -250,7 +250,7 @@ class ProjectDomainImplTest {
         return requirement;
     }
 
-    private static final class ManualExecutor extends AgentExecutor {
+    private static final class ManualExecutor extends ProjectAgentExecutor {
         final BlockingQueue<Invocation> calls = new LinkedBlockingQueue<>();
         boolean reject;
         ManualExecutor() { super(new AgentBean()); }

@@ -15,20 +15,17 @@ import com.kk24426.zbagentwf.common.project.model.Project;
 import com.kk24426.zbagentwf.user.UserInterface;
 
 /** 用户定义的执行契约；通过 AgentExecutorFactory 按已注册模型获取实现。 */
-public abstract class AgentExecutor implements UserInterface {
-	private final AgentBean agent;
+public abstract class ProjectAgentExecutor implements UserInterface {
+
+	private final Project project;
 
 	/** 用户配置的提示词 */
 	private Prompt userPrompt;
 
-	/** 项目中使用的提示词 */
-	private Prompt projectPrompt;
-
-	public AgentExecutor(AgentBean agent) {
+	public ProjectAgentExecutor(Project project) {
 		super();
-		this.agent = agent;
+		this.project = project;
 		this.userPrompt = null;
-		this.projectPrompt = null;
 	}
 
 	/**
@@ -37,27 +34,14 @@ public abstract class AgentExecutor implements UserInterface {
 	 * @param userPrompt    用户提示词
 	 * @param projectPrompt 项目提示词
 	 */
-	public AgentExecutor(AgentBean agent, Prompt userPrompt, Prompt projectPrompt) {
+	public ProjectAgentExecutor(Project project, Prompt userPrompt) {
 		super();
-		this.agent = agent;
+		this.project = project;
 		this.userPrompt = userPrompt;
-		this.projectPrompt = projectPrompt;
 	}
 
 	protected Prompt getUserPrompt() {
 		return userPrompt;
-	}
-
-	private void setUserPrompt(Prompt userPrompt) {
-		this.userPrompt = userPrompt;
-	}
-
-	protected Prompt getProjectPrompt() {
-		return projectPrompt;
-	}
-
-	private void setProjectPrompt(Prompt projectPrompt) {
-		this.projectPrompt = projectPrompt;
 	}
 
 	/**
@@ -71,22 +55,32 @@ public abstract class AgentExecutor implements UserInterface {
 	protected abstract Prompt getSecurityPrompt();
 
 	/** 供实现类读取构造时传入的模型信息，不触发模型发现或执行。 */
-	protected AgentBean getAgent() {
-		return agent;
+	protected Project getProject() {
+		return project;
 	}
 
 	/**
-	 * 异步受理一次执行；工作目录从 project 获取，不依赖全局“当前项目”。 受理后的成功、失败或需要确认均通过一次最终回调表达。
-	 * 需要确认时本次执行结束，调用方收到答复后重新提交并获取新的执行标识。
-	 *
-	 * @param project  本次执行所属项目及工作目录
-	 * @param content  用户指令
-	 * @param memory   先前记忆，没有时可为空
-	 * @param callback 最终结果回调；结果 taskId 与本方法返回值一致
-	 * @return 本次执行的唯一标识，不是规划任务 id 或进程退出码
-	 * @throws RejectedExecutionException 提交失败；未受理且不触发完成回调
+	 * 实际执行应该调用这个方法
 	 */
-	public abstract String exec(Project project, String content, String memory, AgentExecutionCallback callback);
+	protected void exec() {
+
+	}
+
+	/**
+	 * 执行Project中所有待执行的Task
+	 * 
+	 * @param callback
+	 * @return
+	 */
+	public abstract String execAllTasks(AgentExecutionCallback callback);
+
+	/**
+	 * 执行Project中所有待执行的Task
+	 * 
+	 * @param callback
+	 * @return
+	 */
+	public abstract String execTasks(AgentExecutionCallback callback);
 
 	/**
 	 * 按执行标识读取诊断文本；stderr 内容本身不决定成功或失败。
@@ -96,5 +90,21 @@ public abstract class AgentExecutor implements UserInterface {
 	 *         null；完成记录全应用最多256条、保留30分钟
 	 */
 	public abstract String getStderr(String taskId);
+
+	/**
+	 * Agent执行之前必须调用本函数进行安全性检查,<br/>
+	 * 使用默认的模型分析提示词,检查有无安全风险,注入攻击,无意义内容
+	 * 
+	 * @param prompt
+	 * @return
+	 */
+	protected abstract boolean securityCheck();
+
+	/**
+	 * 获取所有的提示词内容
+	 * 
+	 * @return
+	 */
+	public abstract Prompt getAllPrompt();
 
 }

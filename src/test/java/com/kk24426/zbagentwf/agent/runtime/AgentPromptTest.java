@@ -24,7 +24,7 @@ class AgentPromptTest {
 
     @Test void abstractHooksAreNotCalledDuringConstruction() {
         var calls = new java.util.concurrent.atomic.AtomicInteger();
-        var executor = new AgentExecutor(new AgentBean()) {
+        var executor = new ProjectAgentExecutor(new AgentBean()) {
             protected Prompt getDefaultPrompt() { calls.incrementAndGet(); return null; }
             protected Prompt getSecurityPrompt() { calls.incrementAndGet(); return null; }
             public String exec(Project p, String c, String m, AgentExecutionCallback callback) { throw new AssertionError(); }

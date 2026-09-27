@@ -29,7 +29,7 @@ public final class AgentExecutorFactoryImpl implements AgentExecutorFactory, Aut
     /**
      * 只登记本工厂创建的执行器身份，防止外部同模型实例借用规划规则。
      */
-    private final Map<AgentExecutor, CodexRequirementPlanner> planners = new IdentityHashMap<>();
+    private final Map<ProjectAgentExecutor, CodexRequirementPlanner> planners = new IdentityHashMap<>();
     private boolean closed;
 
     /**
@@ -56,7 +56,7 @@ public final class AgentExecutorFactoryImpl implements AgentExecutorFactory, Aut
      * @throws IllegalArgumentException 模型身份无效或已绑定实体被修改
      * @throws IllegalStateException 工厂关闭、模型不可用或必要规则未就绪
      */
-    @Override public synchronized AgentExecutor getExecutor(AgentBean agent) {
+    @Override public synchronized ProjectAgentExecutor getExecutor(AgentBean agent) {
         ensureOpen();
         Binding binding = Binding.from(agent);
         AgentDefinition definition = catalog.require(binding.model());
@@ -82,7 +82,7 @@ public final class AgentExecutorFactoryImpl implements AgentExecutorFactory, Aut
     /**
      * 按执行器身份取得本工厂创建的只读规划器；关闭或跨工厂/自定义实例绑定均明确失败。
      */
-    synchronized CodexRequirementPlanner plannerFor(AgentExecutor executor) {
+    synchronized CodexRequirementPlanner plannerFor(ProjectAgentExecutor executor) {
         ensureOpen();
         // 按对象身份确认来自本工厂；相同模型的外部实例也不能借用本工厂的规划配置。
         CodexRequirementPlanner planner = planners.get(executor);

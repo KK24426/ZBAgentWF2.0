@@ -115,7 +115,7 @@ class AgentExecutionContractTest {
     }
 
     // 只用于表达调用契约：测试手动触发完成，不注册组件，不证明生产异步执行或任务调度。
-    private static final class ManualExecutor extends AgentExecutor {
+    private static final class ManualExecutor extends ProjectAgentExecutor {
         private final Map<String, Submission> pending = new HashMap<>();
         private final Map<String, String> diagnostics = new HashMap<>();
         private int sequence;

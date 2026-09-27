@@ -14,7 +14,7 @@ import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
 import com.kk24426.zbagentwf.common.agent.model.*;
 import com.kk24426.zbagentwf.common.project.model.*;
 import com.kk24426.zbagentwf.common.project.config.ProjectSettings;
-import com.kk24426.zbagentwf.user.agent.api.AgentExecutor;
+import com.kk24426.zbagentwf.user.agent.api.ProjectAgentExecutor;
 import java.nio.file.*;
 import java.time.Duration;
 import java.util.*;
@@ -67,10 +67,10 @@ class AgentRegistryTest {
         try (var resources = new ExecutionResources(); var factory = new AgentExecutorFactoryImpl(catalog, CodexFixtureSupport.prompts(temp), resources, value -> {
             created.incrementAndGet(); return CodexFixtureSupport.client("success", value.timeout(), value.model());
         }); var callers = Executors.newVirtualThreadPerTaskExecutor()) {
-            var futures = new ArrayList<Future<AgentExecutor>>();
+            var futures = new ArrayList<Future<ProjectAgentExecutor>>();
             var entity = first.bean();
             for (int i = 0; i < 20; i++) futures.add(callers.submit(() -> factory.getExecutor(entity)));
-            AgentExecutor shared = futures.getFirst().get(5, TimeUnit.SECONDS);
+            ProjectAgentExecutor shared = futures.getFirst().get(5, TimeUnit.SECONDS);
             for (var future : futures) assertSame(shared, future.get(5, TimeUnit.SECONDS));
             var mutable = first.bean();
             assertNotSame(shared, factory.getExecutor(mutable));
@@ -111,7 +111,7 @@ class AgentRegistryTest {
                     .allMatch(task -> task.getStatus() == TaskStatus.SUCCEEDED && task.getResult().getSummary().contains("develop")));
             assertTrue(second.getRequirements().stream().flatMap(value -> value.getTasks().stream())
                     .allMatch(task -> task.getStatus() == TaskStatus.PENDING));
-            first.setPlanningAgent(new AgentExecutor(new AgentBean()) {
+            first.setPlanningAgent(new ProjectAgentExecutor(new AgentBean()) {
                 protected Prompt getDefaultPrompt() { return com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("fixture"); }
                 protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("fixture"); }
                 public String exec(Project p, String c, String m, com.kk24426.zbagentwf.user.agent.api.AgentExecutionCallback cb) { throw new AssertionError(); }
@@ -127,7 +127,7 @@ class AgentRegistryTest {
         var second = definition("second", javaExecutable().toString());
         var catalog = new AgentCatalog(List.of(first, second)); catalog.initialize();
         try (var resources = new ExecutionResources(); var factory = fixtureFactory(catalog, resources, "sleep")) {
-            AgentExecutor a = factory.getExecutor(first.bean()); AgentExecutor b = factory.getExecutor(second.bean());
+            ProjectAgentExecutor a = factory.getExecutor(first.bean()); ProjectAgentExecutor b = factory.getExecutor(second.bean());
             var results = new ArrayList<CompletableFuture<AgentExecutionResult>>();
             var ids = new ArrayList<String>();
             for (int i = 0; i < 4; i++) {

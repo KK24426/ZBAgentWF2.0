@@ -23,20 +23,24 @@ public class ProjectService {
 		this.domain = domain;
 	}
 
-	public Project newProject(String content) {
+	public Project newProject(String content, String projectName) {
 		if (!StringUtils.hasText(content)) {
 			// 内部校验异常不直接返回给用户，Controller 通过 MsgCatalog 渲染固定提示。
 			throw new IllegalArgumentException("项目内容不能为空");
 		}
-		return domain.newProject(content);
+		return domain.newProject(content, projectName);
 	}
 
-    public Project newProject(String content, AgentBean planning, AgentBean development, AgentBean review) {
-        if (!StringUtils.hasText(content)) throw new IllegalArgumentException("项目内容不能为空。");
-        return domain.newProject(content, planning, development, review);
-    }
+	public Project newProject(String content, String projectName, AgentBean planning, AgentBean development,
+			AgentBean review) {
+		if (!StringUtils.hasText(content))
+			throw new IllegalArgumentException("项目内容不能为空。");
+		return domain.newProject(content,projectName, planning, development, review);
+	}
 
-    public Project getProject(String projectId) { return domain.getProject(projectId); }
+	public Project getProject(String projectId) {
+		return domain.getProject(projectId);
+	}
 
 	public void addProjectPrompt(Project p, String content) {
 		if (!StringUtils.hasText(content)) {
@@ -51,7 +55,7 @@ public class ProjectService {
 			// 内部校验异常不直接返回给用户，Controller 通过 MsgCatalog 渲染固定提示。
 			throw new IllegalArgumentException("内容不能为空");
 		}
-		domain.createRequirements(p, content);
+		domain.createRequiremens(p,content);
 	}
 
 	public void execTask(String projectId) {

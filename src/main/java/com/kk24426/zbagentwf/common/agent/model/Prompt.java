@@ -9,7 +9,15 @@ package com.kk24426.zbagentwf.common.agent.model;
 
 /** 普通数据对象，属性原样存取。 */
 public class Prompt {
-    private String prompt;
-    public String getPrompt() { return prompt; }
-    public void setPrompt(String prompt) { this.prompt = prompt; }
+	private String prompt;
+	private byte[] file;
+
+	public byte[] getFile() {
+		return file;
+	}
+
+	public String getPrompt() {
+		return prompt;
+	}
+
 }

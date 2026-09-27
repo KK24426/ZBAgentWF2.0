@@ -29,7 +29,7 @@ class ProjectMemoryTest {
     @Test void createsDistinctBindingsRegistersOriginalAndAppendsProjectPrompt() {
         var memory = new MemoryStore();
         var received = new ArrayList<AgentBean>();
-        AgentExecutorFactory factory = bean -> { received.add(bean); return mock(AgentExecutor.class); };
+        AgentExecutorFactory factory = bean -> { received.add(bean); return mock(ProjectAgentExecutor.class); };
         var planner = mock(AgentRequirementPlanner.class);
         when(planner.plan(any(), anyString())).thenReturn(List.of(new Requirement()));
         var selection = new RoleAgentResolver.Selection("provider", "model", "default");
@@ -59,7 +59,7 @@ class ProjectMemoryTest {
         var memory = new MemoryStore(); var planner = mock(AgentRequirementPlanner.class);
         var roles = new RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp));
         var service = new ProjectDomainImpl(new ProjectSettings(temp.resolve("projects")),
-                ignored -> mock(AgentExecutor.class), planner, memory, roles);
+                ignored -> mock(ProjectAgentExecutor.class), planner, memory, roles);
         assertThrows(AgentConfigurationUnavailableException.class, () -> service.newProject("任务"));
         assertFalse(Files.exists(temp.resolve("projects")));
         var captured = new Project[1];
@@ -88,7 +88,7 @@ class ProjectMemoryTest {
             captured[0] = call.getArgument(0); throw new java.util.concurrent.RejectedExecutionException("fixture-full");
         });
         var service = new ProjectDomainImpl(new ProjectSettings(temp.resolve("projects")),
-                ignored -> mock(AgentExecutor.class), planner, memory,
+                ignored -> mock(ProjectAgentExecutor.class), planner, memory,
                 new RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp)));
         var model = new AgentBean();
         assertThrows(java.util.concurrent.RejectedExecutionException.class, () -> service.newProject("任务", model, model, model));

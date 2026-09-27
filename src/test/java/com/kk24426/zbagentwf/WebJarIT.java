@@ -277,7 +277,7 @@ class WebJarIT {
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/CodexAgentExecutor.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/project/ProjectDomainImpl.class"));
-            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/api/AgentExecutor.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/api/ProjectAgentExecutor.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/registry/AgentExecutorFactoryImpl.class"));
             // 验证实际发布产物采用新包，避免旧编译产物掩盖迁移遗漏。
             for (String relocated : List.of("user/project/api/ProjectDomain", "user/chat/api/AgentChat",
