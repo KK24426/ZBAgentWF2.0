@@ -1,8 +1,8 @@
 /*
  * 创建日期：2026-09-22
- * 更新日期：2026-09-26
+ * 更新日期：2026-09-27
  * 做 成 者：zebiao
- * 版    本：v0.3
+ * 版    本：v0.4
  * 功能概要：验证脱敏、完整异常链、目录隔离、滚动和日志故障。
  */
 package com.kk24426.zbagentwf.common.logging;
@@ -16,10 +16,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import com.kk24426.zbagentwf.agent.chat.controller.ChatController;
+import com.kk24426.zbagentwf.agent.project.ProjectDomainImpl;
+import com.kk24426.zbagentwf.agent.project.controller.ProjectController;
+import com.kk24426.zbagentwf.user.project.service.ProjectService;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -41,7 +47,7 @@ class LoggingTest {
         try {
             var failure = new IllegalStateException("普通隐私标记", new IllegalArgumentException("普通隐私原因"));
             failure.addSuppressed(new RuntimeException("普通隐私附加"));
-            for (String logger : new String[]{"com.kk24426.zbagentwf.user.chat.service.ChatService",
+            for (String logger : new String[]{ChatController.class.getName(), "com.kk24426.zbagentwf.user.chat.service.ChatService",
                     "com.kk24426.zbagentwf.agent.chat.AgentChatImpl", "org.springframework.web.Binding",
                     "com.kk24426.zbagentwf.agent.codex.CodexClient",
                     "com.kk24426.zbagentwf.agent.registry.AgentExecutorFactoryImpl",
@@ -69,6 +75,37 @@ class LoggingTest {
                         "固定运行摘要 route=CHAT", null, null);
                 event.setMDCPropertyMap(java.util.Map.of("route", "CHAT"));
                 assertTrue(new String(encoder.encode(event), StandardCharsets.UTF_8).contains("固定运行摘要 route=CHAT"));
+            }
+        } finally {
+            encoder.stop();
+            context.stop();
+        }
+    }
+
+    @Test
+    void projectControllersAndServicesKeepRequestDiagnosticsAfterRelocation() {
+        LoggerContext context = new LoggerContext();
+        context.setMDCAdapter(new ch.qos.logback.classic.util.LogbackMDCAdapter());
+        SanitizingEncoder encoder = encoder(context);
+        try {
+            var failure = new IllegalStateException("private-message", new IllegalArgumentException("private-cause"));
+            failure.addSuppressed(new RuntimeException("private-suppressed"));
+            var categories = Map.of(ProjectController.class.getName(), "项目请求诊断：原始内容已隐藏。",
+                    ProjectService.class.getName(), "项目请求诊断：原始内容已隐藏。",
+                    ProjectDomainImpl.class.getName(), "Agent 组件诊断：原始内容已隐藏。");
+            for (var category : categories.entrySet()) {
+                for (var mdc : java.util.List.of(Map.<String, String>of(), Map.of("route", "PROJECT"))) {
+                    var event = new LoggingEvent("test", context.getLogger(category.getKey()), Level.ERROR,
+                            "private-input", failure, null);
+                    event.setMDCPropertyMap(mdc);
+                    String output = new String(encoder.encode(event), StandardCharsets.UTF_8);
+                    assertTrue(output.startsWith("ERROR " + category.getValue()), category.getKey());
+                    assertFalse(output.contains("private-"));
+                    assertTrue(output.contains("IllegalStateException"));
+                    assertTrue(output.contains("Caused by:"));
+                    assertTrue(output.contains("Suppressed:"));
+                    assertTrue(output.contains("LoggingTest.java"));
+                }
             }
         } finally {
             encoder.stop();

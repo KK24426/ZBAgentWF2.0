@@ -5,7 +5,7 @@
  * 版    本：v0.1
  * 功能概要：验证项目 Controller、Service、精确路由及三语隐私边界。
  */
-package com.kk24426.zbagentwf.user.project.controller;
+package com.kk24426.zbagentwf.agent.project.controller;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -156,6 +156,7 @@ class ProjectControllerTest {
                     .content("{\"content\":\"private-natural-input\"}")).andExpect(status().isInternalServerError());
         } finally { logger.detachAppender(appender); logger.setLevel(previousLevel); logger.setAdditive(previousAdditive); appender.stop(); encoder.stop(); }
         String log = bytes.toString(StandardCharsets.UTF_8);
+        assertTrue(log.contains("项目请求诊断：原始内容已隐藏。"));
         assertFalse(log.contains("private-natural-input")); assertFalse(log.contains("private-cause"));
         assertTrue(log.contains("IllegalStateException")); assertTrue(log.contains("Caused by:"));
         assertTrue(log.contains("ProjectController.java"));

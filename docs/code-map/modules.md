@@ -10,11 +10,11 @@
 | 模型配置、工厂与资源 | 根包AgentConfiguration、agent.registry、agent.runtime、config/agents.properties | AgentConfigurationTest、AgentRegistryTest、ExecutionResourcesTest |
 | 必填项目根目录初始化 | 根包ProjectConfiguration、common.project.config.ProjectSettings、外部config/project.properties | ProjectConfigurationTest、ApplicationContextTest、真实WebJarIT配置加载/覆盖/失败 |
 | 接口与数据库实现 | agent | 目标测试、调用方、verify；数据库用mysql-it |
-| 单次聊天骨架 | user.chat、agent.chat、common.chat.dto、common.exception、static/chat.js | Service/Controller替身、过滤器/日志、真实JAR未接入路径 |
+| 单次聊天骨架 | agent.chat.controller、user.chat.service/api、agent.chat、common.chat.dto、common.exception、static/chat.js | Service/Controller替身、过滤器/日志、真实JAR未接入路径 |
 | Bean、工具、共享技术异常 | common | 目标测试、调用方、verify |
 | Web启动、首页、配置 | 根包、agent.web及resources | 单元测试、真实Web JAR IT、verify |
 | 页面与HTTP消息本地化 | MsgConfiguration、common.msg、agent.web、resources/msg、resources/web、static/chat.js | MsgCatalogTest、MsgConfigurationTest、MsgLocaleResolverTest、HomePageControllerTest、Filter/Controller测试、WebJarIT与浏览器验收 |
 
 开始任务先读根AGENTS.md、就近AGENTS.md和根REQUIREMENTS.md。
 
-新增路由：通用内存/快照看common.memory、common.project.dto（MemoryStoreTest/ProjectHttpTest）；规则与绑定看agent.prompt、agent.runtime.AbstractAgentExecutor、RoleAgentResolver（AgentPromptTest/AgentRegistryTest）；项目HTTP看user.project.controller/service（ProjectControllerTest/WebJarIT）。
+新增路由：通用内存/快照看common.memory、common.project.dto（MemoryStoreTest/ProjectHttpTest）；规则与绑定看agent.prompt、agent.runtime.AbstractAgentExecutor、RoleAgentResolver（AgentPromptTest/AgentRegistryTest）；项目HTTP看agent.project.controller、user.project.service（ProjectControllerTest/WebJarIT）。

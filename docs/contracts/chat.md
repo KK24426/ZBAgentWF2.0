@@ -2,11 +2,13 @@
 
 用户批准：2026-09-24，在 user 下建立功能包/controller/service，由 agent 包实现调用；首版为骨架及测试替身验证，并提供简单网页。无真实模型调用、数据库或会话历史。
 
+2026-09-27按用户要求将 ChatController 移到 agent.chat.controller；Service 和用户接口继续位于 user，HTTP行为及默认Bean名称不变。Java直接调用方须更新import，旧包不提供兼容类。
+
 ## Java 出口
 
 | 类型 | 职责 |
 | --- | --- |
-| user.chat.controller.ChatController | HTTP请求/响应及固定错误映射 |
+| agent.chat.controller.ChatController | HTTP请求/响应及固定错误映射 |
 | user.chat.service.ChatService extends UserService | 校验本次请求并通过构造注入的AgentChat委派 |
 | user.chat.api.AgentChat extends UserInterface | String reply(String message)，接收原始有效文本并返回回复 |
 | common.exception.AgentUnavailableException | Agent实现与调用层共享的技术异常；Agent尚未接入或不可用，映射503 |

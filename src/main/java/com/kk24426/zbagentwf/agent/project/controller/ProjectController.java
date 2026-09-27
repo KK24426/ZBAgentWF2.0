@@ -5,7 +5,7 @@
  * 版    本：v0.4
  * 功能概要：接收项目操作，通过服务查找内存项目并返回安全快照及本地化错误。
  */
-package com.kk24426.zbagentwf.user.project.controller;
+package com.kk24426.zbagentwf.agent.project.controller;
 
 import com.kk24426.zbagentwf.common.project.model.Project;
 import com.kk24426.zbagentwf.common.project.dto.ProjectHttp;

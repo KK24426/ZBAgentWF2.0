@@ -108,6 +108,8 @@ Skill只保存skillName，不读取Skill文件，不自动安装或触发Skill�
 
 ## 项目 HTTP 入口
 
+ProjectController 位于 agent.project.controller，通过 user.project.service.ProjectService 调用用户定义的 ProjectDomain。2026-09-27按用户要求从 user.project.controller 迁入；Java调用方须更新import，旧包不提供兼容类，HTTP契约不变。
+
 Java 请求类型为 ProjectHttp.CreateProjectRequest、ProjectHttp.ProjectContentRequest，响应快照为 ProjectHttp.ProjectResponse；仅类型名称调整，JSON 字段与下表保持一致。
 
 | 方法和路径 | JSON输入 | 成功响应 |

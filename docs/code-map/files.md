@@ -42,7 +42,7 @@
 | `src/main/java/com/kk24426/zbagentwf/user/project/api/ProjectDomain.java` | 项目创建、需求规划和任务结果汇总契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/UserInterface.java` | 用户接口的空父接口 |
 | `src/main/java/com/kk24426/zbagentwf/user/UserService.java` | 用户服务父类占位，未定义行为 |
-| `src/main/java/com/kk24426/zbagentwf/user/chat/controller/ChatController.java` | 聊天HTTP入口与固定错误映射 |
+| `src/main/java/com/kk24426/zbagentwf/agent/chat/controller/ChatController.java` | 聊天HTTP入口与固定错误映射 |
 | `src/main/java/com/kk24426/zbagentwf/user/chat/service/ChatService.java` | 用户侧请求校验与Agent调用编排 |
 | `src/main/java/com/kk24426/zbagentwf/user/chat/api/AgentChat.java` | 单次Agent调用公共接口 |
 | `src/main/java/com/kk24426/zbagentwf/common/exception/AgentUnavailableException.java` | Agent实现与调用层共用的不可用异常 |
@@ -51,7 +51,7 @@
 | `src/main/java/com/kk24426/zbagentwf/common/chat/dto/ChatResponse.java` | 聊天回复数据载体 |
 | `src/test/java/com/kk24426/zbagentwf/user/chat/api/ChatAgentFixture.java` | 可控Agent测试替身，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/user/chat/service/ChatServiceTest.java` | 输入边界、原样委派、生产占位测试 |
-| `src/test/java/com/kk24426/zbagentwf/user/chat/controller/ChatControllerTest.java` | Controller/Service/替身HTTP与隐私失败路径测试 |
+| `src/test/java/com/kk24426/zbagentwf/agent/chat/controller/ChatControllerTest.java` | Controller/Service/替身HTTP与隐私失败路径测试 |
 | `src/test/java/com/kk24426/zbagentwf/agent/web/WebRequestFilterTest.java` | 测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/WebJarIT.java` | 真实Web JAR测试，不进入JAR |
 | `src/test/java/com/kk24426/zbagentwf/ApplicationContextTest.java` | 测试，不进入JAR |
@@ -101,7 +101,7 @@ agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging�
 | 文件 | 职责 |
 | --- | --- |
 | `src/main/java/com/kk24426/zbagentwf/agent/runtime/AbstractAgentExecutor.java` | 保存 Agent 绑定快照并在显式初始化后组合通用与角色规则。 |
-| `src/main/java/com/kk24426/zbagentwf/user/project/controller/ProjectController.java` | 接收项目操作，通过服务查找内存项目并返回安全快照及本地化错误。 |
+| `src/main/java/com/kk24426/zbagentwf/agent/project/controller/ProjectController.java` | 接收项目操作，通过服务查找内存项目并返回安全快照及本地化错误。 |
 | `src/main/java/com/kk24426/zbagentwf/user/project/service/ProjectService.java` | 校验项目输入并通过用户定义的领域接口编排操作。 |
 | `src/main/java/com/kk24426/zbagentwf/common/exception/AgentConfigurationUnavailableException.java` | 区分模型或规则尚未配置与执行中的内部错误。 |
 | `src/main/java/com/kk24426/zbagentwf/common/memory/MemoryStore.java` | 按分类和标识保存本进程内的对象引用。 |
@@ -113,7 +113,7 @@ agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging�
 | `src/main/java/com/kk24426/zbagentwf/agent/prompt/PromptCatalog.java` | 显式加载 UTF-8 规则快照，查询时不进行文件访问。 |
 | `src/main/java/com/kk24426/zbagentwf/agent/registry/RoleAgentResolver.java` | 将任意已选择模型与角色规则绑定，缺省选择由显式配置提供。 |
 | `src/test/java/com/kk24426/zbagentwf/agent/runtime/AgentPromptTest.java` | 验证提示词显式初始化、输入快照和缺规则时不启动进程。 |
-| `src/test/java/com/kk24426/zbagentwf/user/project/controller/ProjectControllerTest.java` | 验证项目 Controller、Service、精确路由及三语隐私边界。 |
+| `src/test/java/com/kk24426/zbagentwf/agent/project/controller/ProjectControllerTest.java` | 验证项目 Controller、Service、精确路由及三语隐私边界。 |
 | `src/test/java/com/kk24426/zbagentwf/common/memory/MemoryStoreTest.java` | 验证共享内存存储的类型、分类、引用和并发边界。 |
 | `src/test/java/com/kk24426/zbagentwf/common/project/dto/ProjectHttpTest.java` | 验证项目响应是独立且一致的不可变数据快照。 |
 | `src/test/java/com/kk24426/zbagentwf/agent/project/ProjectMemoryTest.java` | 验证项目登记、角色选择、提示词追加及失败不发布。 |

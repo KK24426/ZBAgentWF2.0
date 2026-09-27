@@ -5,7 +5,7 @@
  * 版    本：v0.3
  * 功能概要：通过真实 Controller 和 Service 加测试替身验证聊天 HTTP 契约。
  */
-package com.kk24426.zbagentwf.user.chat.controller;
+package com.kk24426.zbagentwf.agent.chat.controller;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;

@@ -250,12 +250,14 @@ class WebJarIT {
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/registry/AgentExecutorFactoryImpl.class"));
             // 验证实际发布产物采用新包，避免旧编译产物掩盖迁移遗漏。
             for (String relocated : List.of("user/project/api/ProjectDomain", "user/chat/api/AgentChat",
+                    "agent/chat/controller/ChatController", "agent/project/controller/ProjectController",
                     "common/agent/model/AgentBean", "common/project/model/Project",
                     "common/project/dto/ProjectHttp", "common/project/config/ProjectSettings",
                     "common/chat/dto/ChatRequest", "common/chat/dto/ChatResponse", "agent/runtime/AbstractAgentExecutor")) {
                 assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/" + relocated + ".class"), relocated);
             }
             for (String retired : List.of("user/agent/userif/", "user/project/domain/", "common/agent/bean/",
+                    "user/chat/controller/", "user/project/controller/",
                     "common/project/bean/", "user/chat/service/AgentChat.class", "agent/AbstractAgentExecutor.class",
                     "common/chat/ChatRequest", "common/chat/ChatResponse")) {
                 assertFalse(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/classes/com/kk24426/zbagentwf/" + retired)), retired);

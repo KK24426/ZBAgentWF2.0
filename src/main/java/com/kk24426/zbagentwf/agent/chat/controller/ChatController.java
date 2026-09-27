@@ -5,7 +5,7 @@
  * 版    本：v0.3
  * 功能概要：接收单次聊天请求、调用用户服务并返回安全的结果或固定错误。
  */
-package com.kk24426.zbagentwf.user.chat.controller;
+package com.kk24426.zbagentwf.agent.chat.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

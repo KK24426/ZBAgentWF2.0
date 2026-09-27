@@ -31,3 +31,13 @@
 | agent.AbstractAgentExecutor | agent.runtime.AbstractAgentExecutor |
 
 对应测试跟随被测类型归包，ChatAgentFixture 位于 user.chat.api。保留 ProjectHttp 嵌套数据类型及原有字段；补充必要 import，不提高成员可见性。根启动与配置类、Mapper/XML、日志配置保持原位；用户需要按新 import 调用，旧包不提供兼容类。
+
+## 后续补充：Controller 归入 agent
+
+同日用户追加要求将 Controller 移到 common 或 agent。选择 agent 承担 HTTP 适配，common 保留共享数据和工具：
+
+- user.chat.controller.ChatController 移到 agent.chat.controller.ChatController。
+- user.project.controller.ProjectController 移到 agent.project.controller.ProjectController。
+- 两个 ControllerTest 同步迁移；HomePageController 已位于 agent.web，保持原位。
+
+Controller 继续调用 user 中的 Service，Service/API、类名、默认 Bean 名称、HTTP 路径、DTO 和业务语义不变。Java 直接调用方更新 import，不提供旧包兼容类。日志按新包识别项目 Controller，保留项目请求摘要和完整脱敏异常链；user 服务和 agent.project 领域实现的原有分类不变。实际 JAR 验证新 Controller 存在且旧包无残留。
