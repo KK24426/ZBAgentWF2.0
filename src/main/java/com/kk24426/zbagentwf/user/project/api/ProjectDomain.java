@@ -41,7 +41,7 @@ public abstract class ProjectDomain implements UserInterface {
 	 * @param Prompt
 	 */
 	public abstract void addProjectPrompt(String projectId, String Prompt);
-	
+
 	/**
 	 * 根据不同的类型生成对应的Agent实体并注入角色提示词
 	 * 
@@ -62,10 +62,10 @@ public abstract class ProjectDomain implements UserInterface {
 	/**
 	 * 等待底层异步执行结束后汇总结果；需要确认同样代表该次底层执行已结束。
 	 *
-	 * @param project      本次执行所属项目及工作目录
+	 * @param project 本次执行所属项目及工作目录
 	 * @return 带有 Task 状态和执行结果的需求列表，不是异步批次标识
 	 */
 	public abstract List<Requirement> execTask(Project project);
-	
+
 	public abstract Project getProject(String projectId);
 }
