@@ -20,7 +20,7 @@ import org.springframework.beans.factory.UnsatisfiedDependencyException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import com.kk24426.zbagentwf.user.InjectionFixture;
 
-class ContextTest {
+class ApplicationContextTest {
     @TempDir Path temp;
 
     @Test

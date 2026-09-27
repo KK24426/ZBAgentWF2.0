@@ -7,10 +7,10 @@
 
 ## 用户骨架与最小补充
 
-用户已提供 AgentBean、UserInterface、AgentBase、UserService 及项目/执行契约；实现进度见下文，真实模型账号验收仍未运行。
+用户已提供 AgentBean、UserInterface、AgentRegistry、UserService 及项目/执行契约；实现进度见下文，真实模型账号验收仍未运行。
 AgentBean 保存 brand/name/ver、rolePrompt 和 skill，Prompt 保存 prompt 文本、Skill 保存 skillName；均为普通 Bean，原字段原样存取、默认 null。Skill 名称不会触发自动安装或调用。
 UserInterface 是由 UserImpl 更名的公共空父接口，用户接口通过 extends 继承；不新增业务方法。
-AgentBase 位于 user.agent.userif，声明列表、brand/name/ver 精确查询与刷新；agent.registry.AgentCatalog 保存配置和本机文件可执行性快照，返回防御性复制的 Bean。UserService 保留原占位行为。
+AgentRegistry 位于 user.agent.userif，声明列表、brand/name/ver 精确查询与刷新；agent.registry.AgentCatalog 保存配置和本机文件可执行性快照，返回防御性复制的 Bean。UserService 保留原占位行为。
 验收包括属性独立读写、边界值、父接口继承实现关系，以及既有 Spring 和真实 Web JAR 回归；测试样例不进入正式 JAR。
 此最小补充仅用于验证协作流程，不代表复杂业务接口、模型调用或数据库持久化已实现或验收。
 
@@ -20,7 +20,7 @@ Project 包含多条 Requirement，每条 Requirement 包含多个 RequirementTa
 Project 保存 projectId、Path workingDirectory、requirements，projectPrompt，以及 planningAgent/developmentAgent/reviewAgent 三个 AgentExecutor 运行时引用；Requirement 保存 userContent、agentUnderstanding、acceptanceCriteria、tasks、userConfirmMsg。
 两个列表默认各实例独立的空列表，setter 原样赋值。RequirementTask 保存 id、content、acceptanceCriteria、status、result；默认 PENDING。
 TaskStatus 为 PENDING、RUNNING、SUCCEEDED、FAILED、NEEDS_CONFIRMATION，普通 Bean 不自动转换状态；项目实现按下述执行规则更新。
-规划任务 id 与单次执行 taskId 区分；AgentExecResult 保存 taskId、success、errorMessage、Long tokenCount、summary、confirmationRequired、String confirmationMessage。token 数未知时 null。
+规划任务 id 与单次执行 taskId 区分；AgentExecutionResult 保存 taskId、success、errorMessage、Long tokenCount、summary、confirmationRequired、String confirmationMessage。token 数未知时 null。
 AgentExecutor 保存 final 模型引用并提供 protected getter；exec(Project, content, memory, callback) 异步受理后返回 String 执行标识，最终 onCompleted 回调一次；提交失败同步抛 RejectedExecutionException 且不回调。getStderr(taskId) 按执行读取诊断。
 成功 success=true、confirmationRequired=false；普通失败两者 false；需要确认 success=false、confirmationRequired=true，本次执行结束，答复后重新提交取得新标识。不增加暂停恢复或取消接口。
 ProjectDomain 的 newProject(content, planningAgent, developmentAgent, reviewAgent) 接受显式选择，newProject(content) 使用三角色默认配置。getProject(projectId) 取回本次运行内原对象，addProjectPrompt(projectId, content) 追加规则。createRequirements(project, content) 返回新增需求，execTask(project) 按项目完整需求顺序执行并等待结果；旧二参数入口已删除。
@@ -28,9 +28,11 @@ ProjectDomain 的 newProject(content, planningAgent, developmentAgent, reviewAge
 
 ## 模型注册、工厂与项目角色
 
+Java 角色类型使用 AgentRole.PLANNING/DEVELOPMENT/REVIEW；configKey()/fromConfigKey() 精确关联原有 planning/development/review 配置及提示词名称，不接受大写、空白或未知配置键。类型与方法命名按 ADR0013 统一，HTTP/JSON 字段及业务行为保持不变。
+
 config/agents.properties 通过 Spring 启动导入，真实文件忽略、占位示例入仓。zb.agents[条目键] 包含 brand/name/ver/type/executable/model/timeout/enabled，字段全部显式配置；仅 type=codex 已实现。模型三元组精确匹配、必填、重复拒绝，普通 AgentBean 的原样存取契约不变。CLI路径、实际模型参数和单次超时独立于模型元数据。
 条目按键合并配置来源，支持 JVM > 环境变量 > 文件的字段覆盖；配置错误导致启动失败。无配置或空表保留 Web 启动能力，查询/刷新无可用项、未知/禁用模型明确失败，不自动挑选替代模型。角色默认值必须单独显式配置。初始化只检查配置文件路径是否为可执行普通文件，Windows要求.exe，不执行CLI或鉴权；“可用”不等于账号模型已验收。refreshAgentList 重新检查已加载配置的文件状态，配置修改后重启。
-AgentExecFactoryImpl 按 AgentBean 对象身份绑定 CodexAgentExec，同一未修改实体复用、不同实体独立；深拷贝元数据/角色提示词/Skill 名称，原实体修改后再次获取明确拒绝。工厂负责生命周期。AgentRequirementPlanner 将项目 planningAgent 与同工厂的只读规划适配器关联，业务调用方无需依赖 Codex 类；手工替换为其它工厂/自定义规划实例会明确失败。
+AgentExecutorFactoryImpl 按 AgentBean 对象身份绑定 CodexAgentExecutor，同一未修改实体复用、不同实体独立；深拷贝元数据/角色提示词/Skill 名称，原实体修改后再次获取明确拒绝。工厂负责生命周期。AgentRequirementPlanner 将项目 planningAgent 与同工厂的只读规划适配器关联，业务调用方无需依赖 Codex 类；手工替换为其它工厂/自定义规划实例会明确失败。
 newProject 三个模型全部解析成功后才创建 root/UUID，绑定规划/开发/审核执行器并规划首批需求；createRequirements 使用 planningAgent，execTask 使用 developmentAgent；reviewAgent 仅绑定，不自动增加审核流程。任意可用模型可承担任意角色，但不同项目/角色使用独立 Agent 实体和执行器绑定；上下文分别归属项目。Project 的执行器引用不承诺序列化或持久化，不自行关闭共享实例。
 执行继续采用结构化 command/args/stdin、Codex JSONL及输出schema；规划read-only，开发workspace-write，不管理CLI登录或改变已有规则。项目路径归属、完整规划后追加、失败停止和人工重试规则不变；目录锁计入持有者和等待者，最后一位离开后回收。
 
@@ -46,7 +48,7 @@ ContextClosedEvent停止工厂和票据受理、同时中断执行与规划；�
 Spring 启动时读取 config/project.properties 中的 zb.project.root；支持 ZB_PROJECT_ROOT 环境变量及 JVM -Dzb.project.root 覆盖，无默认值。
 必须显式配置；缺失、空白、格式非法或已存在但不是目录时启动失败退出1。允许目录尚不存在；相对路径按启动工作目录解析并规范化为绝对路径，不创建目录。
 文件入口相对启动工作目录；示例 config/project.properties.example 入仓，真实配置忽略。标准覆盖顺序 JVM 属性 > 环境变量 > 配置文件。
-ProjectConfiguration 在根包初始化只读 ProjectSettings；ProjectUserifImpl.newProject 在业务调用时使用此根目录创建项目，项目自己的目录保存到 Project.workingDirectory。
+ProjectConfiguration 在根包初始化只读 ProjectSettings；ProjectDomainImpl.newProject 在业务调用时使用此根目录创建项目，项目自己的目录保存到 Project.workingDirectory。
 验收覆盖配置加载与覆盖、错误路径、路径规范化、初始化不创建目录，以及现有 Web/JAR 回归。
 
 ## Web
@@ -58,7 +60,7 @@ stdout 不输出业务结果，stderr 为错误及运行诊断，异常保留脱
 正式产物 target/zbagentwf-web-0.1.0-SNAPSHOT.jar；不承诺 Maven 类库兼容。
 
 ## 单次聊天骨架
-user.chat.controller.ChatController 接收请求；user.chat.service.ChatService 继承 UserService，调用 AgentChat（继承 UserInterface）；agent.chat.AgentChatImpl 仅实现 AgentChat，不继承 AgentBase。聊天仍为未接入占位，不调用新的执行契约。
+user.chat.controller.ChatController 接收请求；user.chat.service.ChatService 继承 UserService，调用 AgentChat（继承 UserInterface）；agent.chat.AgentChatImpl 仅实现 AgentChat，不继承 AgentRegistry。聊天仍为未接入占位，不调用新的执行契约。
 AgentUnavailableException 位于 common.exception，由 Agent 实现抛出、Controller 捕获并映射为503。
 POST /api/chat 接收 application/json 的 message 字符串，非空白、长度不超过4000个Java UTF-16代码单元；有效内容原样传递。成功返回200及JSON reply字符串；输入/JSON错误400、媒体类型不支持415、方法不支持405；未接入503，内部故障500，错误正文不包含输入或异常细节。
 正式实现只明确报告 Agent 尚未接入；测试替身仅存在于测试源码，不打入正式JAR。验收包括 Controller → Service → 替身返回的成功链路，以及生产占位的503；不得把替身验证声称为真实模型验收。

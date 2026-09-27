@@ -8,7 +8,7 @@
 package com.kk24426.zbagentwf.common.project.bean;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
+import com.kk24426.zbagentwf.common.agent.bean.AgentExecutionResult;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +23,7 @@ class ProjectHttpTest {
             var writer = pool.submit(() -> {
                 start.await();
                 for (int i = 0; i < 1000; i++) synchronized (project) {
-                    if (i % 2 == 0) { var result = new AgentExecResult(); result.setSuccess(true);
+                    if (i % 2 == 0) { var result = new AgentExecutionResult(); result.setSuccess(true);
                         task.setResult(result); task.setStatus(TaskStatus.SUCCEEDED);
                     } else { task.setResult(null); task.setStatus(TaskStatus.PENDING); }
                 }

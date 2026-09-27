@@ -13,10 +13,10 @@ import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import com.kk24426.zbagentwf.user.UserInterface;
 
 /**
- * 本类包含Agent最基础的一些功能
+ * 本机 Agent 模型的列表、精确查询与刷新契约。
  *
  */
-public abstract class AgentBase implements UserInterface {
+public abstract class AgentRegistry implements UserInterface {
 
 	/**
 	 * 获取当前本机所有可用的Agent工具并存入全局变量中， 在可用Agent的时候重新获取存在时返回已存在的list， 这个方法应该在初始化的时候调用一次。

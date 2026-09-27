@@ -10,13 +10,13 @@ Project → List<Requirement> → List<RequirementTask>，均是独立 Java 类�
 | --- | --- |
 | Project | String projectId、Path workingDirectory、List<Requirement> requirements；AgentExecutor planningAgent/developmentAgent/reviewAgent；Prompt projectPrompt |
 | Requirement | String userContent、agentUnderstanding、acceptanceCriteria、userConfirmMsg；List<RequirementTask> tasks |
-| RequirementTask | String id、content、acceptanceCriteria；TaskStatus status；AgentExecResult result |
-| common.agent.bean.AgentExecResult | String taskId、errorMessage、summary、confirmationMessage；boolean success、confirmationRequired；Long tokenCount |
+| RequirementTask | String id、content、acceptanceCriteria；TaskStatus status；AgentExecutionResult result |
+| common.agent.bean.AgentExecutionResult | String taskId、errorMessage、summary、confirmationMessage；boolean success、confirmationRequired；Long tokenCount |
 
 所有 Bean 提供无参构造与标准 getter/setter，属性原样存取，不自动校验或推断业务状态。requirements/tasks 各自默认 new ArrayList，每个实例独立；setter 原样接收传入列表（包括 null），不复制、不自动建立父子绑定。其它引用默认 null，boolean 默认 false；Task 默认 PENDING。
 
 TaskStatus：PENDING、RUNNING、SUCCEEDED、FAILED、NEEDS_CONFIRMATION。普通 Bean 不自动转换状态；项目实现按下述规则更新。
-RequirementTask.id 是规划任务标识，AgentExecResult.taskId 是一次执行标识。tokenCount 为 null 表示未知，不等同于零。
+RequirementTask.id 是规划任务标识，AgentExecutionResult.taskId 是一次执行标识。tokenCount 为 null 表示未知，不等同于零。
 
 ## 用户接口
 
@@ -33,14 +33,14 @@ user.project.domain.ProjectDomain implements UserInterface：
 
 user.agent.userif.AgentExecutor implements UserInterface，通过构造函数保存 private final AgentBean，protected getAgent() 供实现类读取；工作目录从本次传入的 Project 获取：
 
-- String exec(Project project, String content, String memory, AgentExecCallback callback)：异步受理，返回单次执行标识。memory 没有时可为空。
+- String exec(Project project, String content, String memory, AgentExecutionCallback callback)：异步受理，返回单次执行标识。memory 没有时可为空。
 - String getStderr(String taskId)：读取该次执行的诊断文本；stderr 不决定执行成败，不能原样公开或写日志。
-- AgentExecCallback.onCompleted(AgentExecResult result)：每次受理的执行最终回调一次，result.taskId 与返回值一致；不是过程事件。
+- AgentExecutionCallback.onCompleted(AgentExecutionResult result)：每次受理的执行最终回调一次，result.taskId 与返回值一致；不是过程事件。
 
 提交失败同步抛 RejectedExecutionException，不触发回调；受理后的失败通过结果表达。成功为 success=true、confirmationRequired=false；普通失败两者 false；待确认为 success=false、confirmationRequired=true 并提供确认内容。
 待确认意味着本次执行已经结束，调用方获得用户答复后重新提交，取得新的执行标识。本轮没有暂停恢复或取消接口，也不把成功和待确认同时设置为 true。
 
-AgentExecContractTest 的手动替身仅说明契约；具体 Codex 实现通过真实 Java 子进程 fixture 验证，尚未运行真实模型账号验收。
+AgentExecutionContractTest 的手动替身仅说明契约；具体 Codex 实现通过真实 Java 子进程 fixture 验证，尚未运行真实模型账号验收。
 
 ## 项目根目录配置
 
@@ -48,7 +48,7 @@ AgentExecContractTest 的手动替身仅说明契约；具体 Codex 实现通过
 无默认根目录；可通过 ZB_PROJECT_ROOT 或 JVM -Dzb.project.root 覆盖，标准优先级 JVM > 环境变量 > 配置文件。空覆盖值同样无效，不回退到低优先级配置。
 目录相对于启动工作目录解析，并规范化为绝对路径。缺失、空白、格式非法、已存在非目录或悬空链接使初始化失败，正常入口退出1；不存在的目录允许，但初始化绝不创建它。
 
-根包 ProjectConfiguration 通过 Spring 初始化只读 ProjectSettings，其 getRootDirectory() 供 ProjectUserifImpl 使用；Project.workingDirectory 是单个项目的实际目录，两者不混用。
+根包 ProjectConfiguration 通过 Spring 初始化只读 ProjectSettings，其 getRootDirectory() 供 ProjectDomainImpl 使用；Project.workingDirectory 是单个项目的实际目录，两者不混用。
 Java properties 使用标准转义规则；Windows 推荐正斜线，中文也可用 Unicode 转义。文件只保存根目录设置，不保存账号或凭据。
 
 ## 兼容与验收
@@ -60,12 +60,12 @@ Java properties 使用标准转义规则；Windows 推荐正斜线，中文也�
 
 ## 可调用的具体实现
 
-- agent.codex.CodexAgentExec：异步执行与诊断查询。
+- agent.codex.CodexAgentExecutor：异步执行与诊断查询。
 - agent.codex.CodexRequirementPlanner：只读规划辅助。
 - agent.codex.CodexClient：二者共用的本机进程适配器。
-- agent.project.ProjectUserifImpl：项目目录、需求追加及等待异步结果的串行执行。
+- agent.project.ProjectDomainImpl：项目目录、需求追加及等待异步结果的串行执行。
 
-Spring装配 AgentCatalog（AgentBase）、AgentExecFactoryImpl（AgentExecFactory）和 ProjectUserifImpl（ProjectDomain）。调用方用 getActiveAgent(brand,name,ver) 与 getExecutor(agent) 获取对应模型；键精确匹配，工厂深拷贝元数据和嵌套规则、按实体身份绑定实例，不从品牌猜CLI，不自动回退。
+Spring装配 AgentCatalog（AgentRegistry）、AgentExecutorFactoryImpl（AgentExecutorFactory）和 ProjectDomainImpl（ProjectDomain）。调用方用 getActiveAgent(brand,name,ver) 与 getExecutor(agent) 获取对应模型；键精确匹配，工厂深拷贝元数据和嵌套规则、按实体身份绑定实例，不从品牌猜CLI，不自动回退。
 config/agents.properties 的 zb.agents[条目键] 使用 brand/name/ver/type/executable/model/timeout/enabled，所有字段显式配置，当前仅 codex；type表示执行实现，model为CLI参数，ver不代表CLI版本。示例见[agents.properties.example](../../config/agents.properties.example)。条目键按来源合并字段，JVM > 环境变量 > 文件；无配置允许Web启动，缺必填/重复三元组/非法值启动失败。不可用模型用 AgentConfigurationUnavailableException（IllegalStateException 子类）；无可用模型列表或工厂关闭仍用 IllegalStateException，空/无效三元组用 IllegalArgumentException。
 AgentCatalog初始化只检查文件可执行性，Windows只接受.exe，不运行CLI/鉴权；返回Bean副本。刷新只重查已加载配置中的文件状态；删除文件后刷新清除可用项，配置修改需要重启。已经取得的执行器若随后丢失CLI，按普通执行失败返回，不承诺实时可用性。
 Project保存三个AgentExecutor运行时引用；user接口类型依赖由用户明确批准，不保存线程/CLI参数/凭据到实体，也不承诺实体序列化或持久化。工厂统一拥有实例生命周期，调用方不能关闭共享实例。AgentRequirementPlanner使用当前工厂中与planningAgent同身份的规划适配器；跨工厂或自定义实例绑定无法规划时明确失败。reviewAgent当前仅绑定，网页聊天仍未接入。
@@ -103,10 +103,12 @@ zb.agent-roles.<planning/development/review>.brand/name/ver与模型注册分开
 每个新项目对三角色分别创建独立AgentBean；角色规则由AgentBean.rolePrompt指定，未指定时从对应角色文件读取。工厂以对象身份缓存，实体/嵌套Prompt文本/Skill名称修改后再次getExecutor会拒绝；已绑定实例保留深拷贝。不同实体即使三元组和规则相同也不会共用执行器。共享4额度、诊断限制和工厂关闭规则不变；实例由工厂持有到应用关闭，不自动回收活动项目或执行器。
 
 PromptCatalog在启动阶段显式读取config/prompts中的default.txt、security.txt、planning.txt、development.txt、review.txt。UTF-8（接受BOM），无热加载；不存在/空白或以YOUR_开头的占位内容视为未配置，访问必需规则时抛AgentConfigurationUnavailableException；现有目录/文件不可读或UTF-8非法时启动失败。只读取固定名称，HTTP不能指定配置路径；真实规则被Git忽略，仓库只放.txt.example。
-AgentExecutor构造器只保存字段，getUserPrompt/getProjectPrompt为protected。AgentExecutorImpl提供显式initializePrompts(default,security)，保存文本快照且拒绝重复初始化；Codex执行器和独立规划器未初始化时均在进程启动前拒绝。规则按安全、通用、角色、用户、项目分段传入stdin，用户/项目规则可为空；项目对象的最新projectPrompt优先于构造时的项目规则。规划/执行在调用受理前生成快照，追加只影响后续调用，不改变进行中工作。分段文本不是操作系统权限保障，原sandbox与应用校验继续有效。
+AgentExecutor构造器只保存字段，getUserPrompt/getProjectPrompt为protected。AbstractAgentExecutor提供显式initializePrompts(default,security)，保存文本快照且拒绝重复初始化；Codex执行器和独立规划器未初始化时均在进程启动前拒绝。规则按安全、通用、角色、用户、项目分段传入stdin，用户/项目规则可为空；项目对象的最新projectPrompt优先于构造时的项目规则。规划/执行在调用受理前生成快照，追加只影响后续调用，不改变进行中工作。分段文本不是操作系统权限保障，原sandbox与应用校验继续有效。
 Skill只保存skillName，不读取Skill文件，不自动安装或触发Skill执行。
 
 ## 项目 HTTP 入口
+
+Java 请求类型为 ProjectHttp.CreateProjectRequest、ProjectHttp.ProjectContentRequest，响应快照为 ProjectHttp.ProjectResponse；仅类型名称调整，JSON 字段与下表保持一致。
 
 | 方法和路径 | JSON输入 | 成功响应 |
 | --- | --- | --- |

@@ -14,7 +14,7 @@ import com.kk24426.zbagentwf.common.agent.bean.Prompt;
 import com.kk24426.zbagentwf.common.project.bean.Project;
 import com.kk24426.zbagentwf.user.UserInterface;
 
-/** 用户定义的执行契约；通过 AgentExecFactory 按已注册模型获取实现。 */
+/** 用户定义的执行契约；通过 AgentExecutorFactory 按已注册模型获取实现。 */
 public abstract class AgentExecutor implements UserInterface {
 	private final AgentBean agent;
 
@@ -63,7 +63,7 @@ public abstract class AgentExecutor implements UserInterface {
 	/**
 	 * 读取显式初始化后的默认提示词；不得在 getter 中加载文件
 	 */
-	protected abstract Prompt getDefluatPrompt();
+	protected abstract Prompt getDefaultPrompt();
 
 	/**
 	 * 读取显式初始化后的安全提示词；不得在 getter 中加载文件
@@ -86,7 +86,7 @@ public abstract class AgentExecutor implements UserInterface {
 	 * @return 本次执行的唯一标识，不是规划任务 id 或进程退出码
 	 * @throws RejectedExecutionException 提交失败；未受理且不触发完成回调
 	 */
-	public abstract String exec(Project project, String content, String memory, AgentExecCallback callback);
+	public abstract String exec(Project project, String content, String memory, AgentExecutionCallback callback);
 
 	/**
 	 * 按执行标识读取诊断文本；stderr 内容本身不决定成功或失败。

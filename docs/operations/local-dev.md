@@ -102,7 +102,7 @@ URL仅允许localhost或127.0.0.1及可选端口，不能带URL参数、其它�
 由Spring注入user接口后调用，业务代码无需构造Codex具体类：
 
 ```java
-// agentBase、agentExecFactory、projects 分别注入 AgentBase、AgentExecFactory、ProjectDomain。
+// agentBase、agentExecFactory、projects 分别注入 AgentRegistry、AgentExecutorFactory、ProjectDomain。
 AgentBean planning = agentBase.getActiveAgent("YOUR_PROVIDER", "YOUR_MODEL", "YOUR_PLANNING_VERSION");
 AgentBean development = agentBase.getActiveAgent("YOUR_PROVIDER", "YOUR_MODEL", "YOUR_DEVELOPMENT_VERSION");
 AgentBean review = agentBase.getActiveAgent("YOUR_PROVIDER", "YOUR_MODEL", "YOUR_REVIEW_VERSION");

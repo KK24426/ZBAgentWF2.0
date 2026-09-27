@@ -8,7 +8,7 @@
 package com.kk24426.zbagentwf.common.project.bean;
 
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
-import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
+import com.kk24426.zbagentwf.common.agent.bean.AgentExecutionResult;
 import java.util.List;
 
 /** HTTP 只接受模型标识和文本，不能接收客户端提供的目录、执行器或 Project 实体。 */
@@ -30,7 +30,7 @@ public final class ProjectHttp {
 		}
 	}
 
-	public record Create(String content, Model planningAgent, Model developmentAgent, Model reviewAgent) {
+	public record CreateProjectRequest(String content, Model planningAgent, Model developmentAgent, Model reviewAgent) {
 		public boolean defaults() {
 			return planningAgent == null && developmentAgent == null && reviewAgent == null;
 		}
@@ -42,10 +42,10 @@ public final class ProjectHttp {
 		}
 	}
 
-	public record Content(String content) {
+	public record ProjectContentRequest(String content) {
 	}
 
-	public record View(String projectId, List<RequirementView> requirements) {
+	public record ProjectResponse(String projectId, List<RequirementView> requirements) {
 	}
 
 	public record RequirementView(String userContent, String agentUnderstanding, String acceptanceCriteria,
@@ -60,9 +60,9 @@ public final class ProjectHttp {
 	}
 
 	/** 与领域写入使用同一对象锁，一次复制状态和结果；之后序列化不读取可变业务对象。 */
-	public static View view(Project project) {
+	public static ProjectResponse view(Project project) {
 		synchronized (project) {
-			return new View(project.getProjectId(),
+			return new ProjectResponse(project.getProjectId(),
 					project.getRequirements().stream()
 							.map(r -> new RequirementView(r.getUserContent(), r.getAgentUnderstanding(),
 									r.getAcceptanceCriteria(), r.getUserConfirmMsg(),
@@ -76,7 +76,7 @@ public final class ProjectHttp {
 		return value != null && !value.isBlank();
 	}
 
-	private static ResultView result(AgentExecResult r) {
+	private static ResultView result(AgentExecutionResult r) {
 		return r == null ? null
 				: new ResultView(r.getTaskId(), r.isSuccess(), r.getErrorMessage(), r.getTokenCount(), r.getSummary(),
 						r.isConfirmationRequired(), r.getConfirmationMessage());

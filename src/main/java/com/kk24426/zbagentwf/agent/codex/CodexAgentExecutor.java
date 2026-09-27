@@ -17,34 +17,34 @@ import org.slf4j.LoggerFactory;
 
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
-import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
+import com.kk24426.zbagentwf.common.agent.bean.AgentExecutionResult;
 import com.kk24426.zbagentwf.common.agent.bean.Prompt;
 import com.kk24426.zbagentwf.common.logging.SecretRedactor;
 import com.kk24426.zbagentwf.common.project.bean.Project;
-import com.kk24426.zbagentwf.user.agent.userif.AgentExecCallback;
-import com.kk24426.zbagentwf.agent.AgentExecutorImpl;
+import com.kk24426.zbagentwf.user.agent.userif.AgentExecutionCallback;
+import com.kk24426.zbagentwf.agent.AbstractAgentExecutor;
 
 /**
  * 工厂实例共享四个执行额度；诊断按共享资源的容量和保留时间查询。
  * 直接构造的低层实例拥有独立资源作用域，调用方必须 close。
  */
-public final class CodexAgentExec extends AgentExecutorImpl implements AutoCloseable {
-    private static final Logger LOG = LoggerFactory.getLogger(CodexAgentExec.class);
+public final class CodexAgentExecutor extends AbstractAgentExecutor implements AutoCloseable {
+    private static final Logger LOG = LoggerFactory.getLogger(CodexAgentExecutor.class);
     private final CodexClient client;
     private final Object lifecycle = new Object();
     private final ExecutionResources resources;
     private final boolean ownsResources;
     private boolean closed;
 
-    public CodexAgentExec(AgentBean agent, CodexClient client) {
+    public CodexAgentExecutor(AgentBean agent, CodexClient client) {
         this(agent, client, new ExecutionResources(), true);
     }
 
-    public CodexAgentExec(AgentBean agent, CodexClient client, ExecutionResources resources) {
+    public CodexAgentExecutor(AgentBean agent, CodexClient client, ExecutionResources resources) {
         this(agent, client, resources, false);
     }
 
-    private CodexAgentExec(AgentBean agent, CodexClient client, ExecutionResources resources, boolean ownsResources) {
+    private CodexAgentExecutor(AgentBean agent, CodexClient client, ExecutionResources resources, boolean ownsResources) {
         super(Objects.requireNonNull(agent));
         this.client = Objects.requireNonNull(client);
         this.resources = Objects.requireNonNull(resources);
@@ -52,7 +52,7 @@ public final class CodexAgentExec extends AgentExecutorImpl implements AutoClose
     }
 
     @Override
-    public String exec(Project project, String content, String memory, AgentExecCallback callback) {
+    public String exec(Project project, String content, String memory, AgentExecutionCallback callback) {
         // 在受理前快照真实目录，避免异步线程读取到调用方随后修改的 Project 路径。
         // 此阶段失败统一同步拒绝，尚未启动工作，也不能触发完成回调。
         String instructions;
@@ -86,10 +86,10 @@ public final class CodexAgentExec extends AgentExecutorImpl implements AutoClose
         }
     }
 
-    private void execute(ExecutionResources.Ticket ticket, Path directory, String content, String memory, String instructions, AgentExecCallback callback) {
+    private void execute(ExecutionResources.Ticket ticket, Path directory, String content, String memory, String instructions, AgentExecutionCallback callback) {
         String id = ticket.id();
         String[] diagnostic = {""};
-        AgentExecResult result = new AgentExecResult();
+        AgentExecutionResult result = new AgentExecutionResult();
         result.setTaskId(id);
         try {
             // 工厂可能在预留票据后、工作线程运行前关闭，此时按已受理执行失败完成回调。

@@ -7,15 +7,15 @@
  */
 package com.kk24426.zbagentwf.user.agent.userif;
 
-import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
+import com.kk24426.zbagentwf.common.agent.bean.AgentExecutionResult;
 
 /** 最终结果回调；不承载过程事件，提交失败时不触发。 */
 @FunctionalInterface
-public interface AgentExecCallback {
+public interface AgentExecutionCallback {
     /**
      * 每次受理的执行结束后调用一次，需要确认也表示本次执行已结束。
      *
      * @param result 携带本次执行 taskId 的成功、失败或待确认结果
      */
-    void onCompleted(AgentExecResult result);
+    void onCompleted(AgentExecutionResult result);
 }

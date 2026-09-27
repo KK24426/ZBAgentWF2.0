@@ -9,7 +9,7 @@ package com.kk24426.zbagentwf.agent.registry;
 
 import static org.junit.jupiter.api.Assertions.*;
 import com.kk24426.zbagentwf.agent.codex.CodexFixtureSupport;
-import com.kk24426.zbagentwf.agent.project.ProjectUserifImpl;
+import com.kk24426.zbagentwf.agent.project.ProjectDomainImpl;
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
 import com.kk24426.zbagentwf.common.agent.bean.*;
 import com.kk24426.zbagentwf.common.project.bean.*;
@@ -63,7 +63,7 @@ class AgentRegistryTest {
         var second = definition("two", javaExecutable().toString());
         var catalog = new AgentCatalog(List.of(first, second)); catalog.initialize();
         var created = new AtomicInteger();
-        try (var resources = new ExecutionResources(); var factory = new AgentExecFactoryImpl(catalog, CodexFixtureSupport.prompts(temp), resources, value -> {
+        try (var resources = new ExecutionResources(); var factory = new AgentExecutorFactoryImpl(catalog, CodexFixtureSupport.prompts(temp), resources, value -> {
             created.incrementAndGet(); return CodexFixtureSupport.client("success", value.timeout(), value.model());
         }); var callers = Executors.newVirtualThreadPerTaskExecutor()) {
             var futures = new ArrayList<Future<AgentExecutor>>();
@@ -91,7 +91,7 @@ class AgentRegistryTest {
         try (var resources = new ExecutionResources(); var factory = fixtureFactory(catalog, resources, "success")) {
             var planner = new AgentRequirementPlanner(factory);
             Path root = temp.resolve("projects");
-            var service = new ProjectUserifImpl(new ProjectSettings(root), factory, planner,
+            var service = new ProjectDomainImpl(new ProjectSettings(root), factory, planner,
                     new com.kk24426.zbagentwf.common.memory.MemoryStore(), new RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp)));
             assertThrows(IllegalStateException.class, () -> service.newProject("bad", plan.bean(), develop.bean(),
                     definition("missing", javaExecutable().toString()).bean()));
@@ -111,9 +111,9 @@ class AgentRegistryTest {
             assertTrue(second.getRequirements().stream().flatMap(value -> value.getTasks().stream())
                     .allMatch(task -> task.getStatus() == TaskStatus.PENDING));
             first.setPlanningAgent(new AgentExecutor(new AgentBean()) {
-                protected Prompt getDefluatPrompt() { return com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture"); }
-                protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture"); }
-                public String exec(Project p, String c, String m, com.kk24426.zbagentwf.user.agent.userif.AgentExecCallback cb) { throw new AssertionError(); }
+                protected Prompt getDefaultPrompt() { return com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture"); }
+                protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture"); }
+                public String exec(Project p, String c, String m, com.kk24426.zbagentwf.user.agent.userif.AgentExecutionCallback cb) { throw new AssertionError(); }
                 public String getStderr(String id) { return null; }
             });
             assertThrows(IllegalArgumentException.class, () -> service.createRequirements(first, "unknown binding"));
@@ -127,10 +127,10 @@ class AgentRegistryTest {
         var catalog = new AgentCatalog(List.of(first, second)); catalog.initialize();
         try (var resources = new ExecutionResources(); var factory = fixtureFactory(catalog, resources, "sleep")) {
             AgentExecutor a = factory.getExecutor(first.bean()); AgentExecutor b = factory.getExecutor(second.bean());
-            var results = new ArrayList<CompletableFuture<AgentExecResult>>();
+            var results = new ArrayList<CompletableFuture<AgentExecutionResult>>();
             var ids = new ArrayList<String>();
             for (int i = 0; i < 4; i++) {
-                var done = new CompletableFuture<AgentExecResult>(); results.add(done);
+                var done = new CompletableFuture<AgentExecutionResult>(); results.add(done);
                 ids.add((i % 2 == 0 ? a : b).exec(project("run" + i), "task", "", done::complete));
             }
             assertThrows(RejectedExecutionException.class, () -> b.exec(project("full"), "task", "", ignored -> fail()));
@@ -151,16 +151,16 @@ class AgentRegistryTest {
         var catalog = new AgentCatalog(List.of(definition)); catalog.initialize();
         try (var resources = new ExecutionResources(); var factory = fixtureFactory(catalog, resources, "success")) {
             var bean = definition.bean();
-            bean.setRolePrompt(com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("original-role"));
+            bean.setRolePrompt(com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("original-role"));
             var skill = new Skill(); skill.setSkillName("original-skill"); bean.setSkill(skill);
             var executor = factory.getExecutor(bean);
             assertSame(executor, factory.getExecutor(bean));
-            assertNotSame(executor, factory.getExecutor(com.kk24426.zbagentwf.agent.AgentExecutorImpl.copyAgent(bean)));
+            assertNotSame(executor, factory.getExecutor(com.kk24426.zbagentwf.agent.AbstractAgentExecutor.copyAgent(bean)));
             bean.getRolePrompt().setPrompt("changed-role");
             assertThrows(IllegalArgumentException.class, () -> factory.getExecutor(bean));
             bean.getRolePrompt().setPrompt("original-role"); skill.setSkillName("changed-skill");
             assertThrows(IllegalArgumentException.class, () -> factory.getExecutor(bean));
-            var done = new CompletableFuture<AgentExecResult>();
+            var done = new CompletableFuture<AgentExecutionResult>();
             executor.exec(project("nested"), "task", "", done::complete);
             var result = done.get(10, TimeUnit.SECONDS);
             assertTrue(result.isSuccess()); assertTrue(result.getSummary().contains("original-role"));
@@ -168,7 +168,7 @@ class AgentRegistryTest {
             var choice = new RoleAgentResolver.Selection("provider", "model", "same");
             var roles = new RoleAgentResolver(Map.of("planning", choice, "development", choice, "review", choice),
                     CodexFixtureSupport.prompts(temp));
-            var service = new ProjectUserifImpl(new ProjectSettings(temp.resolve("roles")), factory,
+            var service = new ProjectDomainImpl(new ProjectSettings(temp.resolve("roles")), factory,
                     new AgentRequirementPlanner(factory), new com.kk24426.zbagentwf.common.memory.MemoryStore(), roles);
             var first = service.newProject("项目一"); var second = service.newProject("项目二");
             assertNotSame(first.getPlanningAgent(), first.getDevelopmentAgent());
@@ -187,8 +187,8 @@ class AgentRegistryTest {
         }
     }
 
-    private AgentExecFactoryImpl fixtureFactory(AgentCatalog catalog, ExecutionResources resources, String scenario) {
-        return new AgentExecFactoryImpl(catalog, CodexFixtureSupport.prompts(temp), resources, value -> CodexFixtureSupport.client(scenario, value.timeout(), value.model()));
+    private AgentExecutorFactoryImpl fixtureFactory(AgentCatalog catalog, ExecutionResources resources, String scenario) {
+        return new AgentExecutorFactoryImpl(catalog, CodexFixtureSupport.prompts(temp), resources, value -> CodexFixtureSupport.client(scenario, value.timeout(), value.model()));
     }
 
     @Test

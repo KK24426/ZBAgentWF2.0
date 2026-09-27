@@ -44,9 +44,9 @@ class LoggingTest {
             for (String logger : new String[]{"com.kk24426.zbagentwf.user.chat.service.ChatService",
                     "com.kk24426.zbagentwf.agent.chat.AgentChatImpl", "org.springframework.web.Binding",
                     "com.kk24426.zbagentwf.agent.codex.CodexClient",
-                    "com.kk24426.zbagentwf.agent.registry.AgentExecFactoryImpl",
+                    "com.kk24426.zbagentwf.agent.registry.AgentExecutorFactoryImpl",
                     "com.kk24426.zbagentwf.agent.runtime.ExecutionResources",
-                    "com.kk24426.zbagentwf.agent.project.ProjectUserifImpl",
+                    "com.kk24426.zbagentwf.agent.project.ProjectDomainImpl",
                     "com.kk24426.zbagentwf.agent.web.WebRequestFilter"}) {
                 var event = new LoggingEvent("test", context.getLogger(logger), Level.ERROR,
                         "普通隐私消息", failure, null);

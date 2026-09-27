@@ -14,11 +14,11 @@ import com.kk24426.zbagentwf.user.agent.userif.AgentExecutor;
 import java.util.Objects;
 
 /** 模型通用父类；构造和 getter 均不读取文件、不执行模型。 */
-public abstract class AgentExecutorImpl extends AgentExecutor {
+public abstract class AbstractAgentExecutor extends AgentExecutor {
     private volatile Rules rules;
 
-    protected AgentExecutorImpl(AgentBean agent) { this(agent, null, null); }
-    protected AgentExecutorImpl(AgentBean agent, Prompt userPrompt, Prompt projectPrompt) {
+    protected AbstractAgentExecutor(AgentBean agent) { this(agent, null, null); }
+    protected AbstractAgentExecutor(AgentBean agent, Prompt userPrompt, Prompt projectPrompt) {
         super(copyAgent(agent), copyPrompt(userPrompt), copyPrompt(projectPrompt));
     }
 
@@ -28,7 +28,7 @@ public abstract class AgentExecutorImpl extends AgentExecutor {
         rules = new Rules(required(defaults), required(security));
     }
 
-    @Override protected final Prompt getDefluatPrompt() { return prompt(requireRules().defaults()); }
+    @Override protected final Prompt getDefaultPrompt() { return prompt(requireRules().defaults()); }
     @Override protected final Prompt getSecurityPrompt() { return prompt(requireRules().security()); }
 
     /** 在受理前生成本次快照；项目追加规则只影响之后的调用。 */

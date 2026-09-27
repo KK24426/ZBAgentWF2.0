@@ -8,7 +8,7 @@
 package com.kk24426.zbagentwf.common.agent.bean;
 
 /** 承载一次 Agent 执行结束后的结果和确认事项。 普通属性原样存取，不自动执行业务校验。 */
-public class AgentExecResult {
+public class AgentExecutionResult {
     /** 本次执行标识，与 exec 返回值一致，区别于规划任务 id。 */
     private String taskId;
 

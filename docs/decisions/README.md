@@ -21,6 +21,7 @@
 - [0010：配置注册、工厂与项目角色（实例复用和默认选择部分由0012替代）](./0010-agent-registry-project-roles.md)
 - [0012：内存项目、角色选择与提示词隔离](./0012-project-memory-role-prompts.md)
 - [0011：页面与接口消息本地化](./0011-message-localization.md)
+- [0013：Java 命名与包目录统一](./0013-java-naming-and-packages.md)
 
 阅读历史 ADR 时先看顶部的当前适用范围；已被替代的正文只保留决策背景，不用于恢复旧架构。当前按包协作，不因历史“模块”措辞新建 Maven 子模块；用户权限仍以根 `AGENTS.md` 为准。
 

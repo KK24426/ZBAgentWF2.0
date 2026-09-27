@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class CodexAgentExecTest {
+class CodexAgentExecutorTest {
     @TempDir Path temp;
 
     @Test
@@ -26,11 +26,11 @@ class CodexAgentExecTest {
         Project project = project("中文 project");
         var count = new AtomicInteger();
         try (var executor = executor("success")) {
-            var done = new CompletableFuture<AgentExecResult>();
+            var done = new CompletableFuture<AgentExecutionResult>();
             String id = executor.exec(project, "中文任务 ' ; $(literal)", "先前记忆", result -> {
                 count.incrementAndGet(); done.complete(result);
             });
-            AgentExecResult result = done.get(20, TimeUnit.SECONDS);
+            AgentExecutionResult result = done.get(20, TimeUnit.SECONDS);
             assertEquals(id, result.getTaskId());
             assertTrue(result.isSuccess(), result.getErrorMessage());
             assertFalse(result.isConfirmationRequired());
@@ -66,7 +66,7 @@ class CodexAgentExecTest {
         for (String scenario : List.of("bad-json", "contradiction", "exit-failure", "event-error",
                 "duplicate-completion", "missing-completion", "output-limit")) {
             try (var executor = executor(scenario)) {
-                AgentExecResult result = submit(executor, project(scenario));
+                AgentExecutionResult result = submit(executor, project(scenario));
                 assertFalse(result.isSuccess(), scenario);
                 assertFalse(result.isConfirmationRequired(), scenario);
                 assertNotNull(result.getErrorMessage());
@@ -78,7 +78,7 @@ class CodexAgentExecTest {
     @Test
     void drainsLargeStderrAndInputWithoutDeadlock() throws Exception {
         try (var executor = executor("flood")) {
-            var done = new CompletableFuture<AgentExecResult>();
+            var done = new CompletableFuture<AgentExecutionResult>();
             String id = executor.exec(project("flood"), "中文".repeat(100000), "", done::complete);
             assertTrue(done.get(20, TimeUnit.SECONDS).isSuccess());
             assertTrue(executor.getStderr(id).contains("诊断已截断"));
@@ -89,8 +89,8 @@ class CodexAgentExecTest {
     @Test
     void timeoutKillsProcessAndCleansSchemaEvenWhenStdinIsNotConsumed() throws Exception {
         Project project = project("timeout");
-        try (var executor = CodexFixtureSupport.ready(new CodexAgentExec(new AgentBean(), CodexFixtureSupport.client("no-input", Duration.ofSeconds(2))))) {
-            var done = new CompletableFuture<AgentExecResult>();
+        try (var executor = CodexFixtureSupport.ready(new CodexAgentExecutor(new AgentBean(), CodexFixtureSupport.client("no-input", Duration.ofSeconds(2))))) {
+            var done = new CompletableFuture<AgentExecutionResult>();
             executor.exec(project, "x".repeat(1024 * 1024), "", done::complete);
             assertFalse(done.get(10, TimeUnit.SECONDS).isSuccess());
             long pid = Long.parseLong(Files.readString(project.getWorkingDirectory().resolve("started")));
@@ -103,7 +103,7 @@ class CodexAgentExecTest {
     void closesObservedDescendantThatKeepsPipesOpenAfterParentExit() throws Exception {
         Project project = project("descendant");
         try (var executor = executor("descendant")) {
-            var done = new CompletableFuture<AgentExecResult>();
+            var done = new CompletableFuture<AgentExecutionResult>();
             executor.exec(project, "task", null, done::complete);
             assertNotNull(done.get(10, TimeUnit.SECONDS));
             long pid = Long.parseLong(Files.readString(project.getWorkingDirectory().resolve("child-pid")));
@@ -116,12 +116,12 @@ class CodexAgentExecTest {
     @Test
     void closeReleasesCacheAndCompletesAcceptedWorkWhileRejectingFurtherSubmissions() throws Exception {
         var executor = executor("sleep");
-        var completions = new ArrayList<CompletableFuture<AgentExecResult>>();
+        var completions = new ArrayList<CompletableFuture<AgentExecutionResult>>();
         var ids = new ArrayList<String>();
         var count = new AtomicInteger();
         try {
             for (int i = 0; i < 4; i++) {
-                var done = new CompletableFuture<AgentExecResult>();
+                var done = new CompletableFuture<AgentExecutionResult>();
                 completions.add(done);
                 ids.add(executor.exec(project("close" + i), "task", null, result -> { count.incrementAndGet(); done.complete(result); }));
             }
@@ -149,10 +149,10 @@ class CodexAgentExecTest {
         } finally { executor.close(); }
     }
 
-    private CodexAgentExec executor(String scenario) { return CodexFixtureSupport.ready(new CodexAgentExec(new AgentBean(), CodexFixtureSupport.client(scenario))); }
+    private CodexAgentExecutor executor(String scenario) { return CodexFixtureSupport.ready(new CodexAgentExecutor(new AgentBean(), CodexFixtureSupport.client(scenario))); }
 
-    private AgentExecResult submit(CodexAgentExec executor, Project project) throws Exception {
-        var done = new CompletableFuture<AgentExecResult>();
+    private AgentExecutionResult submit(CodexAgentExecutor executor, Project project) throws Exception {
+        var done = new CompletableFuture<AgentExecutionResult>();
         String id = executor.exec(project, "任务", null, done::complete);
         var result = done.get(20, TimeUnit.SECONDS);
         assertEquals(id, result.getTaskId());

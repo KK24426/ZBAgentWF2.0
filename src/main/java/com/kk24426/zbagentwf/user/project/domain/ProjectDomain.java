@@ -7,7 +7,7 @@
  */
 package com.kk24426.zbagentwf.user.project.domain;
 
-import com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum;
+import com.kk24426.zbagentwf.common.project.bean.AgentRole;
 import com.kk24426.zbagentwf.common.project.bean.Project;
 import com.kk24426.zbagentwf.common.project.bean.Requirement;
 import com.kk24426.zbagentwf.user.UserInterface;
@@ -29,8 +29,8 @@ public abstract class ProjectDomain implements UserInterface {
 			AgentBean reviewAgent);
 
 	public Project newProject(String content) {
-		return newProject(content, getAgent(AgentTypeEnum.planning), getAgent(AgentTypeEnum.development),
-				getAgent(AgentTypeEnum.review));
+		return newProject(content, getAgent(AgentRole.PLANNING), getAgent(AgentRole.DEVELOPMENT),
+				getAgent(AgentRole.REVIEW));
 
 	}
 
@@ -48,7 +48,7 @@ public abstract class ProjectDomain implements UserInterface {
 	 * @param agentTypeEnum Agent类型
 	 * @return
 	 */
-	protected abstract AgentBean getAgent(AgentTypeEnum agentTypeEnum);
+	protected abstract AgentBean getAgent(AgentRole agentTypeEnum);
 
 	/**
 	 * 将用户需求规划为项目内的需求列表，每条需求包含可执行 Task。

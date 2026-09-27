@@ -9,12 +9,12 @@ package com.kk24426.zbagentwf.agent.registry;
 
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
-import com.kk24426.zbagentwf.user.agent.userif.AgentBase;
+import com.kk24426.zbagentwf.user.agent.userif.AgentRegistry;
 import java.nio.file.Files;
 import java.util.*;
 
 /** 不查询账号模型、不执行 CLI；修改配置后重启，刷新只更新本机文件可用性。 */
-public final class AgentCatalog extends AgentBase {
+public final class AgentCatalog extends AgentRegistry {
     private final Map<AgentDefinition.Key, AgentDefinition> definitions;
     // 配置本身不可变；刷新构造新快照后一次发布，查询不会读到清空或填充中的中间状态。
     private volatile Map<AgentDefinition.Key, AgentDefinition> available = Map.of();

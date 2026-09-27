@@ -7,7 +7,7 @@
  */
 package com.kk24426.zbagentwf;
 
-import com.kk24426.zbagentwf.agent.project.ProjectUserifImpl;
+import com.kk24426.zbagentwf.agent.project.ProjectDomainImpl;
 import com.kk24426.zbagentwf.agent.registry.*;
 import com.kk24426.zbagentwf.common.project.bean.ProjectSettings;
 import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
@@ -51,19 +51,19 @@ public class AgentConfiguration {
     }
 
     @Bean(destroyMethod = "close")
-    AgentExecFactoryImpl agentExecFactory(AgentCatalog catalog, PromptCatalog prompts) { return new AgentExecFactoryImpl(catalog, prompts); }
+    AgentExecutorFactoryImpl agentExecFactory(AgentCatalog catalog, PromptCatalog prompts) { return new AgentExecutorFactoryImpl(catalog, prompts); }
 
     @Bean
-    AgentRequirementPlanner agentRequirementPlanner(AgentExecFactoryImpl factory) { return new AgentRequirementPlanner(factory); }
+    AgentRequirementPlanner agentRequirementPlanner(AgentExecutorFactoryImpl factory) { return new AgentRequirementPlanner(factory); }
 
     @Bean
-    ProjectDomain projectDomain(ProjectSettings settings, AgentExecFactoryImpl factory, AgentRequirementPlanner planner,
+    ProjectDomain projectDomain(ProjectSettings settings, AgentExecutorFactoryImpl factory, AgentRequirementPlanner planner,
             MemoryStore memory, RoleAgentResolver roles) {
-        return new ProjectUserifImpl(settings, factory, planner, memory, roles);
+        return new ProjectDomainImpl(settings, factory, planner, memory, roles);
     }
 
     @Bean
-    ApplicationListener<ContextClosedEvent> agentShutdownListener(AgentExecFactoryImpl factory) {
+    ApplicationListener<ContextClosedEvent> agentShutdownListener(AgentExecutorFactoryImpl factory) {
         // 关闭事件先停止受理并中断工作，后续 Bean 销毁再有限等待；两阶段使用同一个资源截止时间。
         return event -> factory.beginShutdown();
     }

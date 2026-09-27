@@ -25,23 +25,23 @@ class AgentPromptTest {
     @Test void abstractHooksAreNotCalledDuringConstruction() {
         var calls = new java.util.concurrent.atomic.AtomicInteger();
         var executor = new AgentExecutor(new AgentBean()) {
-            protected Prompt getDefluatPrompt() { calls.incrementAndGet(); return null; }
+            protected Prompt getDefaultPrompt() { calls.incrementAndGet(); return null; }
             protected Prompt getSecurityPrompt() { calls.incrementAndGet(); return null; }
-            public String exec(Project p, String c, String m, AgentExecCallback callback) { throw new AssertionError(); }
+            public String exec(Project p, String c, String m, AgentExecutionCallback callback) { throw new AssertionError(); }
             public String getStderr(String id) { return null; }
         };
         assertNotNull(executor); assertEquals(0, calls.get());
     }
 
     @Test void explicitInitializationCopiesNestedInputsAndLatestProjectRulesAreUsed() {
-        var bean = new AgentBean(); bean.setRolePrompt(AgentExecutorImpl.prompt("原角色"));
-        var user = AgentExecutorImpl.prompt("用户规则");
-        var executor = new Inspectable(bean, user, AgentExecutorImpl.prompt("构造项目规则"));
+        var bean = new AgentBean(); bean.setRolePrompt(AbstractAgentExecutor.prompt("原角色"));
+        var user = AbstractAgentExecutor.prompt("用户规则");
+        var executor = new Inspectable(bean, user, AbstractAgentExecutor.prompt("构造项目规则"));
         var project = new Project();
         assertThrows(AgentConfigurationUnavailableException.class, () -> executor.instructionsFor(project));
         assertThrows(AgentConfigurationUnavailableException.class,
-                () -> executor.initializePrompts(AgentExecutorImpl.prompt(" "), AgentExecutorImpl.prompt("安全")));
-        var defaults = AgentExecutorImpl.prompt("通用"); var security = AgentExecutorImpl.prompt("安全");
+                () -> executor.initializePrompts(AbstractAgentExecutor.prompt(" "), AbstractAgentExecutor.prompt("安全")));
+        var defaults = AbstractAgentExecutor.prompt("通用"); var security = AbstractAgentExecutor.prompt("安全");
         executor.initializePrompts(defaults, security);
         defaults.setPrompt("外部变更"); security.setPrompt("外部变更");
         user.setPrompt("外部变更"); bean.getRolePrompt().setPrompt("外部变更");
@@ -49,7 +49,7 @@ class AgentPromptTest {
         assertTrue(initial.contains("原角色")); assertTrue(initial.contains("用户规则"));
         assertTrue(initial.contains("构造项目规则")); assertFalse(initial.contains("外部变更"));
         assertTrue(initial.indexOf("安全规则") < initial.indexOf("通用规则"));
-        project.setProjectPrompt(AgentExecutorImpl.prompt("新项目规则"));
+        project.setProjectPrompt(AbstractAgentExecutor.prompt("新项目规则"));
         String next = executor.instructionsFor(project);
         assertTrue(next.contains("新项目规则")); assertFalse(next.contains("构造项目规则"));
         assertThrows(IllegalStateException.class, () -> executor.initializePrompts(defaults, security));
@@ -66,7 +66,7 @@ class AgentPromptTest {
         Files.write(temp.resolve("default.txt"), new byte[]{(byte) 0xc3, 0x28});
         assertThrows(java.io.IOException.class, () -> PromptCatalog.load(temp));
         var project = new Project(); project.setWorkingDirectory(temp); project.setProjectId("fixture");
-        try (var executor = new CodexAgentExec(new AgentBean(), CodexFixtureSupport.client("success"))) {
+        try (var executor = new CodexAgentExecutor(new AgentBean(), CodexFixtureSupport.client("success"))) {
             assertThrows(RejectedExecutionException.class, () -> executor.exec(project, "内容", "", ignored -> fail()));
             assertFalse(Files.exists(temp.resolve("started")));
         }
@@ -76,13 +76,13 @@ class AgentPromptTest {
     }
 
     @Test void acceptedExecutionKeepsRulesSnapshotEvenIfProjectChanges() throws Exception {
-        var bean = new AgentBean(); bean.setRolePrompt(AgentExecutorImpl.prompt("开发角色"));
+        var bean = new AgentBean(); bean.setRolePrompt(AbstractAgentExecutor.prompt("开发角色"));
         var project = new Project(); project.setProjectId("fixture"); project.setWorkingDirectory(temp);
-        project.setProjectPrompt(AgentExecutorImpl.prompt("受理时项目规则"));
-        try (var executor = CodexFixtureSupport.ready(new CodexAgentExec(bean, CodexFixtureSupport.client("success")))) {
-            var done = new CompletableFuture<AgentExecResult>();
+        project.setProjectPrompt(AbstractAgentExecutor.prompt("受理时项目规则"));
+        try (var executor = CodexFixtureSupport.ready(new CodexAgentExecutor(bean, CodexFixtureSupport.client("success")))) {
+            var done = new CompletableFuture<AgentExecutionResult>();
             executor.exec(project, "内容", "记忆", done::complete);
-            project.setProjectPrompt(AgentExecutorImpl.prompt("之后的项目规则"));
+            project.setProjectPrompt(AbstractAgentExecutor.prompt("之后的项目规则"));
             var result = done.get(10, TimeUnit.SECONDS);
             assertTrue(result.isSuccess());
             assertTrue(result.getSummary().contains("开发角色"));
@@ -91,9 +91,9 @@ class AgentPromptTest {
         }
     }
 
-    private static class Inspectable extends AgentExecutorImpl {
+    private static class Inspectable extends AbstractAgentExecutor {
         Inspectable(AgentBean agent, Prompt user, Prompt project) { super(agent, user, project); }
-        public String exec(Project p, String c, String m, AgentExecCallback callback) { throw new AssertionError(); }
+        public String exec(Project p, String c, String m, AgentExecutionCallback callback) { throw new AssertionError(); }
         public String getStderr(String id) { return null; }
     }
 }

@@ -10,8 +10,8 @@ package com.kk24426.zbagentwf.user.agent.userif;
 import static org.junit.jupiter.api.Assertions.*;
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import com.kk24426.zbagentwf.common.agent.bean.Prompt;
-import com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum;
-import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
+import com.kk24426.zbagentwf.common.project.bean.AgentRole;
+import com.kk24426.zbagentwf.common.agent.bean.AgentExecutionResult;
 import com.kk24426.zbagentwf.common.project.bean.Project;
 import com.kk24426.zbagentwf.common.project.bean.Requirement;
 import com.kk24426.zbagentwf.user.UserInterface;
@@ -25,14 +25,14 @@ import java.util.Map;
 import java.util.concurrent.RejectedExecutionException;
 import org.junit.jupiter.api.Test;
 
-class AgentExecContractTest {
+class AgentExecutionContractTest {
     @Test
     void callerAssociatesEachFinalResultAndDiagnosticsWithTheSubmittedProject() {
         var model = new AgentBean();
         var executor = new ManualExecutor(model);
         var first = project("project-1");
         var second = project("project-2");
-        var results = new ArrayList<AgentExecResult>();
+        var results = new ArrayList<AgentExecutionResult>();
         String firstId = executor.exec(first, "  原始内容  ", null, results::add);
         String secondId = executor.exec(second, "另一任务", "先前记忆", results::add);
         assertTrue(results.isEmpty());
@@ -43,14 +43,14 @@ class AgentExecContractTest {
         assertEquals("  原始内容  ", executor.pending.get(firstId).content());
         assertNull(executor.pending.get(firstId).memory());
         assertEquals("先前记忆", executor.pending.get(secondId).memory());
-        var confirm = new AgentExecResult();
+        var confirm = new AgentExecutionResult();
         confirm.setConfirmationRequired(true);
         confirm.setConfirmationMessage("请确认范围");
         executor.complete(secondId, confirm, "第二次执行诊断");
-        var success = new AgentExecResult();
+        var success = new AgentExecutionResult();
         success.setSuccess(true);
         executor.complete(firstId, success, "第一次执行诊断");
-        assertEquals(List.of(secondId, firstId), results.stream().map(AgentExecResult::getTaskId).toList());
+        assertEquals(List.of(secondId, firstId), results.stream().map(AgentExecutionResult::getTaskId).toList());
         assertEquals("第二次执行诊断", executor.getStderr(secondId));
         assertEquals("第一次执行诊断", executor.getStderr(firstId));
         assertFalse(confirm.isSuccess());
@@ -60,7 +60,7 @@ class AgentExecContractTest {
     @Test
     void rejectedSubmissionHasNoCompletionAndAcceptedFailureUsesAResult() {
         var executor = new ManualExecutor(new AgentBean());
-        var results = new ArrayList<AgentExecResult>();
+        var results = new ArrayList<AgentExecutionResult>();
         executor.reject = true;
         assertThrows(RejectedExecutionException.class,
                 () -> executor.exec(project("p"), "内容", "", results::add));
@@ -68,7 +68,7 @@ class AgentExecContractTest {
         assertTrue(executor.pending.isEmpty());
         executor.reject = false;
         String id = executor.exec(project("p"), "内容", "", results::add);
-        var failure = new AgentExecResult();
+        var failure = new AgentExecutionResult();
         failure.setErrorMessage("测试失败");
         executor.complete(id, failure, "");
         assertEquals(1, results.size());
@@ -81,10 +81,10 @@ class AgentExecContractTest {
     void projectPortCarriesProjectAndSelectedRequirements() {
         var port = new ProjectDomain() {
             private final Map<String, Project> projects = new HashMap<>();
-            @Override protected AgentBean getAgent(AgentTypeEnum role) { return new AgentBean(); }
+            @Override protected AgentBean getAgent(AgentRole role) { return new AgentBean(); }
             @Override public Project getProject(String id) { return projects.get(id); }
             @Override public void addProjectPrompt(String id, String content) {
-                projects.get(id).setProjectPrompt(com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt(content));
+                projects.get(id).setProjectPrompt(com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt(content));
             }
             @Override public Project newProject(String content, AgentBean planning, AgentBean development, AgentBean review) { var p = project(content); projects.put(content, p); return p; }
             @Override public List<Requirement> createRequirements(Project project, String content) {
@@ -122,11 +122,11 @@ class AgentExecContractTest {
         private boolean reject;
 
         private ManualExecutor(AgentBean agent) { super(agent); }
-        @Override protected Prompt getDefluatPrompt() { return com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-default"); }
-        @Override protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-security"); }
+        @Override protected Prompt getDefaultPrompt() { return com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture-default"); }
+        @Override protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture-security"); }
 
         @Override
-        public String exec(Project project, String content, String memory, AgentExecCallback callback) {
+        public String exec(Project project, String content, String memory, AgentExecutionCallback callback) {
             if (reject) throw new RejectedExecutionException("测试拒绝提交");
             String id = "execution-" + ++sequence;
             pending.put(id, new Submission(project, content, memory, callback));
@@ -135,7 +135,7 @@ class AgentExecContractTest {
 
         @Override public String getStderr(String taskId) { return diagnostics.get(taskId); }
 
-        private void complete(String id, AgentExecResult result, String diagnostic) {
+        private void complete(String id, AgentExecutionResult result, String diagnostic) {
             Submission submission = pending.remove(id);
             assertNotNull(submission);
             result.setTaskId(id);
@@ -144,5 +144,5 @@ class AgentExecContractTest {
         }
     }
 
-    private record Submission(Project project, String content, String memory, AgentExecCallback callback) { }
+    private record Submission(Project project, String content, String memory, AgentExecutionCallback callback) { }
 }

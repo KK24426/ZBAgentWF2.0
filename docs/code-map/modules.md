@@ -4,11 +4,11 @@
 | 任务 | 位置 | 验证 |
 | --- | --- | --- |
 | 用户接口、编排 | user | 目标测试、调用方、verify |
-| 项目/需求/Task、异步执行声明 | common.project.bean、common.agent.bean、user.project.domain、user.agent.userif | ProjectModelTest、AgentExecContractTest、verify；替身不代表真实执行 |
-| Codex 进程与异步执行、只读规划 | agent.codex | CodexAgentExecTest、CodexRequirementPlannerTest；真实 Java 子进程 fixture，不等于真实模型验收 |
-| UUID 项目、追加需求、串行 Task | agent.project | ProjectUserifImplTest、AgentRegistryTest；三角色绑定与隔离 |
+| 项目/需求/Task、异步执行声明 | common.project.bean、common.agent.bean、user.project.domain、user.agent.userif | ProjectModelTest、AgentExecutionContractTest、verify；替身不代表真实执行 |
+| Codex 进程与异步执行、只读规划 | agent.codex | CodexAgentExecutorTest、CodexRequirementPlannerTest；真实 Java 子进程 fixture，不等于真实模型验收 |
+| UUID 项目、追加需求、串行 Task | agent.project | ProjectDomainImplTest、AgentRegistryTest；三角色绑定与隔离 |
 | 模型配置、工厂与资源 | 根包AgentConfiguration、agent.registry、agent.runtime、config/agents.properties | AgentConfigurationTest、AgentRegistryTest、ExecutionResourcesTest |
-| 必填项目根目录初始化 | 根包ProjectConfiguration、common.project.bean.ProjectSettings、外部config/project.properties | ProjectConfigurationTest、ContextTest、真实WebJarIT配置加载/覆盖/失败 |
+| 必填项目根目录初始化 | 根包ProjectConfiguration、common.project.bean.ProjectSettings、外部config/project.properties | ProjectConfigurationTest、ApplicationContextTest、真实WebJarIT配置加载/覆盖/失败 |
 | 接口与数据库实现 | agent | 目标测试、调用方、verify；数据库用mysql-it |
 | 单次聊天骨架 | user.chat、agent.chat、common.chat、common.exception、static/chat.js | Service/Controller替身、过滤器/日志、真实JAR未接入路径 |
 | Bean、工具、共享技术异常 | common | 目标测试、调用方、verify |
@@ -17,4 +17,4 @@
 
 开始任务先读根AGENTS.md、就近AGENTS.md和根REQUIREMENTS.md。
 
-新增路由：通用内存/快照看common.memory、common.project.bean（MemoryStoreTest/ProjectHttpTest）；规则与绑定看agent.prompt、agent.AgentExecutorImpl、RoleAgentResolver（AgentPromptTest/AgentRegistryTest）；项目HTTP看user.project.controller/service（ProjectControllerTest/WebJarIT）。
+新增路由：通用内存/快照看common.memory、common.project.bean（MemoryStoreTest/ProjectHttpTest）；规则与绑定看agent.prompt、agent.AbstractAgentExecutor、RoleAgentResolver（AgentPromptTest/AgentRegistryTest）；项目HTTP看user.project.controller/service（ProjectControllerTest/WebJarIT）。

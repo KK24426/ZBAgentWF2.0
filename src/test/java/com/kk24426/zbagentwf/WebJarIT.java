@@ -244,20 +244,20 @@ class WebJarIT {
             }
             assertTrue(names.contains("BOOT-INF/classes/static/chat.js"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/chat/AgentChatImpl.class"));
-            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/CodexAgentExec.class"));
-            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/project/ProjectUserifImpl.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/codex/CodexAgentExecutor.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/project/ProjectDomainImpl.class"));
             assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/userif/AgentExecutor.class"));
-            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/registry/AgentExecFactoryImpl.class"));
+            assertTrue(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/agent/registry/AgentExecutorFactoryImpl.class"));
             assertFalse(names.contains("BOOT-INF/classes/com/kk24426/zbagentwf/user/agent/userif/AgentExec.class"));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/tomcat-embed-core")));
             assertTrue(names.stream().anyMatch(n -> n.startsWith("BOOT-INF/lib/mysql-connector-j")));
             assertFalse(names.stream().anyMatch(n -> n.contains("CliApplication") || n.contains("ZbAgentWfCli")
                     || n.contains("Fixture") || n.contains("MySqlIT") || n.contains("junit")
                     || n.contains("AgentBeanTest") || n.contains("UserInterfaceTest")
-                    || n.contains("ProjectModelTest") || n.contains("AgentExecContractTest")
+                    || n.contains("ProjectModelTest") || n.contains("AgentExecutionContractTest")
                     || n.contains("ProjectConfigurationTest")
                     || n.contains("AgentConfigurationTest") || n.contains("ExecutionResourcesTest") || n.contains("AgentRegistryTest")
-                    || n.contains("CodexAgentExecTest") || n.contains("CodexRequirementPlannerTest") || n.contains("ProjectUserifImplTest")
+                    || n.contains("CodexAgentExecutorTest") || n.contains("CodexRequirementPlannerTest") || n.contains("ProjectDomainImplTest")
                     || n.contains("ChatAgentFixture") || n.contains("ChatControllerTest") || n.contains("ChatServiceTest")));
         }
     }

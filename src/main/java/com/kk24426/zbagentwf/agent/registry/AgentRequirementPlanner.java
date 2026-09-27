@@ -14,8 +14,8 @@ import java.util.Objects;
 
 /** 实现层组合服务，不新增 user 业务接口，也不从执行摘要猜测规划数据。 */
 public final class AgentRequirementPlanner {
-    private final AgentExecFactoryImpl factory;
-    public AgentRequirementPlanner(AgentExecFactoryImpl factory) { this.factory = Objects.requireNonNull(factory); }
+    private final AgentExecutorFactoryImpl factory;
+    public AgentRequirementPlanner(AgentExecutorFactoryImpl factory) { this.factory = Objects.requireNonNull(factory); }
     /** 以项目绑定的实例选择专用规划协议；普通执行结果摘要不能作为需求列表解析。 */
     public List<Requirement> plan(Project project, String content) {
         return factory.plannerFor(project.getPlanningAgent()).plan(project, content);

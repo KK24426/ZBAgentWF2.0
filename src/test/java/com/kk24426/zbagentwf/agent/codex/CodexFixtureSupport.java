@@ -36,15 +36,15 @@ public final class CodexFixtureSupport {
             return com.kk24426.zbagentwf.agent.prompt.PromptCatalog.load(directory);
         } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
     }
-    public static CodexAgentExec ready(CodexAgentExec executor) {
-        executor.initializePrompts(com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-default-规则"),
-                com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-security-规则"));
+    public static CodexAgentExecutor ready(CodexAgentExecutor executor) {
+        executor.initializePrompts(com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture-default-规则"),
+                com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture-security-规则"));
         return executor;
     }
     public static CodexRequirementPlanner planner(CodexClient client) {
         var planner = new CodexRequirementPlanner(client);
-        planner.initializePrompts(com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-default-规则"),
-                com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-security-规则"));
+        planner.initializePrompts(com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture-default-规则"),
+                com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture-security-规则"));
         return planner;
     }
 }

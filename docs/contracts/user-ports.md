@@ -5,10 +5,10 @@
 ## user 包
 
 - `UserInterface`：由 UserImpl 更名的公共空父接口，没有业务方法，也不自动注册为 Spring Bean。
-- `user.agent.userif.AgentBase`：用户定义的本机 Agent 发现、查询和刷新抽象契约，implements UserInterface；由 agent.registry.AgentCatalog 实现配置注册及可执行文件快照，精确查询使用brand/name/ver。聊天实现不继承此类型。
+- `user.agent.userif.AgentRegistry`：用户定义的本机 Agent 发现、查询和刷新抽象契约，implements UserInterface；由 agent.registry.AgentCatalog 实现配置注册及可执行文件快照，精确查询使用brand/name/ver。聊天实现不继承此类型。
 - `UserService`：用户定义的服务父类占位，本轮保持原样，没有业务行为或 Spring 注解。
 
-用户已批准 UserImpl 更名、AgentBase 和 AgentBean 移包，以及[项目与执行契约](./project-agent.md)的字段和方法补齐。调用方需迁移类型名、import 和方法签名，不保留旧类型兼容层；项目不承诺 Maven 类库兼容。
+用户已批准 UserImpl 更名、AgentRegistry 和 AgentBean 移包，以及[项目与执行契约](./project-agent.md)的字段和方法补齐。调用方需迁移类型名、import 和方法签名，不保留旧类型兼容层；项目不承诺 Maven 类库兼容。
 
 ## common.agent.bean.AgentBean
 
@@ -26,4 +26,4 @@
 ## 验证边界
 
 AgentBeanTest 覆盖属性契约，UserInterfaceTest 用测试内子接口和实现类验证 Java 类型关系；这些样例不进入正式 JAR。
-ContextTest 在显式提供项目根目录后验证 Spring 扫描与注入，不构成真实 Agent 业务链路验收。
+ApplicationContextTest 在显式提供项目根目录后验证 Spring 扫描与注入，不构成真实 Agent 业务链路验收。

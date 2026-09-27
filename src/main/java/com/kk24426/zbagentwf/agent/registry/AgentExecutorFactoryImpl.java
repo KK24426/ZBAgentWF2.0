@@ -8,7 +8,7 @@
 package com.kk24426.zbagentwf.agent.registry;
 
 import com.kk24426.zbagentwf.agent.codex.*;
-import com.kk24426.zbagentwf.agent.AgentExecutorImpl;
+import com.kk24426.zbagentwf.agent.AbstractAgentExecutor;
 import com.kk24426.zbagentwf.agent.prompt.PromptCatalog;
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.function.Function;
 
 /** 缓存按实体身份保存；执行器由工厂关闭，业务调用方不单独关闭。 */
-public final class AgentExecFactoryImpl implements AgentExecFactory, AutoCloseable {
+public final class AgentExecutorFactoryImpl implements AgentExecutorFactory, AutoCloseable {
     private final AgentCatalog catalog;
     private final ExecutionResources resources;
     private final Function<AgentDefinition, CodexClient> clients;
@@ -26,12 +26,12 @@ public final class AgentExecFactoryImpl implements AgentExecFactory, AutoCloseab
     private final Map<AgentExecutor, CodexRequirementPlanner> planners = new IdentityHashMap<>();
     private boolean closed;
 
-    public AgentExecFactoryImpl(AgentCatalog catalog, PromptCatalog prompts) {
+    public AgentExecutorFactoryImpl(AgentCatalog catalog, PromptCatalog prompts) {
         this(catalog, prompts, new ExecutionResources(), value -> new CodexClient(value.path(), value.model(), value.timeout()));
     }
 
     // 同包测试可替换进程边界；生产配置没有任意 command/args 或 shell 字符串入口。
-    AgentExecFactoryImpl(AgentCatalog catalog, PromptCatalog prompts, ExecutionResources resources, Function<AgentDefinition, CodexClient> clients) {
+    AgentExecutorFactoryImpl(AgentCatalog catalog, PromptCatalog prompts, ExecutionResources resources, Function<AgentDefinition, CodexClient> clients) {
         this.catalog = Objects.requireNonNull(catalog);
         this.prompts = Objects.requireNonNull(prompts);
         this.resources = Objects.requireNonNull(resources);
@@ -51,7 +51,7 @@ public final class AgentExecFactoryImpl implements AgentExecFactory, AutoCloseab
             var defaults = prompts.require("default");
             var security = prompts.require("security");
             CodexClient client = clients.apply(definition);
-            var executor = new CodexAgentExec(AgentExecutorImpl.copyAgent(agent), client, resources);
+            var executor = new CodexAgentExecutor(AbstractAgentExecutor.copyAgent(agent), client, resources);
             executor.initializePrompts(defaults, security);
             var planner = new CodexRequirementPlanner(client, resources, executor);
             entry = new Entry(binding, executor, planner);
@@ -87,7 +87,7 @@ public final class AgentExecFactoryImpl implements AgentExecFactory, AutoCloseab
         synchronized (this) { entries.clear(); planners.clear(); }
     }
 
-    private record Entry(Binding binding, CodexAgentExec executor, CodexRequirementPlanner planner) { }
+    private record Entry(Binding binding, CodexAgentExecutor executor, CodexRequirementPlanner planner) { }
     private record Binding(AgentDefinition.Key model, boolean hasRole, String role, boolean hasSkill, String skill) {
         private static Binding from(AgentBean bean) {
             var key = AgentDefinition.Key.from(bean);

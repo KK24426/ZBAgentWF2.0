@@ -7,7 +7,7 @@
  */
 package com.kk24426.zbagentwf.common.project.bean;
 
-import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
+import com.kk24426.zbagentwf.common.agent.bean.AgentExecutionResult;
 
 /** 保存需求拆分出的规划任务、状态与执行结果。 普通属性原样存取，不自动执行业务校验。 */
 public class RequirementTask {
@@ -24,7 +24,7 @@ public class RequirementTask {
     private TaskStatus status = TaskStatus.PENDING;
 
     /** 关联的单次执行结果；尚无结果时为 null。 */
-    private AgentExecResult result;
+    private AgentExecutionResult result;
 
     public String getId() {
         return id;
@@ -58,11 +58,11 @@ public class RequirementTask {
         this.status = status;
     }
 
-    public AgentExecResult getResult() {
+    public AgentExecutionResult getResult() {
         return result;
     }
 
-    public void setResult(AgentExecResult result) {
+    public void setResult(AgentExecutionResult result) {
         this.result = result;
     }
 }

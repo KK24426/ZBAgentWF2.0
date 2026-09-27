@@ -7,11 +7,11 @@
  */
 package com.kk24426.zbagentwf.agent.registry;
 
-import com.kk24426.zbagentwf.agent.AgentExecutorImpl;
+import com.kk24426.zbagentwf.agent.AbstractAgentExecutor;
 import com.kk24426.zbagentwf.agent.prompt.PromptCatalog;
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
-import com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum;
+import com.kk24426.zbagentwf.common.project.bean.AgentRole;
 import java.util.Map;
 import java.util.Objects;
 
@@ -23,11 +23,11 @@ public final class RoleAgentResolver {
     public RoleAgentResolver(Map<String, Selection> defaults, PromptCatalog prompts) {
         this.defaults = Map.copyOf(defaults);
         this.prompts = Objects.requireNonNull(prompts);
-        for (String role : defaults.keySet()) AgentTypeEnum.valueOf(role);
+        for (String role : defaults.keySet()) AgentRole.fromConfigKey(role);
     }
 
-    public AgentBean defaultFor(AgentTypeEnum role) {
-        var key = defaults.get(role.name());
+    public AgentBean defaultFor(AgentRole role) {
+        var key = defaults.get(role.configKey());
         if (key == null || blank(key.brand()) || blank(key.name()) || blank(key.ver())) throw new AgentConfigurationUnavailableException();
         return bind(key.bean(), role);
     }
@@ -40,9 +40,9 @@ public final class RoleAgentResolver {
         }
     }
 
-    public AgentBean bind(AgentBean selected, AgentTypeEnum role) {
-        var bound = AgentExecutorImpl.copyAgent(Objects.requireNonNull(selected, "必须指定角色模型。"));
-        if (bound.getRolePrompt() == null) bound.setRolePrompt(prompts.require(role.name()));
+    public AgentBean bind(AgentBean selected, AgentRole role) {
+        var bound = AbstractAgentExecutor.copyAgent(Objects.requireNonNull(selected, "必须指定角色模型。"));
+        if (bound.getRolePrompt() == null) bound.setRolePrompt(prompts.require(role.configKey()));
         if (bound.getRolePrompt().getPrompt() == null || bound.getRolePrompt().getPrompt().isBlank()) {
             throw new AgentConfigurationUnavailableException();
         }

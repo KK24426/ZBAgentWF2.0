@@ -27,17 +27,17 @@ class AgentConfigurationTest {
         Path file = temp.resolve("agents.properties");
         Properties values = properties();
         try (var out = Files.newOutputStream(file)) { values.store(out, "fixture"); }
-        var holder = new AgentExecFactory[1];
+        var holder = new AgentExecutorFactory[1];
         var model = new com.kk24426.zbagentwf.common.agent.bean.AgentBean[1];
         runner().withInitializer(new ConfigDataApplicationContextInitializer())
                 .withPropertyValues("spring.config.location=optional:file:" + temp.resolve("absent.properties").toUri(),
                         "spring.config.import=" + file.toUri(), "zb.agents[0].ver=overridden")
                 .run(context -> {
                     assertNull(context.getStartupFailure());
-                    var catalog = context.getBean(AgentBase.class);
+                    var catalog = context.getBean(AgentRegistry.class);
                     model[0] = catalog.getActiveAgent("fixture-provider", "fixture-model", "overridden");
                     assertNotNull(context.getBean(ProjectDomain.class));
-                    holder[0] = context.getBean(AgentExecFactory.class);
+                    holder[0] = context.getBean(AgentExecutorFactory.class);
                     assertSame(holder[0].getExecutor(model[0]), holder[0].getExecutor(model[0]));
                     assertFalse(Files.exists(temp.resolve("projects")));
                 });
@@ -48,7 +48,7 @@ class AgentConfigurationTest {
     void missingRegistrationsPermitWebCompositionButLookupExplicitlyFails() {
         runner().run(context -> {
             assertNull(context.getStartupFailure());
-            assertThrows(IllegalStateException.class, () -> context.getBean(AgentBase.class).getActiveAgent());
+            assertThrows(IllegalStateException.class, () -> context.getBean(AgentRegistry.class).getActiveAgent());
         });
     }
 
@@ -73,13 +73,13 @@ class AgentConfigurationTest {
                 .run(context -> {
                     assertNull(context.getStartupFailure());
                     var roles = context.getBean(com.kk24426.zbagentwf.agent.registry.RoleAgentResolver.class);
-                    var planning = roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum.planning);
+                    var planning = roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentRole.PLANNING);
                     assertEquals("shared", planning.getName()); assertEquals("one", planning.getVer());
                     assertEquals("fixture-planning-规则", planning.getRolePrompt().getPrompt());
                     assertThrows(com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException.class,
-                            () -> roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum.development));
+                            () -> roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentRole.DEVELOPMENT));
                     assertThrows(com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException.class,
-                            () -> roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentTypeEnum.review));
+                            () -> roles.defaultFor(com.kk24426.zbagentwf.common.project.bean.AgentRole.REVIEW));
                     assertFalse(Files.exists(temp.resolve("projects")));
                 });
     }
@@ -102,11 +102,11 @@ class AgentConfigurationTest {
                         "spring.config.import=" + file.toUri());
         base.run(context -> {
             assertNull(context.getStartupFailure());
-            assertEquals("environment", context.getBean(AgentBase.class).getActiveAgent().getFirst().getVer());
+            assertEquals("environment", context.getBean(AgentRegistry.class).getActiveAgent().getFirst().getVer());
         });
         base.withSystemProperties("zb.agents[0].ver=system").run(context -> {
             assertNull(context.getStartupFailure());
-            assertEquals("system", context.getBean(AgentBase.class).getActiveAgent().getFirst().getVer());
+            assertEquals("system", context.getBean(AgentRegistry.class).getActiveAgent().getFirst().getVer());
         });
     }
     private Properties properties() {

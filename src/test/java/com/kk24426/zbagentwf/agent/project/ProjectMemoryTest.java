@@ -28,13 +28,13 @@ class ProjectMemoryTest {
     @Test void createsDistinctBindingsRegistersOriginalAndAppendsProjectPrompt() {
         var memory = new MemoryStore();
         var received = new ArrayList<AgentBean>();
-        AgentExecFactory factory = bean -> { received.add(bean); return mock(AgentExecutor.class); };
+        AgentExecutorFactory factory = bean -> { received.add(bean); return mock(AgentExecutor.class); };
         var planner = mock(AgentRequirementPlanner.class);
         when(planner.plan(any(), anyString())).thenReturn(List.of(new Requirement()));
         var selection = new RoleAgentResolver.Selection("provider", "model", "default");
         var roles = new RoleAgentResolver(Map.of("planning", selection, "development", selection, "review", selection),
                 CodexFixtureSupport.prompts(temp));
-        var service = new ProjectUserifImpl(new ProjectSettings(temp.resolve("projects")), factory, planner, memory, roles);
+        var service = new ProjectDomainImpl(new ProjectSettings(temp.resolve("projects")), factory, planner, memory, roles);
         var first = service.newProject("第一项目");
         assertSame(first, service.getProject(first.getProjectId()));
         assertEquals(List.of("default", "default", "default"), received.stream().map(AgentBean::getVer).toList());
@@ -57,7 +57,7 @@ class ProjectMemoryTest {
     @Test void failedCreationNeverRegistersAndMissingDefaultsDoNotCreateDirectories() {
         var memory = new MemoryStore(); var planner = mock(AgentRequirementPlanner.class);
         var roles = new RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp));
-        var service = new ProjectUserifImpl(new ProjectSettings(temp.resolve("projects")),
+        var service = new ProjectDomainImpl(new ProjectSettings(temp.resolve("projects")),
                 ignored -> mock(AgentExecutor.class), planner, memory, roles);
         assertThrows(AgentConfigurationUnavailableException.class, () -> service.newProject("任务"));
         assertFalse(Files.exists(temp.resolve("projects")));
@@ -71,13 +71,22 @@ class ProjectMemoryTest {
         assertTrue(memory.get("project", captured[0].getProjectId(), Project.class).isEmpty());
         assertFalse(Files.exists(captured[0].getWorkingDirectory()));
     }
+
+    @Test void roleConfigurationStillRejectsUppercaseMixedCaseAndUnknownKeys() {
+        var selection = new RoleAgentResolver.Selection("provider", "model", "default");
+        var prompts = CodexFixtureSupport.prompts(temp);
+        for (String invalid : List.of("PLANNING", "DEVELOPMENT", "REVIEW", "Planning", " planning", "unknown")) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new RoleAgentResolver(Map.of(invalid, selection), prompts), invalid);
+        }
+    }
     @Test void initialPlanningRejectionPreservesRetryableTypeAndDoesNotPublishProject() {
         var memory = new MemoryStore(); var planner = mock(AgentRequirementPlanner.class);
         var captured = new Project[1];
         when(planner.plan(any(), anyString())).thenAnswer(call -> {
             captured[0] = call.getArgument(0); throw new java.util.concurrent.RejectedExecutionException("fixture-full");
         });
-        var service = new ProjectUserifImpl(new ProjectSettings(temp.resolve("projects")),
+        var service = new ProjectDomainImpl(new ProjectSettings(temp.resolve("projects")),
                 ignored -> mock(AgentExecutor.class), planner, memory,
                 new RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp)));
         var model = new AgentBean();

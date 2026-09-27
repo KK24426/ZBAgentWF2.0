@@ -9,14 +9,14 @@ package com.kk24426.zbagentwf.agent.project;
 
 import com.kk24426.zbagentwf.agent.registry.AgentRequirementPlanner;
 import com.kk24426.zbagentwf.agent.registry.RoleAgentResolver;
-import com.kk24426.zbagentwf.agent.AgentExecutorImpl;
+import com.kk24426.zbagentwf.agent.AbstractAgentExecutor;
 import com.kk24426.zbagentwf.common.memory.MemoryStore;
 import com.kk24426.zbagentwf.common.agent.bean.AgentBean;
-import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
+import com.kk24426.zbagentwf.common.agent.bean.AgentExecutionResult;
 import com.kk24426.zbagentwf.common.project.bean.*;
 import com.kk24426.zbagentwf.user.agent.userif.AgentExecutor;
 import com.kk24426.zbagentwf.user.project.domain.ProjectDomain;
-import com.kk24426.zbagentwf.user.agent.userif.AgentExecFactory;
+import com.kk24426.zbagentwf.user.agent.userif.AgentExecutorFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,15 +28,15 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 
 /** 创建时绑定三角色，后续操作读取项目中的绑定；实例本身不保存当前项目或默认模型。 */
-public final class ProjectUserifImpl extends ProjectDomain {
+public final class ProjectDomainImpl extends ProjectDomain {
     private final ProjectSettings settings;
     private final AgentRequirementPlanner planner;
-    private final AgentExecFactory factory;
+    private final AgentExecutorFactory factory;
     private final MemoryStore memory;
     private final RoleAgentResolver roles;
     private final Map<Path, ProjectLock> locks = new HashMap<>();
 
-    public ProjectUserifImpl(ProjectSettings settings, AgentExecFactory factory, AgentRequirementPlanner planner, MemoryStore memory, RoleAgentResolver roles) {
+    public ProjectDomainImpl(ProjectSettings settings, AgentExecutorFactory factory, AgentRequirementPlanner planner, MemoryStore memory, RoleAgentResolver roles) {
         this.settings = Objects.requireNonNull(settings);
         this.planner = Objects.requireNonNull(planner);
         this.factory = Objects.requireNonNull(factory);
@@ -48,9 +48,9 @@ public final class ProjectUserifImpl extends ProjectDomain {
     public Project newProject(String content, AgentBean planningAgent, AgentBean developmentAgent, AgentBean reviewAgent) {
         requireContent(content);
         // 三个模型全部解析成功后才产生项目目录等外部副作用。
-        AgentExecutor planning = Objects.requireNonNull(factory.getExecutor(roles.bind(planningAgent, AgentTypeEnum.planning)));
-        AgentExecutor development = Objects.requireNonNull(factory.getExecutor(roles.bind(developmentAgent, AgentTypeEnum.development)));
-        AgentExecutor review = Objects.requireNonNull(factory.getExecutor(roles.bind(reviewAgent, AgentTypeEnum.review)));
+        AgentExecutor planning = Objects.requireNonNull(factory.getExecutor(roles.bind(planningAgent, AgentRole.PLANNING)));
+        AgentExecutor development = Objects.requireNonNull(factory.getExecutor(roles.bind(developmentAgent, AgentRole.DEVELOPMENT)));
+        AgentExecutor review = Objects.requireNonNull(factory.getExecutor(roles.bind(reviewAgent, AgentRole.REVIEW)));
         Path created = null;
         try {
             Path root = settings.getRootDirectory();
@@ -79,7 +79,7 @@ public final class ProjectUserifImpl extends ProjectDomain {
         }
     }
 
-    @Override protected AgentBean getAgent(AgentTypeEnum role) { return roles.defaultFor(role); }
+    @Override protected AgentBean getAgent(AgentRole role) { return roles.defaultFor(role); }
 
     @Override public Project getProject(String projectId) {
         Project project = memory.get("project", projectId, Project.class)
@@ -95,7 +95,7 @@ public final class ProjectUserifImpl extends ProjectDomain {
             try (var ignored = lock(directory(project))) {
                 var previous = project.getProjectPrompt();
                 String text = previous == null ? null : previous.getPrompt();
-                project.setProjectPrompt(AgentExecutorImpl.prompt(text == null || text.isBlank() ? content : text + "\n" + content));
+                project.setProjectPrompt(AbstractAgentExecutor.prompt(text == null || text.isBlank() ? content : text + "\n" + content));
             }
         }
     }
@@ -138,8 +138,8 @@ public final class ProjectUserifImpl extends ProjectDomain {
                             // 既有失败或待确认也会挡住后续任务；只有调用方显式重置 PENDING 才算重试。
                             if (task.getStatus() == TaskStatus.FAILED || task.getStatus() == TaskStatus.NEEDS_CONFIRMATION) return selected;
                             if (task.getStatus() != TaskStatus.PENDING) continue;
-                            var completion = new CompletableFuture<AgentExecResult>();
-                            AgentExecResult previous = task.getResult();
+                            var completion = new CompletableFuture<AgentExecutionResult>();
+                            AgentExecutionResult previous = task.getResult();
                             // 重试是新会话；先保存原确认问题/失败原因和新答复，再清除当前结果。
                             String context = memory(requirement);
                             task.setResult(null);
@@ -154,7 +154,7 @@ public final class ProjectUserifImpl extends ProjectDomain {
                                 task.setResult(previous);
                                 throw failure;
                             }
-                            AgentExecResult result;
+                            AgentExecutionResult result;
                             // 当前契约没有取消操作。调用方中断后仍须等已受理执行结束并落下结果，
                             // 随后停止本批并恢复中断标志，不能留下后台修改与前台状态脱节的 Task。
                             while (true) {
@@ -165,7 +165,7 @@ public final class ProjectUserifImpl extends ProjectDomain {
                             // 回调可能来自其它实现或替身；标识不匹配、互斥状态冲突时统一记为失败。
                             if (result == null || !Objects.equals(id, result.getTaskId())
                                     || result.isSuccess() && result.isConfirmationRequired()) {
-                                result = new AgentExecResult();
+                                result = new AgentExecutionResult();
                                 result.setTaskId(id);
                                 result.setErrorMessage("底层执行结果违反回调契约。");
                             }
@@ -261,7 +261,7 @@ public final class ProjectUserifImpl extends ProjectDomain {
                 .append("\n需求验收：\n").append(Objects.toString(requirement.getAcceptanceCriteria(), ""))
                 .append("\n确认相关内容：\n").append(Objects.toString(requirement.getUserConfirmMsg(), ""));
         for (RequirementTask task : requirement.getTasks()) {
-            AgentExecResult previous = task.getResult();
+            AgentExecutionResult previous = task.getResult();
             if (previous != null) {
                 memory.append("\n规划任务：").append(task.getId())
                         .append("\n先前执行：").append(Objects.toString(previous.getTaskId(), ""))

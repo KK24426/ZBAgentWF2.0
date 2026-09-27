@@ -21,7 +21,7 @@ import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class ProjectUserifImplTest {
+class ProjectDomainImplTest {
     @TempDir Path temp;
     private final AgentBean model = new AgentBean();
     private final List<Project> existingProjects = new ArrayList<>();
@@ -196,9 +196,9 @@ class ProjectUserifImplTest {
         assertTrue(executor.calls.isEmpty());
     }
 
-    private ProjectUserifImpl service(AgentRequirementPlanner planner, AgentExecutor executor) {
+    private ProjectDomainImpl service(AgentRequirementPlanner planner, AgentExecutor executor) {
         existingProjects.forEach(project -> project.setDevelopmentAgent(executor));
-        return new ProjectUserifImpl(new ProjectSettings(temp.resolve("projects")), ignored -> executor, planner, new com.kk24426.zbagentwf.common.memory.MemoryStore(),
+        return new ProjectDomainImpl(new ProjectSettings(temp.resolve("projects")), ignored -> executor, planner, new com.kk24426.zbagentwf.common.memory.MemoryStore(),
                 new com.kk24426.zbagentwf.agent.registry.RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp)));
     }
 
@@ -226,7 +226,7 @@ class ProjectUserifImplTest {
             first.get(5, TimeUnit.SECONDS); second.get(5, TimeUnit.SECONDS);
             assertEquals(2, project.getRequirements().size());
         } finally { release.countDown(); }
-        var field = ProjectUserifImpl.class.getDeclaredField("locks");
+        var field = ProjectDomainImpl.class.getDeclaredField("locks");
         field.setAccessible(true);
         assertTrue(((Map<?, ?>) field.get(service)).isEmpty(), "结束后的项目锁不应一直积累");
     }
@@ -253,9 +253,9 @@ class ProjectUserifImplTest {
         final BlockingQueue<Invocation> calls = new LinkedBlockingQueue<>();
         boolean reject;
         ManualExecutor() { super(new AgentBean()); }
-        @Override protected Prompt getDefluatPrompt() { return com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-default"); }
-        @Override protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.AgentExecutorImpl.prompt("fixture-security"); }
-        @Override public String exec(Project project, String content, String memory, AgentExecCallback callback) {
+        @Override protected Prompt getDefaultPrompt() { return com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture-default"); }
+        @Override protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.AbstractAgentExecutor.prompt("fixture-security"); }
+        @Override public String exec(Project project, String content, String memory, AgentExecutionCallback callback) {
             if (reject) throw new RejectedExecutionException("fixture");
             String id = UUID.randomUUID().toString();
             calls.add(new Invocation(id, content, memory, callback));
@@ -265,9 +265,9 @@ class ProjectUserifImplTest {
         Invocation next() throws Exception { return Objects.requireNonNull(calls.poll(5, TimeUnit.SECONDS), "没有收到执行"); }
     }
 
-    private record Invocation(String id, String content, String memory, AgentExecCallback callback) {
+    private record Invocation(String id, String content, String memory, AgentExecutionCallback callback) {
         void complete(boolean success, boolean confirmation) {
-            var result = new AgentExecResult(); result.setTaskId(id); result.setSuccess(success);
+            var result = new AgentExecutionResult(); result.setTaskId(id); result.setSuccess(success);
             result.setConfirmationRequired(confirmation); result.setSummary("fixture summary");
             if (confirmation) result.setConfirmationMessage("请确认");
             if (!success && !confirmation) result.setErrorMessage("fixture failure");

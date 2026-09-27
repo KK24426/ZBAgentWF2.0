@@ -8,7 +8,7 @@
 package com.kk24426.zbagentwf.common.project.bean;
 
 import static org.junit.jupiter.api.Assertions.*;
-import com.kk24426.zbagentwf.common.agent.bean.AgentExecResult;
+import com.kk24426.zbagentwf.common.agent.bean.AgentExecutionResult;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
@@ -58,7 +58,7 @@ class ProjectModelTest {
         task.setId("planning-1");
         task.setContent("执行内容");
         task.setAcceptanceCriteria("任务验收");
-        var result = new AgentExecResult();
+        var result = new AgentExecutionResult();
         assertNull(result.getTokenCount());
         result.setTaskId("execution-2");
         result.setConfirmationRequired(true);
@@ -90,7 +90,7 @@ class ProjectModelTest {
 
     @Test
     void resultPropertiesPreserveValuesWithoutInferringBusinessState() {
-        var result = new AgentExecResult();
+        var result = new AgentExecutionResult();
         result.setSuccess(true);
         result.setTokenCount(0L);
         result.setSummary("完成");

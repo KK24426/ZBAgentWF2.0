@@ -37,7 +37,7 @@ public class ProjectController {
 
     @PostMapping(value = "/api/projects", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> create(@RequestBody ProjectHttp.Create request, Locale locale) {
+    public ResponseEntity<?> create(@RequestBody ProjectHttp.CreateProjectRequest request, Locale locale) {
         if (request == null || !request.valid()) return invalid(locale);
         Project project = request.defaults() ? projectService.newProject(request.content())
                 : projectService.newProject(request.content(), request.planningAgent().bean(),
@@ -51,7 +51,7 @@ public class ProjectController {
     }
 
     @PostMapping(value = "/api/projects/{projectId}/prompts", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> prompt(@PathVariable String projectId, @RequestBody ProjectHttp.Content request, Locale locale) {
+    public ResponseEntity<?> prompt(@PathVariable String projectId, @RequestBody ProjectHttp.ProjectContentRequest request, Locale locale) {
         if (request == null || !ProjectHttp.text(request.content())) return invalid(locale);
         return withProject(projectId, locale, p -> {
             projectService.addProjectPrompt(p, request.content());
@@ -61,7 +61,7 @@ public class ProjectController {
 
     @PostMapping(value = "/api/projects/{projectId}/requirements", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> requirements(@PathVariable String projectId, @RequestBody ProjectHttp.Content request, Locale locale) {
+    public ResponseEntity<?> requirements(@PathVariable String projectId, @RequestBody ProjectHttp.ProjectContentRequest request, Locale locale) {
         if (request == null || !ProjectHttp.text(request.content())) return invalid(locale);
         return withProject(projectId, locale, p -> {
             projectService.createRequirements(p, request.content());

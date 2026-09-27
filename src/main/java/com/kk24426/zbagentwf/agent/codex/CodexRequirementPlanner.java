@@ -10,7 +10,7 @@ package com.kk24426.zbagentwf.agent.codex;
 import com.kk24426.zbagentwf.common.project.bean.Requirement;
 import com.kk24426.zbagentwf.common.project.bean.Project;
 import com.kk24426.zbagentwf.common.agent.bean.Prompt;
-import com.kk24426.zbagentwf.agent.AgentExecutorImpl;
+import com.kk24426.zbagentwf.agent.AbstractAgentExecutor;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
 import com.kk24426.zbagentwf.common.project.bean.RequirementTask;
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
@@ -42,11 +42,11 @@ public final class CodexRequirementPlanner {
     /** 独立低层规划器也必须显式初始化；工厂规划使用已绑定执行器的规则。 */
     public synchronized void initializePrompts(Prompt defaults, Prompt security) {
         if (initializedRules != null) throw new IllegalStateException("规划规则已经初始化。");
-        initializedRules = AgentExecutorImpl.instructions(defaults, security, null, null, null);
+        initializedRules = AbstractAgentExecutor.instructions(defaults, security, null, null, null);
     }
 
     public List<Requirement> plan(Project project, String content) {
-        if (!(owner instanceof AgentExecutorImpl executor)) throw new AgentConfigurationUnavailableException();
+        if (!(owner instanceof AbstractAgentExecutor executor)) throw new AgentConfigurationUnavailableException();
         return planWithRules(project.getWorkingDirectory(), content, executor.instructionsFor(project));
     }
 

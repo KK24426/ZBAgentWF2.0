@@ -58,7 +58,7 @@ class ProjectControllerTest {
         when(domain.getProject("project-1")).thenReturn(project);
         when(domain.getProject("missing")).thenThrow(new IllegalArgumentException("internal-private-text"));
         when(domain.execTask(project)).thenAnswer(call -> {
-            var result = new AgentExecResult(); result.setTaskId("execution-1"); result.setSuccess(true); result.setSummary("完成");
+            var result = new AgentExecutionResult(); result.setTaskId("execution-1"); result.setSuccess(true); result.setSummary("完成");
             t.setResult(result); t.setStatus(TaskStatus.SUCCEEDED); return project.getRequirements();
         });
     }
