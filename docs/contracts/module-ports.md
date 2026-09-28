@@ -49,4 +49,6 @@ MyBatis原生日志关闭，诊断拦截器只记录statement ID、操作、耗�
 ZbAgentWfApplication、ProjectConfiguration、AgentConfiguration、ProjectSettings、WebRequestFilter、common.logging公开类型和MySqlConfiguration属于已批准的技术基础能力，不构成用户业务接口。2026-09-27批准MsgConfiguration、common.msg.MsgCatalog、agent.web.MsgLocaleResolver/HomePageController作为本地化技术能力；没有新增业务API。
 后续用户业务接口、DTO、schema、事务变化在本文同步索引，不能由文档先发明契约。
 
-2026-09-27另行批准ProjectController/Service、ProjectDomain适配、common.memory.MemoryStore、ProjectHttp快照及Prompt/Skill原字段读写。角色映射和规则文件契约详见[项目与执行契约](./project-agent.md#内存登记及规则绑定)。
+2026-09-27另行批准ProjectController/Service、ProjectDomain适配、common.memory.MemoryStore、ProjectHttp快照及Prompt/Skill原字段读写。角色映射和规则文件契约详见[项目与执行契约](./project-agent.md#规则绑定)。
+
+2026-09-28用户批准ProjectAgentExecutor、getExecutor(Project)、Long任务主键、Prompt不可变/附件预留、项目名称与四表持久化。ProjectDomain新签名及完整迁移规则见[项目契约](./project-agent.md)；原失效入口删除。mysql未启用时项目503，真实业务调用统一安全预审。

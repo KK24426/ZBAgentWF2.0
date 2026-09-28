@@ -3,13 +3,13 @@
  * 更新日期：2026-09-25
  * 做 成 者：zebiao
  * 版    本：v0.1
- * 功能概要：承载一次 Agent 执行结束后的结果和确认事项。
+ * 功能概要：承载任务执行或项目批次的最终结果和确认事项。
  */
 package com.kk24426.zbagentwf.common.agent.model;
 
-/** 承载一次 Agent 执行结束后的结果和确认事项。 普通属性原样存取，不自动执行业务校验。 */
+/** 承载任务执行或项目批次的最终结果和确认事项。 普通属性原样存取，不自动执行业务校验。 */
 public class AgentExecutionResult {
-    /** 本次执行标识，与 exec 返回值一致，区别于规划任务 id。 */
+    /** 回调结果为execAllTasks批次UUID或execTasks单次UUID，与受理返回值一致；Task.result保存该任务独立执行UUID，均非数据库Task.id。 */
     private String taskId;
 
     /** 执行成功时为 true；需要确认时必须为 false。 */
@@ -18,7 +18,7 @@ public class AgentExecutionResult {
     /** 普通执行失败的原因；不得包含凭据，不应直接写入日志。 */
     private String errorMessage;
 
-    /** 本次消耗的 token 数；未知时为 null。 */
+    /** 本次审核及业务消耗的token数，批次结果汇总本批次；未知或溢出时为null。 */
     private Long tokenCount;
 
     /** 本次执行的汇报或总结。 */

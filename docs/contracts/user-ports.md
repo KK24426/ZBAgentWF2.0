@@ -19,9 +19,10 @@
 | brand | Agent 模型提供方 | getBrand / setBrand |
 | name | 具体模型名称 | getName / setName |
 | ver | 具体版本 | getVer / setVer |
+| think | 模型推理程度，本轮保存但不映射CLI | getThink / setThink |
 
-三个属性相互独立，默认 null；getter 返回 String，setter 接受 String 并返回 void。允许 null、空字符串、中文和空白字符，原样存取，不增加校验、规范化或默认值。
-用户于2026-09-27新增rolePrompt（Prompt）和skill（Skill），已补标准getter/setter。Prompt.prompt与Skill.skillName原样存取、默认null，无自动读取/执行。工厂在绑定时复制这些嵌套值，规则和身份语义见[项目契约](./project-agent.md)。不增加equals/hashCode/toString。
+四个属性相互独立，默认 null；getter 返回 String，setter 接受 String 并返回 void。允许 null、空字符串、中文和空白字符，原样存取，不增加校验、规范化或默认值。
+用户于2026-09-27新增rolePrompt（Prompt）和skill（Skill），已补标准getter/setter。Skill.skillName普通存取；Prompt于2026-09-28改为不可变构造及附件防御复制，无自动读取/执行。AgentBean继承DataBean公共持久化元数据，实际保存由DAO负责。工厂在绑定时复制这些嵌套值，规则和身份语义见[项目契约](./project-agent.md)。不增加equals/hashCode/toString。
 
 ## 验证边界
 

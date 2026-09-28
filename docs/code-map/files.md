@@ -30,14 +30,14 @@
 | `src/main/java/com/kk24426/zbagentwf/common/package-info.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/common/agent/model/AgentBean.java` | Agent 数据骨架及属性访问 |
 | `src/main/java/com/kk24426/zbagentwf/common/agent/model/AgentExecutionResult.java` | 单次执行结果及待确认内容 |
-| `src/main/java/com/kk24426/zbagentwf/common/project/model/Project.java` | 项目标识、工作目录、三角色执行器和需求列表 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/Project.java` | 数据库/业务标识、名称、三角色快照和需求列表 |
 | `src/main/java/com/kk24426/zbagentwf/common/project/model/Requirement.java` | 项目内需求及Task列表 |
 | `src/main/java/com/kk24426/zbagentwf/common/project/model/RequirementTask.java` | 规划任务、状态与单次执行结果 |
 | `src/main/java/com/kk24426/zbagentwf/common/project/model/TaskStatus.java` | 已批准的任务状态值，不实现状态转换 |
 | `src/main/java/com/kk24426/zbagentwf/common/project/config/ProjectSettings.java` | 初始化后的只读项目根目录 |
 | `src/main/java/com/kk24426/zbagentwf/user/package-info.java` | 运行代码 |
 | `src/main/java/com/kk24426/zbagentwf/user/agent/api/AgentRegistry.java` | 本机Agent发现、查询和刷新抽象契约 |
-| `src/main/java/com/kk24426/zbagentwf/user/agent/api/AgentExecutor.java` | 项目内单次异步执行与诊断查询契约 |
+| `src/main/java/com/kk24426/zbagentwf/user/agent/api/ProjectAgentExecutor.java` | 项目协调器、批次和Long单任务执行契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/agent/api/AgentExecutionCallback.java` | 执行最终结果回调契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/project/api/ProjectDomain.java` | 项目创建、需求规划和任务结果汇总契约 |
 | `src/main/java/com/kk24426/zbagentwf/user/UserInterface.java` | 用户接口的空父接口 |
@@ -101,7 +101,7 @@ agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging�
 | 文件 | 职责 |
 | --- | --- |
 | `src/main/java/com/kk24426/zbagentwf/agent/runtime/AbstractAgentExecutor.java` | 保存 Agent 绑定快照并在显式初始化后组合通用与角色规则。 |
-| `src/main/java/com/kk24426/zbagentwf/agent/project/controller/ProjectController.java` | 接收项目操作，通过服务查找内存项目并返回安全快照及本地化错误。 |
+| `src/main/java/com/kk24426/zbagentwf/agent/project/controller/ProjectController.java` | 接收项目操作，通过服务查找数据库项目并返回安全快照及本地化错误。 |
 | `src/main/java/com/kk24426/zbagentwf/user/project/service/ProjectService.java` | 校验项目输入并通过用户定义的领域接口编排操作。 |
 | `src/main/java/com/kk24426/zbagentwf/common/exception/AgentConfigurationUnavailableException.java` | 区分模型或规则尚未配置与执行中的内部错误。 |
 | `src/main/java/com/kk24426/zbagentwf/common/memory/MemoryStore.java` | 按分类和标识保存本进程内的对象引用。 |
@@ -132,3 +132,20 @@ agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging�
 | `src/test/java/com/kk24426/zbagentwf/agent/web/ProjectPageControllerTest.java` | 项目三语模板、恶意文案转义与精确路由验证 |
 | `src/test/browser/project_fixture.py` | 回环浏览器测试替身，只代理只读页面，业务请求全部本地模拟 |
 | `src/test/browser/project_page_test.cjs` | 浏览器行为回归：按钮载荷、错误恢复、语言保留、纯文本与窄屏 |
+
+## 项目持久化与安全审核
+
+| 文件 | 职责 |
+| --- | --- |
+| src/main/java/com/kk24426/zbagentwf/common/DataBean.java | 用户公共元数据及可访问属性 |
+| src/main/java/com/kk24426/zbagentwf/common/DataBeanDao.java | 用户DAO签名，ProjectDao实现完整聚合 |
+| src/main/java/com/kk24426/zbagentwf/agent/persistence/ProjectDao.java | 四表读写短事务、版本冲突、提交后发布、不确定状态隔离 |
+| src/main/java/com/kk24426/zbagentwf/agent/persistence/mapper/ProjectMapper.java | 参数绑定技术行入口 |
+| src/main/resources/mapper/ProjectMapper.xml | 四表生产SQL与父子/版本约束 |
+| src/main/resources/db/project-schema.sql | 显式部署的四表DDL，应用不自动执行 |
+| src/test/java/com/kk24426/zbagentwf/ProjectPersistenceIT.java | 生产DDL/Mapper/DAO真实MySQL隔离事务验收 |
+| src/test/java/com/kk24426/zbagentwf/agent/persistence/ProjectDaoTest.java | 正式DAO可用性探测失败隔离与跨批次共享实体拒绝 |
+| src/test/java/com/kk24426/zbagentwf/agent/codex/CodexSafetyTest.java | 单次许可、客户端归属、中断和附件拒绝 |
+| src/test/java/com/kk24426/zbagentwf/agent/registry/ProjectFixtureSupport.java | 测试专用深拷贝Store和Java模型进程，不进入正式JAR |
+
+原ProjectMemoryTest迁移为数据库重载和canonical身份测试，CodexAgentExecutorTest/PlannerTest及直接调用者适配新接口。Prompt、CodexClient、ProjectDomainImpl、ProjectSettings及工厂仍在原职责包；没有新增模块。

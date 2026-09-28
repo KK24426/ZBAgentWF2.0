@@ -52,6 +52,6 @@ public final class PromptCatalog {
     public Prompt require(String name) {
         String value = rules.get(name);
         if (value == null) throw new AgentConfigurationUnavailableException();
-        var prompt = new Prompt(); prompt.setPrompt(value); return prompt;
+        return new Prompt(value);
     }
 }

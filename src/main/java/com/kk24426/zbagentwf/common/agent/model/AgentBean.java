@@ -26,6 +26,9 @@ public class AgentBean extends DataBean{
 	/** 使用哪个skill */
 	private Skill skill;
 
+	public String getThink() { return think; }
+	public void setThink(String think) { this.think = think; }
+
 	public String getBrand() {
 		return brand;
 	}

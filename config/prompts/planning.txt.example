@@ -1,1 +1,1 @@
-YOUR_PLANNING_RULES_REPLACE_BEFORE_USE
+YOUR_PLANNING_RULES：填写只读需求分析和任务拆分规则；本次调用的阶段及schema决定输出requirements或tasks，不把两个阶段写成固定合并结构。

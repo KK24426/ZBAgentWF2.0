@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-25
- * 更新日期：2026-09-25
+ * 更新日期：2026-09-28
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：验证项目、需求、Task 的包含关系、默认值及普通属性存取。
@@ -13,11 +13,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 
+/** 验证用户数据结构和Long主键迁移，普通Bean本身不执行业务。 */
 class ProjectModelTest {
+    /** 验证项目与需求的集合各自独立，修改一条需求不会影响其它项目或需求。 */
     @Test
     void projectsOwnMultipleRequirementsAndEachRequirementOwnsMultipleTasks() {
-        var first = new Project();
-        var second = new Project();
+        var first = new Project(null, new java.util.ArrayList<>(), null, null, null);
+        var second = new Project(null, new java.util.ArrayList<>(), null, null, null);
         var requirement = new Requirement();
         var another = new Requirement();
         first.getRequirements().add(requirement);
@@ -37,11 +39,11 @@ class ProjectModelTest {
         assertEquals(2, another.getTasks().size());
     }
 
+    /** 验证任务Long主键与单次执行ID相互独立，Bean保留原始文本、引用及待确认结果而不推断业务状态。 */
     @Test
     void planningTaskAndExecutionResultKeepDistinctIdentifiers() {
-        var project = new Project();
+        var project = new Project(null, new java.util.ArrayList<>(), null, null, null);
         project.setProjectId("项目一");
-        project.setWorkingDirectory(Path.of("工作目录"));
         var requirements = new ArrayList<Requirement>();
         project.setRequirements(requirements);
         var requirement = new Requirement();
@@ -55,7 +57,7 @@ class ProjectModelTest {
         var task = new RequirementTask();
         assertEquals(TaskStatus.PENDING, task.getStatus());
         assertNull(task.getResult());
-        task.setId("planning-1");
+        task.setId(1L);
         task.setContent("执行内容");
         task.setAcceptanceCriteria("任务验收");
         var result = new AgentExecutionResult();
@@ -69,14 +71,13 @@ class ProjectModelTest {
         tasks.add(task);
 
         assertEquals("项目一", project.getProjectId());
-        assertEquals(Path.of("工作目录"), project.getWorkingDirectory());
         assertSame(requirements, project.getRequirements());
         assertEquals("  原始需求\n第二行", requirement.getUserContent());
         assertEquals("需求理解", requirement.getAgentUnderstanding());
         assertEquals("需求验收", requirement.getAcceptanceCriteria());
         assertEquals("待确认范围", requirement.getUserConfirmMsg());
         assertSame(tasks, requirement.getTasks());
-        assertEquals("planning-1", task.getId());
+        assertEquals(1L, task.getId());
         assertEquals("执行内容", task.getContent());
         assertEquals("任务验收", task.getAcceptanceCriteria());
         assertEquals(TaskStatus.NEEDS_CONFIRMATION, task.getStatus());

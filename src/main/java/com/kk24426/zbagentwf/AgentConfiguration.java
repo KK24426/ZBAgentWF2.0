@@ -8,6 +8,10 @@
 package com.kk24426.zbagentwf;
 
 import com.kk24426.zbagentwf.agent.project.ProjectDomainImpl;
+import com.kk24426.zbagentwf.agent.persistence.ProjectDao;
+import com.kk24426.zbagentwf.agent.persistence.mapper.ProjectMapper;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.transaction.PlatformTransactionManager;
 import com.kk24426.zbagentwf.agent.registry.*;
 import com.kk24426.zbagentwf.common.project.config.ProjectSettings;
 import com.kk24426.zbagentwf.user.project.api.ProjectDomain;
@@ -62,17 +66,23 @@ public class AgentConfiguration {
 
     /** 创建应用共享执行器工厂，Spring销毁时统一回收执行资源；构造不运行模型。 */
     @Bean(destroyMethod = "close")
-    AgentExecutorFactoryImpl agentExecFactory(AgentCatalog catalog, PromptCatalog prompts) { return new AgentExecutorFactoryImpl(catalog, prompts); }
+    AgentExecutorFactoryImpl agentExecFactory(AgentCatalog catalog, PromptCatalog prompts, ProjectSettings settings, ProjectDao dao) { return new AgentExecutorFactoryImpl(catalog, prompts, settings, dao); }
+
+    /** 未启用mysql时仍能装配页面，但所有项目操作明确报告503，不使用内存替代数据库。 */
+    @Bean
+    ProjectDao projectDao(ObjectProvider<ProjectMapper> mapper,ObjectProvider<PlatformTransactionManager> transactions) {
+        return new ProjectDao(mapper.getIfAvailable(),transactions.getIfAvailable());
+    }
 
     /** 将规划入口绑定到当前工厂，仅使用该工厂登记的执行器。 */
     @Bean
     AgentRequirementPlanner agentRequirementPlanner(AgentExecutorFactoryImpl factory) { return new AgentRequirementPlanner(factory); }
 
-    /** 组合项目实现所需目录配置、模型工厂、规划、内存索引与角色选择，不在装配时创建项目目录。 */
+    /** 组合项目实现所需目录配置、模型工厂、规划、数据库聚合与角色选择，不在装配时创建项目目录。 */
     @Bean
     ProjectDomain projectDomain(ProjectSettings settings, AgentExecutorFactoryImpl factory, AgentRequirementPlanner planner,
-            MemoryStore memory, RoleAgentResolver roles) {
-        return new ProjectDomainImpl(settings, factory, planner, memory, roles);
+            ProjectDao dao, RoleAgentResolver roles) {
+        return new ProjectDomainImpl(settings, factory, planner, dao, roles);
     }
 
     /**

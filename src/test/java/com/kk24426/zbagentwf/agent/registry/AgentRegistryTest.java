@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+/** 验证精确模型注册及按项目缓存的绑定隔离。 */
 class AgentRegistryTest {
     @TempDir Path temp;
 
@@ -58,198 +59,16 @@ class AgentRegistryTest {
         assertEquals(List.of("valid"), catalog.refreshAgentList().stream().map(AgentBean::getVer).toList());
     }
 
-    @Test
-    void factoryUsesImmutableKeysAndOneInstanceForConcurrentRequests() throws Exception {
-        var first = definition("one", javaExecutable().toString());
-        var second = definition("two", javaExecutable().toString());
-        var catalog = new AgentCatalog(List.of(first, second)); catalog.initialize();
-        var created = new AtomicInteger();
-        try (var resources = new ExecutionResources(); var factory = new AgentExecutorFactoryImpl(catalog, CodexFixtureSupport.prompts(temp), resources, value -> {
-            created.incrementAndGet(); return CodexFixtureSupport.client("success", value.timeout(), value.model());
-        }); var callers = Executors.newVirtualThreadPerTaskExecutor()) {
-            var futures = new ArrayList<Future<ProjectAgentExecutor>>();
-            var entity = first.bean();
-            for (int i = 0; i < 20; i++) futures.add(callers.submit(() -> factory.getExecutor(entity)));
-            ProjectAgentExecutor shared = futures.getFirst().get(5, TimeUnit.SECONDS);
-            for (var future : futures) assertSame(shared, future.get(5, TimeUnit.SECONDS));
-            var mutable = first.bean();
-            assertNotSame(shared, factory.getExecutor(mutable));
-            mutable.setVer("two");
-            assertThrows(IllegalArgumentException.class, () -> factory.getExecutor(mutable));
-            assertEquals(2, created.get());
-            assertSame(shared, factory.getExecutor(entity));
-            assertThrows(IllegalArgumentException.class, () -> factory.getExecutor(new AgentBean()));
-            assertThrows(IllegalStateException.class, () -> factory.getExecutor(definition("unknown", javaExecutable().toString()).bean()));
+    /** 工厂按项目复用，其他项目隔离，绑定后的think变化拒绝重新绑定。 */
+    @Test void projectFactoryReusesCanonicalIdentityAndRejectsChangedBindings() throws Exception {
+        try(var env=new ProjectFixtureSupport(temp.resolve("projects"),"success","success")) {
+            var p=env.single();var first=env.factory.getExecutor(p);assertSame(first,env.factory.getExecutor(p));
+            var other=env.single();assertNotSame(first,env.factory.getExecutor(other));
+            p.getDevelopmentAgent().setThink("changed");assertThrows(IllegalArgumentException.class,() -> env.factory.getExecutor(p));
         }
     }
-
-    @Test
-    void projectsBindThreeModelsAndDispatchPlanningAndDevelopmentWithoutRunningReview() throws Exception {
-        var plan = definition("plan", javaExecutable().toString());
-        var develop = definition("develop", javaExecutable().toString());
-        var review = definition("review", javaExecutable().toString());
-        var catalog = new AgentCatalog(List.of(plan, develop, review)); catalog.initialize();
-        try (var resources = new ExecutionResources(); var factory = fixtureFactory(catalog, resources, "success")) {
-            var planner = new AgentRequirementPlanner(factory);
-            Path root = temp.resolve("projects");
-            var service = new ProjectDomainImpl(new ProjectSettings(root), factory, planner,
-                    new com.kk24426.zbagentwf.common.memory.MemoryStore(), new RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp)));
-            assertThrows(IllegalStateException.class, () -> service.newProject("bad", plan.bean(), develop.bean(),
-                    definition("missing", javaExecutable().toString()).bean()));
-            assertFalse(Files.exists(root));
-            Project first = service.newProject("第一项目", plan.bean(), develop.bean(), review.bean());
-            assertNotSame(factory.getExecutor(plan.bean()), first.getPlanningAgent());
-            assertNotSame(factory.getExecutor(develop.bean()), first.getDevelopmentAgent());
-            assertNotSame(factory.getExecutor(review.bean()), first.getReviewAgent());
-            assertEquals("plan", Files.readString(first.getWorkingDirectory().resolve("model-selection")));
-            Project second = service.newProject("第二项目", review.bean(), plan.bean(), develop.bean());
-            assertEquals("review", Files.readString(second.getWorkingDirectory().resolve("model-selection")));
-            assertNotSame(first.getRequirements(), second.getRequirements());
-            service.execTask(first);
-            assertEquals("develop", Files.readString(first.getWorkingDirectory().resolve("model-selection")));
-            assertTrue(first.getRequirements().stream().flatMap(value -> value.getTasks().stream())
-                    .allMatch(task -> task.getStatus() == TaskStatus.SUCCEEDED && task.getResult().getSummary().contains("develop")));
-            assertTrue(second.getRequirements().stream().flatMap(value -> value.getTasks().stream())
-                    .allMatch(task -> task.getStatus() == TaskStatus.PENDING));
-            first.setPlanningAgent(new ProjectAgentExecutor(new AgentBean()) {
-                protected Prompt getDefaultPrompt() { return com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("fixture"); }
-                protected Prompt getSecurityPrompt() { return com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("fixture"); }
-                public String exec(Project p, String c, String m, com.kk24426.zbagentwf.user.agent.api.AgentExecutionCallback cb) { throw new AssertionError(); }
-                public String getStderr(String id) { return null; }
-            });
-            assertThrows(IllegalArgumentException.class, () -> service.createRequirements(first, "unknown binding"));
-        }
-    }
-
-    @Test
-    void multipleModelsAndPlanningShareLimitAndFactoryShutdownCompletesAcceptedWork() throws Exception {
-        var first = definition("first", javaExecutable().toString());
-        var second = definition("second", javaExecutable().toString());
-        var catalog = new AgentCatalog(List.of(first, second)); catalog.initialize();
-        try (var resources = new ExecutionResources(); var factory = fixtureFactory(catalog, resources, "sleep")) {
-            ProjectAgentExecutor a = factory.getExecutor(first.bean()); ProjectAgentExecutor b = factory.getExecutor(second.bean());
-            var results = new ArrayList<CompletableFuture<AgentExecutionResult>>();
-            var ids = new ArrayList<String>();
-            for (int i = 0; i < 4; i++) {
-                var done = new CompletableFuture<AgentExecutionResult>(); results.add(done);
-                ids.add((i % 2 == 0 ? a : b).exec(project("run" + i), "task", "", done::complete));
-            }
-            assertThrows(RejectedExecutionException.class, () -> b.exec(project("full"), "task", "", ignored -> fail()));
-            Project planning = project("planning"); planning.setPlanningAgent(a);
-            assertThrows(RejectedExecutionException.class, () -> new AgentRequirementPlanner(factory).plan(planning, "plan"));
-            factory.beginShutdown();
-            factory.close();
-            for (var result : results) assertFalse(result.get(8, TimeUnit.SECONDS).isSuccess());
-            assertThrows(IllegalStateException.class, () -> factory.getExecutor(first.bean()));
-            assertThrows(RejectedExecutionException.class, () -> a.exec(planning, "task", "", ignored -> fail()));
-            for (String id : ids) assertNull(a.getStderr(id));
-        }
-    }
-
-    @Test
-    void sameModelCanFillEveryRoleWithIsolatedRulesAndNestedBeanMutationIsRejected() throws Exception {
-        var definition = definition("same", javaExecutable().toString());
-        var catalog = new AgentCatalog(List.of(definition)); catalog.initialize();
-        try (var resources = new ExecutionResources(); var factory = fixtureFactory(catalog, resources, "success")) {
-            var bean = definition.bean();
-            bean.setRolePrompt(com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.prompt("original-role"));
-            var skill = new Skill(); skill.setSkillName("original-skill"); bean.setSkill(skill);
-            var executor = factory.getExecutor(bean);
-            assertSame(executor, factory.getExecutor(bean));
-            assertNotSame(executor, factory.getExecutor(com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor.copyAgent(bean)));
-            bean.getRolePrompt().setPrompt("changed-role");
-            assertThrows(IllegalArgumentException.class, () -> factory.getExecutor(bean));
-            bean.getRolePrompt().setPrompt("original-role"); skill.setSkillName("changed-skill");
-            assertThrows(IllegalArgumentException.class, () -> factory.getExecutor(bean));
-            var done = new CompletableFuture<AgentExecutionResult>();
-            executor.exec(project("nested"), "task", "", done::complete);
-            var result = done.get(10, TimeUnit.SECONDS);
-            assertTrue(result.isSuccess()); assertTrue(result.getSummary().contains("original-role"));
-            assertFalse(result.getSummary().contains("changed-role"));
-            var choice = new RoleAgentResolver.Selection("provider", "model", "same");
-            var roles = new RoleAgentResolver(Map.of("planning", choice, "development", choice, "review", choice),
-                    CodexFixtureSupport.prompts(temp));
-            var service = new ProjectDomainImpl(new ProjectSettings(temp.resolve("roles")), factory,
-                    new AgentRequirementPlanner(factory), new com.kk24426.zbagentwf.common.memory.MemoryStore(), roles);
-            var first = service.newProject("项目一"); var second = service.newProject("项目二");
-            assertNotSame(first.getPlanningAgent(), first.getDevelopmentAgent());
-            assertNotSame(first.getPlanningAgent(), second.getPlanningAgent());
-            String planInput = Files.readString(first.getWorkingDirectory().resolve("prompt-input.txt"));
-            assertTrue(planInput.contains("fixture-planning-规则"));
-            assertTrue(planInput.contains("fixture-security-规则"));
-            service.addProjectPrompt(first.getProjectId(), "only-first-project");
-            service.createRequirements(first, "追加");
-            assertTrue(Files.readString(first.getWorkingDirectory().resolve("prompt-input.txt")).contains("only-first-project"));
-            service.execTask(first);
-            String execution = Files.readString(first.getWorkingDirectory().resolve("prompt-input.txt"));
-            assertTrue(execution.contains("fixture-development-规则"));
-            assertTrue(execution.contains("only-first-project"));
-            assertFalse(Files.readString(second.getWorkingDirectory().resolve("prompt-input.txt")).contains("only-first-project"));
-        }
-    }
-
-    private AgentExecutorFactoryImpl fixtureFactory(AgentCatalog catalog, ExecutionResources resources, String scenario) {
-        return new AgentExecutorFactoryImpl(catalog, CodexFixtureSupport.prompts(temp), resources, value -> CodexFixtureSupport.client(scenario, value.timeout(), value.model()));
-    }
-
-    @Test
-    void acceptedPlanningConsumesAnExecutionSlotAndShutdownDoesNotWaitForCallerLifetime() throws Exception {
-        var definition = definition("planner", javaExecutable().toString());
-        var catalog = new AgentCatalog(List.of(definition)); catalog.initialize();
-        var callerRelease = new CountDownLatch(1);
-        var planned = new CompletableFuture<Void>();
-        try (var resources = new ExecutionResources(); var factory = fixtureFactory(catalog, resources, "sleep")) {
-            Project project = project("synchronous");
-            var executor = factory.getExecutor(definition.bean()); project.setPlanningAgent(executor);
-            var planner = new AgentRequirementPlanner(factory);
-            var held = new ArrayList<ExecutionResources.Ticket>();
-            for (int i = 0; i < 3; i++) held.add(resources.reserve(new Object()));
-            Thread caller = Thread.ofVirtual().start(() -> {
-                try { planner.plan(project, "task"); planned.completeExceptionally(new AssertionError("planning unexpectedly succeeded")); }
-                catch (IllegalStateException expected) { planned.complete(null); }
-                Thread.interrupted();
-                try { callerRelease.await(); } catch (InterruptedException failure) { Thread.currentThread().interrupt(); }
-            });
-            try {
-                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-                while (!Files.exists(project.getWorkingDirectory().resolve("started")) && System.nanoTime() < deadline) Thread.sleep(10);
-                assertTrue(Files.exists(project.getWorkingDirectory().resolve("started")));
-                assertThrows(RejectedExecutionException.class, () -> executor.exec(project, "task", "", ignored -> fail()));
-                held.forEach(ExecutionResources.Ticket::close);
-                factory.beginShutdown();
-                factory.close();
-                planned.get(5, TimeUnit.SECONDS);
-                assertTrue(caller.isAlive());
-            } finally { held.forEach(ExecutionResources.Ticket::close); callerRelease.countDown(); }
-        }
-    }
-
-    @Test
-    void callbackCanCloseItsFactoryAfterDiagnosticsAreAvailable() throws Exception {
-        var definition = definition("one", javaExecutable().toString());
-        var catalog = new AgentCatalog(List.of(definition)); catalog.initialize();
-        try (var resources = new ExecutionResources(); var factory = fixtureFactory(catalog, resources, "success")) {
-            var executor = factory.getExecutor(definition.bean());
-            var done = new CompletableFuture<Void>();
-            executor.exec(project("callback"), "task", "", result -> {
-                try {
-                    assertNotNull(executor.getStderr(result.getTaskId()));
-                    factory.close();
-                    assertNull(executor.getStderr(result.getTaskId()));
-                    done.complete(null);
-                } catch (Throwable failure) { done.completeExceptionally(failure); }
-            });
-            done.get(10, TimeUnit.SECONDS);
-        }
-    }
-    private AgentDefinition definition(String version, String executable) {
-        return new AgentDefinition("provider", "model", version, "codex", executable, version, Duration.ofSeconds(15), true);
-    }
-    private static Path javaExecutable() {
-        return Path.of(System.getProperty("java.home"), "bin", System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java");
-    }
-    private Project project(String name) throws Exception {
-        var project = new Project(); project.setProjectId(name); project.setWorkingDirectory(Files.createDirectory(temp.resolve(name)));
-        return project;
-    }
+    /** 使用当前JVM的原生程序路径，只验证文件注册而不调用真实模型。 */
+    private static Path javaExecutable() {return Path.of(System.getProperty("java.home"),"bin",System.getProperty("os.name").startsWith("Windows")?"java.exe":"java");}
+    /** 创建测试专用模型配置，版本独立且超时固定为八秒。 */
+    private static AgentDefinition definition(String version,String executable) {return new AgentDefinition("provider","model",version,"codex",executable,"fixture",Duration.ofSeconds(8),true);}
 }

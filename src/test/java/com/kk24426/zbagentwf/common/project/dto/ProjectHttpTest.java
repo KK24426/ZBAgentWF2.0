@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-27
- * 更新日期：2026-09-27
+ * 更新日期：2026-09-28
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：验证项目响应是独立且一致的不可变数据快照。
@@ -16,10 +16,12 @@ import com.kk24426.zbagentwf.common.project.model.TaskStatus;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
 
+/** 验证HTTP快照不暴露内部配置且与后续可变实体修改隔离。 */
 class ProjectHttpTest {
+    /** 并发读写时快照内状态与结果成对一致，之后修改实体不会改变已生成的不可变响应。 */
     @Test void concurrentReadersCannotMixStatusAndResultAndSnapshotsStayDetached() throws Exception {
-        var project = new Project(); project.setProjectId("id");
-        var requirement = new Requirement(); var task = new RequirementTask(); task.setId("task");
+        var project = new Project(null, new java.util.ArrayList<>(), null, null, null); project.setProjectId("id");
+        var requirement = new Requirement(); var task = new RequirementTask(); task.setId(1L);
         requirement.getTasks().add(task); project.getRequirements().add(requirement);
         var before = ProjectHttp.view(project);
         var start = new CountDownLatch(1);

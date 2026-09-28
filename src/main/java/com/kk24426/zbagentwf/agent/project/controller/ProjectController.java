@@ -1,9 +1,9 @@
 /*
  * 创建日期：2026-09-24
- * 更新日期：2026-09-27
+ * 更新日期：2026-09-28
  * 做 成 者：zebiao
- * 版    本：v0.4
- * 功能概要：接收项目操作，通过服务查找内存项目并返回安全快照及本地化错误。
+ * 版    本：v0.5
+ * 功能概要：接收项目操作，通过服务查找数据库项目并返回安全快照及本地化错误。
  */
 package com.kk24426.zbagentwf.agent.project.controller;
 
@@ -30,6 +30,7 @@ public class ProjectController {
     private final ProjectService projectService;
     private final MsgCatalog messages;
 
+    /** 绑定领域服务和三语消息目录；构造不查询项目或启动模型。 */
     public ProjectController(ProjectService projectService, MsgCatalog messages) {
         this.projectService = projectService;
         this.messages = messages;
@@ -42,18 +43,18 @@ public class ProjectController {
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> create(@RequestBody ProjectHttp.CreateProjectRequest request, Locale locale) {
         if (request == null || !request.valid()) return invalid(locale);
-        Project project = request.defaults() ? projectService.newProject(request.content())
-                : projectService.newProject(request.content(), request.planningAgent().bean(),
+        Project project = request.defaults() ? projectService.newProject(request.content(), request.projectName())
+                : projectService.newProject(request.content(), request.projectName(), request.planningAgent().bean(),
                         request.developmentAgent().bean(), request.reviewAgent().bean());
-        return ResponseEntity.status(201).body(ProjectHttp.view(project));
+        return ResponseEntity.status(201).body(snapshot(project));
     }
 
     /**
-     * 按ID返回当前进程项目的安全快照；未知ID为404，不从目录恢复项目，不返回运行时引用。
+     * 按ID从数据库重载并返回项目安全快照；未知ID为404，不从目录恢复项目，不返回运行时引用。
      */
     @GetMapping(value = "/api/projects/{projectId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> get(@PathVariable String projectId, Locale locale) {
-        return withProject(projectId, locale, p -> ResponseEntity.ok(ProjectHttp.view(p)));
+        return withProject(projectId, locale, p -> ResponseEntity.ok(snapshot(p)));
     }
 
     /**
@@ -77,7 +78,7 @@ public class ProjectController {
         if (request == null || !ProjectHttp.text(request.content())) return invalid(locale);
         return withProject(projectId, locale, p -> {
             projectService.createRequirements(p, request.content());
-            return ResponseEntity.ok(ProjectHttp.view(p));
+            return ResponseEntity.ok(snapshot(p));
         });
     }
 
@@ -90,20 +91,30 @@ public class ProjectController {
         if (request == null || !request.isEmpty()) return invalid(locale);
         return withProject(projectId, locale, p -> {
             projectService.execTask(projectId);
-            return ResponseEntity.ok(ProjectHttp.view(p));
+            return ResponseEntity.ok(snapshot(p));
         });
     }
 
     /**
-     * 先按ID查找，再在项目对象锁内执行操作与复制快照；只把查找时的IllegalArgumentException映射404，内部操作错误继续上抛。
+     * 先按ID查找；领域/执行器负责写锁，响应另行原子重载并复制；只把初次查找时的IllegalArgumentException映射404，内部操作错误继续上抛。
      */
     private ResponseEntity<?> withProject(String id, Locale locale, Function<Project, ResponseEntity<?>> operation) {
         if (!ProjectHttp.text(id)) return invalid(locale);
         Project project;
         try { project = projectService.getProject(id); }
         catch (IllegalArgumentException missing) { return error(404, "http.project.notFound", locale); }
-        // 查询和操作/复制同一项目串行；不同项目可以独立处理。
-        synchronized (project) { return operation.apply(project); }
+        // 不能持有项目锁等待异步worker；否则worker无法取得同一锁完成回调。
+        return operation.apply(project);
+    }
+
+    /**
+     * 在canonical对象锁内重载并复制响应，避免初次查找后另一请求保存失败而泄露未提交终态。
+     * 重载失败继续上抛，不回退旧快照；此处不等待异步执行，序列化在释放锁后使用不可变副本。
+     */
+    private ProjectHttp.ProjectResponse snapshot(Project project) {
+        synchronized (project) {
+            return ProjectHttp.view(projectService.getProject(project.getProjectId()));
+        }
     }
 
     /**

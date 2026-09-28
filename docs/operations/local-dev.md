@@ -14,7 +14,7 @@ verify运行单元测试与真实Boot JAR进程测试；MySQL专用库测试默�
 项目根目录必须显式配置，没有默认目录。配置缺失、空白、格式非法或已存在非目录时启动失败退出1。
 可以使用上面的环境变量，或复制 [config/project.properties.example](../../config/project.properties.example) 为启动工作目录下的 config/project.properties，填写 zb.project.root；真实文件不提交。
 JVM -Dzb.project.root 优先于 ZB_PROJECT_ROOT，再优先于文件值；空覆盖值不会回退到低优先级配置。应用仍不接受 --zb.project.root 等命令参数。
-相对路径按启动工作目录解析并规范化为绝对路径；允许目录不存在，但初始化不创建它，也不会创建业务项目。全局根目录与 Project.workingDirectory 中的单个项目目录区分。
+相对路径按启动工作目录解析并规范化为绝对路径；允许目录不存在，但初始化不创建它，也不会创建业务项目。项目目录从配置推导为root/local/projectId，local是固定用户占位，不接收客户端路径。
 properties 文件使用标准 Java 转义；Windows 推荐正斜线，中文路径可写 Unicode 转义，避免反斜线被解释为转义字符。
 浏览器访问 http://127.0.0.1:8080/，首页可输入请求并发送；当前正式Agent为未接入占位，显示503提示。成功链路仅在测试中由替身验证，替身不随JAR发布。使用Ctrl+C正常停止。默认只监听回环地址。
 正式JAR为target/zbagentwf-web-0.1.0-SNAPSHOT.jar，.jar.original不是正式分发。
@@ -78,7 +78,7 @@ Hikari最大5、空闲0、取连接超时5秒，驱动连接超时5秒、读取�
 配置不足或连接失败退出1，检查对应runId日志。
 
 ## MySQL专用库验证
-使用已批准的专用zbagentwf_test库和仅有该库建表、删表、CRUD权限的账号。
+使用已批准的专用zbagentwf_test库和仅有该库建表、删表、CRUD及REFERENCES权限的账号；REFERENCES用于四表外键创建。
 远程测试环境通过SSH隧道连接，见[远程测试环境](./remote-test.md)；不使用root或操作现有业务库。
 未经明确授权不查找系统保存的密码。
 测试只接受以下专用环境变量，不回退到SPRING_DATASOURCE：
@@ -96,40 +96,30 @@ URL仅允许localhost或127.0.0.1及可选端口，不能带URL参数、其它�
 
 ## 模型注册与项目调用
 
-复制 [agents.properties.example](../../config/agents.properties.example) 为启动工作目录下的 config/agents.properties，填写模型三元组、type=codex、原生可执行文件路径、实际CLI模型参数、单次timeout和enabled。真实配置被Git忽略；不保存登录材料。启动时加载，修改后重启。条目键如[0]只用于配置分组，模型身份仍是brand/name/ver；同一模型三元组重复会失败，单字段可由JVM属性或环境变量覆盖。
-无注册配置仍可启动Web，查询可用Agent时明确报错。初始化只检查已配置路径是否为可执行普通文件，Windows要求原生.exe；不能把此检查当作账号鉴权或模型可调用验收。refreshAgentList仅重查文件状态。CLI安装、登录及原有规则由本机使用者管理，应用不读取或复制凭据。
-
-由Spring注入user接口后调用，业务代码无需构造Codex具体类：
+复制config/agents.properties.example为本地agents.properties，填写模型三元组、原生可执行程序、CLI模型参数、timeout、enabled及三角色默认选择。真实文件不入仓，程序不管理登录。规则复制config/prompts五个示例并替换YOUR_占位；planning必须允许需求/任务两阶段分别按schema输出。修改配置后重启。
 
 ```java
-// agentBase、agentExecFactory、projects 分别注入 AgentRegistry、AgentExecutorFactory、ProjectDomain。
-AgentBean planning = agentBase.getActiveAgent("YOUR_PROVIDER", "YOUR_MODEL", "YOUR_PLANNING_VERSION");
-AgentBean development = agentBase.getActiveAgent("YOUR_PROVIDER", "YOUR_MODEL", "YOUR_DEVELOPMENT_VERSION");
-AgentBean review = agentBase.getActiveAgent("YOUR_PROVIDER", "YOUR_MODEL", "YOUR_REVIEW_VERSION");
-Project project = projects.newProject("用户项目描述", planning, development, review);
-// 检查规划后再由业务调用方启动任务。
-projects.execTask(project);
-AgentExecutor executor = agentExecFactory.getExecutor(development);
-// executor.exec(project, content, memory, callback) 也可直接使用。
+// projects与factory由Spring注入，三角色默认值已显式配置。
+Project project = projects.newProject("用户项目描述", "可选项目名称");
+projects.execTask(project); // 等待该项目待办批次完成
+ProjectAgentExecutor executor = factory.getExecutor(project);
+executor.execTasks(project.getRequirements().getFirst().getTasks().getFirst().getId(), callback);
 ```
 
-项目持有planningAgent/developmentAgent/reviewAgent；工厂按Agent实体隔离实例并管理关闭，调用方不关闭共享执行器。规划绑定必须来自当前工厂；审核角色只绑定，不自动运行审核。Project执行器引用用于内存运行，不承诺序列化或持久化。newProject(content)读取显式三角色默认配置，完整指定三个Agent则使用用户选择。
-创建项目先验证三个角色，随后在root/UUID创建目录并以read-only规划；execTask才以developmentAgent执行workspace-write任务。需要确认时结束本次执行，调用者补充内容并重置PENDING后重新提交。CLI协议继续基于已适配的Codex exec能力；升级后另行做实际账号验收。
+最后一行仅用于选择尚为PENDING的具体任务，已完成任务不可重跑。规划、拆任务和执行前都以同一配置模型做独立只读审核；审核拒绝/超时/错误不启动业务调用。review角色不自动做代码审核。Prompt附件当前不支持非空内容。
 
-共享工厂同时最多受理4个规划/执行，无队列，执行超限同步拒绝且不回调。单次任务超时由各条目的timeout指定，示例30m只是可调整示例。stderr诊断单条64KiB，完成记录全工厂最多256条/30分钟；未知、过期和其它执行器所有ID返回null，不影响Task结果。stdout上限8MiB。直接构造低层Codex类的调用方负责自己的资源作用域和close，应用业务应使用共享工厂。
-正常关闭事件立即停止受理并中断工作；共享Agent资源从该时刻起最多等待20秒，不把20秒当作单任务超时。销毁阶段等待票据归还而非长期调用线程退出，预算不重新计时。Spring Web另有每phase关闭预算，不能推断整个应用任何情况下20秒内退出。
-测试调用真实Java fixture子进程，不消耗模型额度；2026-09-27另按用户要求完成当前本机Codex的有限项目功能验收，见[验收记录](./codex-live-validation.md)；网页聊天保持503。完整verify包含Web/JAR回归，MySQL仍单独启用。
+## 项目数据库准备
 
-## 角色默认值、规则与内存项目
+未启用mysql时Web可以启动，项目操作503。项目持久化需要已批准专用数据库连接，以及显式执行src/main/resources/db/project-schema.sql；应用不自动DDL。仅在核实目标zbagentwf_test后按建表顺序执行，四个正式表已有时不要重复执行或删除。创建外键还需要该库的REFERENCES权限；这应由管理员明确授权，不能由应用自动扩权。已有旧内存项目不会自动迁移。凭据留在仓库外，远程数据库经已验证SSH隧道接到回环地址，禁止把认证值写入示例或日志。
 
-在config/agents.properties中按示例补充zb.agent-roles.planning/development/review的brand/name/ver，指向已注册模型；不同角色可选同一模型，也可完全不同。HTTP或Java调用显式提供完整三个模型时覆盖默认；无默认值只影响需要默认的项目创建，不影响Web启动。
-将config/prompts/五个.txt.example复制为同名.txt，替换YOUR_占位为你自己的UTF-8规则；示例不能直接用于调用。default/security为通用必要规则，planning/development/review供对应角色绑定使用。文件在启动时读取，修改后重启；不要在规则中保存凭据。真实文件被忽略。未准备配置时项目创建返回固定503，不调用模型。用户本机已补齐所选Codex注册及角色配置，项目页面的有限真实验收见[验收记录](./codex-live-validation.md#项目页面补充验收)；新克隆仍须准备自己的本地配置。
-项目HTTP操作、请求格式及状态码见[项目契约](../contracts/project-agent.md#项目-http-入口)。例如向POST /api/projects发送 {"content":"项目需求"}，成功后保留返回的projectId；之后GET /api/projects/{projectId}取回快照，POST相应子路径追加提示词/需求或执行任务。创建和规划会实际调用配置的Agent；不要把接口可达当作真实模型验收。
-MemoryStore保存任意类别对象；项目仅在本次服务运行内有效。没有自动淘汰或恢复，应用重启会丢失登记。配置修改不会热替换已绑定模型；停机后项目目录可能仍在，但仅目录和ID不足以恢复原需求/执行器。
+启用mysql profile并提供spring.datasource.url/username/password（推荐外部配置或进程环境）；生产Mapper自动从classpath:/mapper/*.xml加载。详细连接和测试限制沿用上文MySQL章节。-Pmysql-it另外运行ProjectPersistenceIT：随机前缀四表直接使用正式DDL/Mapper/DAO验证，不改正式表，不代表已经为实际Web完成schema初始化。
+
+项目持久化后可重启并按UUID读取。目录root/local/projectId须继续存在且归属正确，数据库中的RUNNING不得自动重试；执行后保存失败要先重载并人工核对目录实际变化，SQL回滚不回滚文件。
 
 ## 项目工作台
 
-启动后访问 http://127.0.0.1:8080/projects，也可从首页进入“项目工作台”。填写目标并“创建并规划”，核对需求与任务后“执行待办任务”；支持按ID打开/刷新、追加需求和提示词。默认模型来自agents.properties的三角色配置，也可在创建时展开模型选项填写完整的三角色标识。审核角色仅绑定，不会自动执行。
-创建或规划会实际调用模型，执行可能修改项目目录中的文件。项目当前仅存在于本次服务运行；重启后无法仅凭原ID恢复。运行中显示等待，不自动重发；错误后的旧结果不代表最新状态，按页面提示先刷新。此页面没有项目列表、删除、任务重置或取消接口。
-修改页面或本地模型配置后重新构建并重启服务。旧进程不会自动加载新资源和配置；不要用仍在运行的旧服务判断新页面是否已发布。
-浏览器回归：先用隔离配置启动本机JAR，再运行python -X utf8 src/test/browser/project_fixture.py --upstream-port <JAR端口>，使用该脚本打印的回环地址执行node src/test/browser/project_page_test.cjs <fixture URL> <本地证据目录>（需本机Playwright浏览器环境）。fixture只代理页面资源，业务请求全部本地模拟，不进入JAR，不调用真实模型。结束后停止自建进程；真实模型的功能验证另行记录。
+访问http://127.0.0.1:8080/projects，从首页也可进入。填写可选项目名称和目标，创建规划后核对需求/任务，再执行待办；支持按ID打开/刷新、追加需求和规则。服务默认三角色可被创建时完整显式选择覆盖。
+
+页面显示数据库及安全审核说明。创建和规划会实际调用模型，执行可能修改root/local/UUID中的文件；没有项目列表、删除、任务重置或取消接口。请求单飞且不自动重发，已知项目写入错误后先刷新。修改源码/配置后需重建并重启；运行中的旧进程不会自动更新，本轮不会隐式部署或重启现有服务。
+
+浏览器回归使用隔离JAR和src/test/browser/project_fixture.py（代理页面、业务全模拟），再运行project_page_test.cjs；这些替身不进入正式JAR，不构成真实模型验收。2026-09-27有限真实模型记录为旧版本证据，见[codex-live-validation.md](./codex-live-validation.md)。

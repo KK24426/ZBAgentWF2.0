@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kk24426.zbagentwf.agent.persistence.mapper.ProjectMapper">
+  <insert id="insertAgent" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO zb_agent (creation_data, lastupdate_data, del_flg, version, brand, name, ver, think, role_prompt, skill_name) VALUES (#{creationData}, #{lastupdateData}, #{delFlg}, #{version}, #{brand}, #{name}, #{ver}, #{think}, #{rolePrompt}, #{skillName})
+  </insert>
+  <update id="updateAgent" parameterType="map">
+    UPDATE zb_agent SET lastupdate_data=#{lastupdateData}, del_flg=#{delFlg}, brand=#{brand}, name=#{name}, ver=#{ver}, think=#{think}, role_prompt=#{rolePrompt}, skill_name=#{skillName}, version=version+1 WHERE id=#{id} AND version=#{version} AND del_flg=FALSE
+  </update>
+  <select id="getAgent" resultType="map">SELECT id, creation_data AS `creationData`, lastupdate_data AS `lastupdateData`, del_flg AS `delFlg`, version AS `version`, brand AS `brand`, name AS `name`, ver AS `ver`, think AS `think`, role_prompt AS `rolePrompt`, skill_name AS `skillName` FROM zb_agent WHERE id=#{id} AND del_flg=FALSE</select>
+  <insert id="insertProject" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO zb_project (creation_data, lastupdate_data, del_flg, version, project_id, project_name, planning_agent_id, development_agent_id, review_agent_id, project_prompt) VALUES (#{creationData}, #{lastupdateData}, #{delFlg}, #{version}, #{projectId}, #{projectName}, #{planningAgentId}, #{developmentAgentId}, #{reviewAgentId}, #{projectPrompt})
+  </insert>
+  <update id="updateProject" parameterType="map">
+    UPDATE zb_project SET lastupdate_data=#{lastupdateData}, del_flg=#{delFlg}, project_id=#{projectId}, project_name=#{projectName}, planning_agent_id=#{planningAgentId}, development_agent_id=#{developmentAgentId}, review_agent_id=#{reviewAgentId}, project_prompt=#{projectPrompt}, version=version+1 WHERE id=#{id} AND version=#{version} AND del_flg=FALSE
+  </update>
+  <select id="getProject" resultType="map">SELECT id, creation_data AS `creationData`, lastupdate_data AS `lastupdateData`, del_flg AS `delFlg`, version AS `version`, project_id AS `projectId`, project_name AS `projectName`, planning_agent_id AS `planningAgentId`, development_agent_id AS `developmentAgentId`, review_agent_id AS `reviewAgentId`, project_prompt AS `projectPrompt` FROM zb_project WHERE id=#{id} AND del_flg=FALSE</select>
+  <insert id="insertRequirement" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO zb_requirement (creation_data, lastupdate_data, del_flg, version, project_id, sort_order, user_content, agent_understanding, acceptance_criteria, user_confirm_msg) VALUES (#{creationData}, #{lastupdateData}, #{delFlg}, #{version}, #{projectId}, #{sortOrder}, #{userContent}, #{agentUnderstanding}, #{acceptanceCriteria}, #{userConfirmMsg})
+  </insert>
+  <update id="updateRequirement" parameterType="map">
+    UPDATE zb_requirement SET lastupdate_data=#{lastupdateData}, del_flg=#{delFlg}, project_id=#{projectId}, sort_order=#{sortOrder}, user_content=#{userContent}, agent_understanding=#{agentUnderstanding}, acceptance_criteria=#{acceptanceCriteria}, user_confirm_msg=#{userConfirmMsg}, version=version+1 WHERE id=#{id} AND version=#{version} AND del_flg=FALSE AND project_id=#{projectId}
+  </update>
+  <select id="getRequirement" resultType="map">SELECT id, creation_data AS `creationData`, lastupdate_data AS `lastupdateData`, del_flg AS `delFlg`, version AS `version`, project_id AS `projectId`, sort_order AS `sortOrder`, user_content AS `userContent`, agent_understanding AS `agentUnderstanding`, acceptance_criteria AS `acceptanceCriteria`, user_confirm_msg AS `userConfirmMsg` FROM zb_requirement WHERE id=#{id} AND del_flg=FALSE</select>
+  <select id="listRequirements" resultType="map">SELECT id, creation_data AS `creationData`, lastupdate_data AS `lastupdateData`, del_flg AS `delFlg`, version AS `version`, project_id AS `projectId`, sort_order AS `sortOrder`, user_content AS `userContent`, agent_understanding AS `agentUnderstanding`, acceptance_criteria AS `acceptanceCriteria`, user_confirm_msg AS `userConfirmMsg` FROM zb_requirement WHERE project_id=#{parentId} AND del_flg=FALSE ORDER BY sort_order,id</select>
+  <select id="listStoredRequirements" resultType="map">SELECT id, creation_data AS `creationData`, lastupdate_data AS `lastupdateData`, del_flg AS `delFlg`, version AS `version`, project_id AS `projectId`, sort_order AS `sortOrder`, user_content AS `userContent`, agent_understanding AS `agentUnderstanding`, acceptance_criteria AS `acceptanceCriteria`, user_confirm_msg AS `userConfirmMsg` FROM zb_requirement WHERE project_id=#{parentId} ORDER BY sort_order,id</select>
+  <insert id="insertTask" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO zb_task (creation_data, lastupdate_data, del_flg, version, requirement_id, sort_order, content, acceptance_criteria, status, result_json) VALUES (#{creationData}, #{lastupdateData}, #{delFlg}, #{version}, #{requirementId}, #{sortOrder}, #{content}, #{acceptanceCriteria}, #{status}, #{resultJson})
+  </insert>
+  <update id="updateTask" parameterType="map">
+    UPDATE zb_task SET lastupdate_data=#{lastupdateData}, del_flg=#{delFlg}, requirement_id=#{requirementId}, sort_order=#{sortOrder}, content=#{content}, acceptance_criteria=#{acceptanceCriteria}, status=#{status}, result_json=#{resultJson}, version=version+1 WHERE id=#{id} AND version=#{version} AND del_flg=FALSE AND requirement_id=#{requirementId}
+  </update>
+  <select id="getTask" resultType="map">SELECT id, creation_data AS `creationData`, lastupdate_data AS `lastupdateData`, del_flg AS `delFlg`, version AS `version`, requirement_id AS `requirementId`, sort_order AS `sortOrder`, content AS `content`, acceptance_criteria AS `acceptanceCriteria`, status AS `status`, result_json AS `resultJson` FROM zb_task WHERE id=#{id} AND del_flg=FALSE</select>
+  <select id="listTasks" resultType="map">SELECT id, creation_data AS `creationData`, lastupdate_data AS `lastupdateData`, del_flg AS `delFlg`, version AS `version`, requirement_id AS `requirementId`, sort_order AS `sortOrder`, content AS `content`, acceptance_criteria AS `acceptanceCriteria`, status AS `status`, result_json AS `resultJson` FROM zb_task WHERE requirement_id=#{parentId} AND del_flg=FALSE ORDER BY sort_order,id</select>
+  <select id="listStoredTasks" resultType="map">SELECT id, creation_data AS `creationData`, lastupdate_data AS `lastupdateData`, del_flg AS `delFlg`, version AS `version`, requirement_id AS `requirementId`, sort_order AS `sortOrder`, content AS `content`, acceptance_criteria AS `acceptanceCriteria`, status AS `status`, result_json AS `resultJson` FROM zb_task WHERE requirement_id=#{parentId} ORDER BY sort_order,id</select>
+  <select id="findProjectId" resultType="long">SELECT id FROM zb_project WHERE project_id=#{projectId} AND del_flg=FALSE</select>
+  <select id="projectIds" resultType="long">SELECT id FROM zb_project WHERE del_flg=FALSE ORDER BY id</select>
+  <select id="checkSchema" resultType="int">SELECT COUNT(*) FROM zb_project p JOIN zb_agent a ON a.id=p.planning_agent_id JOIN zb_requirement r ON r.project_id=p.id JOIN zb_task t ON t.requirement_id=r.id WHERE 1=0</select>
+</mapper>

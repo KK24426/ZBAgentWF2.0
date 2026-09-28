@@ -31,7 +31,7 @@ def main():
     def requirement(content, number):
         return {"userContent": content, "agentUnderstanding": "理解 <img src=x onerror=alert(1)> 日本語",
                 "acceptanceCriteria": "检查实际产物", "userConfirmMsg": None,
-                "tasks": [{"id": "task-" + str(number), "content": content,
+                "tasks": [{"id": str(number), "content": content,
                            "acceptanceCriteria": "结果符合要求", "status": "PENDING", "result": None}]}
 
     class Handler(BaseHTTPRequestHandler):
@@ -115,7 +115,7 @@ def main():
             if self.path == "/api/projects":
                 with lock:
                     project_id = "fixture-" + str(len(projects) + 1)
-                    project = {"projectId": project_id, "requirements": [requirement(content, 1)]}
+                    project = {"projectId": project_id, "projectName": data.get("projectName"), "requirements": [requirement(content, 1)]}
                     projects[project_id] = project
                     self.send(201, copy.deepcopy(project))
                 return

@@ -1,133 +1,77 @@
 /*
  * 创建日期：2026-09-26
- * 更新日期：2026-09-27
+ * 更新日期：2026-09-28
  * 做 成 者：zebiao
- * 版    本：v0.1
- * 功能概要：按 Agent 实体隔离执行器并拥有共享资源生命周期。
+ * 版    本：v0.2
+ * 功能概要：按项目对象绑定唯一协调器并管理共享执行资源。
  */
 package com.kk24426.zbagentwf.agent.registry;
-
 import com.kk24426.zbagentwf.agent.codex.*;
-import com.kk24426.zbagentwf.agent.runtime.AbstractAgentExecutor;
 import com.kk24426.zbagentwf.agent.prompt.PromptCatalog;
 import com.kk24426.zbagentwf.agent.runtime.ExecutionResources;
+import com.kk24426.zbagentwf.agent.persistence.ProjectDao;
 import com.kk24426.zbagentwf.common.agent.model.AgentBean;
+import com.kk24426.zbagentwf.common.project.model.Project;
+import com.kk24426.zbagentwf.common.project.config.ProjectSettings;
 import com.kk24426.zbagentwf.user.agent.api.*;
 import java.util.*;
 import java.util.function.Function;
 
-/** 缓存按实体身份保存；执行器由工厂关闭，业务调用方不单独关闭。 */
-public final class AgentExecutorFactoryImpl implements AgentExecutorFactory, AutoCloseable {
+/** canonical项目身份由领域实现维护；不同项目模型相同也不共享任务上下文。 */
+public final class AgentExecutorFactoryImpl implements AgentExecutorFactory,AutoCloseable {
     private final AgentCatalog catalog;
-    private final ExecutionResources resources;
-    private final Function<AgentDefinition, CodexClient> clients;
-    /**
-     * 按调用方Bean对象身份缓存绑定；同值不同对象分别创建执行器，不能按equals合并。
-     */
-    private final Map<AgentBean, Entry> entries = new IdentityHashMap<>();
     private final PromptCatalog prompts;
-    /**
-     * 只登记本工厂创建的执行器身份，防止外部同模型实例借用规划规则。
-     */
-    private final Map<ProjectAgentExecutor, CodexRequirementPlanner> planners = new IdentityHashMap<>();
+    private final ProjectSettings settings;
+    private final ProjectDao dao;
+    private final ExecutionResources resources;
+    private final Function<AgentDefinition,CodexClient> clients;
+    private final Map<Project,Entry> entries=new IdentityHashMap<>();
     private boolean closed;
-
-    /**
-     * 建立工厂自有共享资源作用域；执行器按需创建，工厂统一关闭，构造不运行模型。
-     */
-    public AgentExecutorFactoryImpl(AgentCatalog catalog, PromptCatalog prompts) {
-        this(catalog, prompts, new ExecutionResources(), value -> new CodexClient(value.path(), value.model(), value.timeout()));
+    /** 工厂拥有共享资源；构造不发现模型或访问数据库。 */
+    public AgentExecutorFactoryImpl(AgentCatalog catalog,PromptCatalog prompts,ProjectSettings settings,ProjectDao dao) {
+        this(catalog,prompts,settings,dao,new ExecutionResources(), d -> new CodexClient(d.path(),d.model(),d.timeout()));
     }
-
-    // 同包测试可替换进程边界；生产配置没有任意 command/args 或 shell 字符串入口。
-    /** 注入可替换的进程客户端创建器及共享资源；工厂关闭时仍统一关闭该资源，构造不调用创建器。 */
-    AgentExecutorFactoryImpl(AgentCatalog catalog, PromptCatalog prompts, ExecutionResources resources, Function<AgentDefinition, CodexClient> clients) {
-        this.catalog = Objects.requireNonNull(catalog);
-        this.prompts = Objects.requireNonNull(prompts);
-        this.resources = Objects.requireNonNull(resources);
-        this.clients = Objects.requireNonNull(clients);
+    /** 同包测试可注入真实fixture子进程；无面向HTTP的任意命令入口。 */
+    AgentExecutorFactoryImpl(AgentCatalog catalog,PromptCatalog prompts,ProjectSettings settings,ProjectDao dao,
+            ExecutionResources resources,Function<AgentDefinition,CodexClient> clients) {
+        this.catalog=Objects.requireNonNull(catalog); this.prompts=Objects.requireNonNull(prompts);
+        this.settings=Objects.requireNonNull(settings); this.dao=Objects.requireNonNull(dao);
+        this.resources=Objects.requireNonNull(resources); this.clients=Objects.requireNonNull(clients);
     }
-
-    /**
-     * 按实体身份获取或创建执行器，首次创建时校验模型可用性及必要提示词并保存深拷贝。
-     * 同一实体的绑定字段或嵌套规则改变后拒绝复用；同值的不同实体不会共用执行器。
-     * @param agent 调用方持有的模型及角色规则实体
-     * @return 由本工厂管理生命周期的实例，业务调用方不单独关闭
-     * @throws IllegalArgumentException 模型身份无效或已绑定实体被修改
-     * @throws IllegalStateException 工厂关闭、模型不可用或必要规则未就绪
-     */
-    @Override public synchronized ProjectAgentExecutor getExecutor(AgentBean agent) {
-        ensureOpen();
-        Binding binding = Binding.from(agent);
-        AgentDefinition definition = catalog.require(binding.model());
-        Entry entry = entries.get(agent);
-        if (entry != null && !entry.binding.equals(binding)) {
-            throw new IllegalArgumentException("已绑定 Agent 被修改，请创建新的 Agent 实体。");
+    /** 校验三个角色后按项目身份缓存；模型、角色规则和推理程度改变后拒绝悄悄重绑。 */
+    @Override public synchronized ProjectAgentExecutor getExecutor(Project project) {
+        ensureOpen(); Objects.requireNonNull(project);
+        List<Binding> binding=List.of(Binding.from(project.getPlanningAgent()),Binding.from(project.getDevelopmentAgent()),Binding.from(project.getReviewAgent()));
+        var definitions=binding.stream().map(b -> catalog.require(b.model())).toList();
+        Entry previous=entries.get(project);
+        if (previous!=null) {
+            if (!previous.projectId.equals(project.getProjectId()) || !previous.binding.equals(binding)) throw new IllegalArgumentException("已绑定项目的模型配置发生变化。");
+            return previous.executor;
         }
-        if (entry == null) {
-            // 先校验规则，再创建适配器；模型相同的不同实体仍分别拥有绑定快照。
-            var defaults = prompts.require("default");
-            var security = prompts.require("security");
-            CodexClient client = clients.apply(definition);
-            var executor = new CodexAgentExecutor(AbstractAgentExecutor.copyAgent(agent), client, resources);
-            executor.initializePrompts(defaults, security);
-            var planner = new CodexRequirementPlanner(client, resources, executor);
-            entry = new Entry(binding, executor, planner);
-            entries.put(agent, entry);
-            planners.put(executor, planner);
-        }
-        return entry.executor;
+        var defaults=prompts.require("default"); var security=prompts.require("security");
+        CodexClient planning=clients.apply(definitions.get(0)); planning.initializeSecurity(security);
+        CodexClient development=clients.apply(definitions.get(1)); development.initializeSecurity(security);
+        var executor=new CodexAgentExecutor(project,planning,development,settings,dao,resources);
+        executor.initializePrompts(defaults,security); entries.put(project,new Entry(Objects.requireNonNull(project.getProjectId()),binding,executor)); return executor;
     }
-
-    /**
-     * 按执行器身份取得本工厂创建的只读规划器；关闭或跨工厂/自定义实例绑定均明确失败。
-     */
-    synchronized CodexRequirementPlanner plannerFor(ProjectAgentExecutor executor) {
-        ensureOpen();
-        // 按对象身份确认来自本工厂；相同模型的外部实例也不能借用本工厂的规划配置。
-        CodexRequirementPlanner planner = planners.get(executor);
-        if (planner == null) throw new IllegalArgumentException("项目规划 Agent 必须由当前工厂获取。");
-        return planner;
-    }
-
-    /** 调用者持有工厂锁时检查关闭标记；关闭后拒绝取得或创建绑定。 */
-    private void ensureOpen() {
-        if (closed) throw new IllegalStateException("Agent 工厂已关闭。");
-    }
-
-    /** ContextClosedEvent 调用；停止受理与进程中断不等待单个工作完成。 */
-    public synchronized void beginShutdown() {
-        if (closed) return;
-        closed = true;
-        resources.beginShutdown();
-    }
-
-    /**
-     * 先停止受理，再在不持有工厂锁时按资源截止时间等待，最后释放实例索引；重复关闭沿用原截止时间。
-     */
-    @Override public void close() {
-        beginShutdown();
-        // 等待时不持有工厂锁，避免完成回调重入工厂造成互相等待；资源层沿用原关闭截止时间。
-        resources.close();
-        synchronized (this) { entries.clear(); planners.clear(); }
-    }
-
-    /**
-     * 同一实体的原始绑定快照、执行器和专用规划器，保存至工厂关闭。
-     */
-    private record Entry(Binding binding, CodexAgentExecutor executor, CodexRequirementPlanner planner) { }
-    /**
-     * 按当前工厂支持的三元组、角色文本和Skill名称检测绑定后变更；空对象与空文本分别记录。
-     */
-    private record Binding(AgentDefinition.Key model, boolean hasRole, String role, boolean hasSkill, String skill) {
-        /**
-         * 只提取绑定校验使用的值，不保留可变嵌套对象；后续比较用于拒绝已绑定实体的重配置。
-         */
+    /** 只取得当前工厂创建的项目协调器，供两阶段规划组合调用。 */
+    synchronized CodexAgentExecutor coordinator(Project project) { return (CodexAgentExecutor)getExecutor(project); }
+    /** 生命周期结束后不再解析配置或创建新的项目协调器。 */
+    private void ensureOpen() { if (closed) throw new IllegalStateException("Agent工厂已关闭。"); }
+    /** 关闭事件停止受理并中断所有项目、规划和审核，共用同一关闭预算。 */
+    public synchronized void beginShutdown() { if (!closed) { closed=true; resources.beginShutdown(); } }
+    /** 不持有工厂锁等待回调或资源释放，防止重入关闭死锁。 */
+    @Override public void close() { beginShutdown(); resources.close(); synchronized(this) { entries.clear(); } }
+    /** 生命周期与项目身份对应，不以模型相同合并实例。 */
+    private record Entry(String projectId,List<Binding> binding,CodexAgentExecutor executor) { }
+    /** 持久化ID和时间不属于模型绑定；文本规则及think是绑定快照的一部分。 */
+    private record Binding(AgentDefinition.Key model,String role,String skill,String think) {
+        /** 只读提取并拒绝不受支持附件，避免快照复制时丢失文件。 */
         private static Binding from(AgentBean bean) {
-            var key = AgentDefinition.Key.from(bean);
-            return new Binding(key, bean.getRolePrompt() != null,
-                    bean.getRolePrompt() == null ? null : bean.getRolePrompt().getPrompt(), bean.getSkill() != null,
-                    bean.getSkill() == null ? null : bean.getSkill().getSkillName());
+            Objects.requireNonNull(bean);
+            if (bean.getRolePrompt()!=null) bean.getRolePrompt().requireTextOnly();
+            return new Binding(AgentDefinition.Key.from(bean),bean.getRolePrompt()==null?null:bean.getRolePrompt().getPrompt(),
+                    bean.getSkill()==null?null:bean.getSkill().getSkillName(),bean.getThink());
         }
     }
 }

@@ -3,11 +3,10 @@
  * 更新日期：2026-09-26
  * 做 成 者：zebiao
  * 版    本：v0.1
- * 功能概要：保存项目标识、工作目录、三角色执行器及其需求列表。
+ * 功能概要：保存项目标识、可选名称、三角色模型快照及其需求列表。
  */
 package com.kk24426.zbagentwf.common.project.model;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +14,7 @@ import com.kk24426.zbagentwf.common.DataBean;
 import com.kk24426.zbagentwf.common.agent.model.AgentBean;
 import com.kk24426.zbagentwf.common.agent.model.Prompt;
 
-/** 保存项目标识、工作目录、三角色执行器及其需求列表。 普通属性原样存取，不自动执行业务校验。 */
+/** 保存项目标识、可选名称、三角色模型快照及其需求列表。 普通属性原样存取，不自动执行业务校验。 */
 public class Project extends DataBean {
 	/** 项目标识，不等同于一次 Agent 执行标识。 */
 	private String projectId;
@@ -33,6 +32,7 @@ public class Project extends DataBean {
 	/** 审核模型 */
 	private AgentBean reviewAgent;
 	
+	/** 保存调用者给定的名称、需求和三角色快照引用；不创建目录、生成ID或访问模型/数据库。 */
 	public Project(String projectName, List<Requirement> requirements, AgentBean planningAgent,
 			AgentBean developmentAgent, AgentBean reviewAgent) {
 		super();
@@ -46,11 +46,11 @@ public class Project extends DataBean {
 	/** 项目中使用的提示词 */
 	private Prompt projectPrompt;
 
-	private String getProjectName() {
+	public String getProjectName() {
 		return projectName;
 	}
 
-	private void setProjectName(String projectName) {
+	public void setProjectName(String projectName) {
 		this.projectName = projectName;
 	}
 

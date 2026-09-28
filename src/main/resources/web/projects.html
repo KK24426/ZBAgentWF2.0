@@ -39,6 +39,8 @@
         <section class="project-panel" aria-labelledby="create-title">
           <h2 id="create-title" data-msg="project.createTitle">{{project.createTitle}}</h2>
           <form id="create-project-form" novalidate>
+            <label for="project-name" data-msg="project.name">{{project.name}}</label>
+            <input id="project-name" type="text" autocomplete="off" data-project-control>
             <label for="project-goal" data-msg="project.goal">{{project.goal}}</label>
             <textarea id="project-goal" rows="5" required data-project-control data-msg-placeholder="project.goalPlaceholder" placeholder="{{project.goalPlaceholder}}"></textarea>
             <details class="model-options">
@@ -73,6 +75,7 @@
         <div id="project-current" hidden>
           <section class="project-panel project-overview">
             <div class="overview-heading"><h2 data-msg="project.current">{{project.current}}</h2><button id="project-refresh" type="button" class="secondary" data-project-control data-msg="project.refresh">{{project.refresh}}</button></div>
+            <p id="project-current-name"></p>
             <div class="project-id-row"><span data-msg="project.id">{{project.id}}</span><output id="project-current-id"></output><button id="project-copy-id" type="button" class="text-button" data-project-control data-msg="project.copyId">{{project.copyId}}</button></div>
             <p id="project-stale" class="attention-note" hidden data-msg="project.stale">{{project.stale}}</p>
             <dl class="project-metrics">

@@ -41,3 +41,5 @@ public interface EchoMapper {
 - 值使用 `#{parameter}` 绑定；动态表名、列名须来自明确白名单，不拼接外部原始输入，不写入自动建表脚本。
 
 连接配置与专用库验收见[本地开发](../../../../docs/operations/local-dev.md)。
+
+2026-09-28新增正式ProjectMapper.xml，对应已批准的四表项目聚合。ProjectDao使用短事务并在提交后发布实体ID/version；根组合层在mysql未启用时允许无Mapper装配，仅在业务操作时明确报未就绪，不提供内存持久化替代。DDL见../db/project-schema.sql，需显式执行，应用不会自动建表。

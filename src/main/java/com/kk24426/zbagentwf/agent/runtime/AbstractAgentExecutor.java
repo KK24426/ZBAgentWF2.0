@@ -17,16 +17,8 @@ import java.util.Objects;
 public abstract class AbstractAgentExecutor extends ProjectAgentExecutor {
     private volatile Rules rules;
 
-    /**
-     * 保存独立模型副本，不附加用户或项目规则；必要通用/安全规则仍须显式初始化。
-     */
-    protected AbstractAgentExecutor(AgentBean agent) { this(agent, null, null); }
-    /**
-     * 复制模型及可选用户/项目提示词，隔离后续外部修改；不调用可覆写的初始化方法或读取文件。
-     */
-    protected AbstractAgentExecutor(AgentBean agent, Prompt userPrompt, Prompt projectPrompt) {
-        super(copyAgent(agent), copyPrompt(userPrompt), copyPrompt(projectPrompt));
-    }
+    /** 保存项目和可选用户规则，不读取文件或调用模型。 */
+    protected AbstractAgentExecutor(Project project) { super(project); }
 
     /** 配置由装配方提前读取；这里只保存不可变文本，禁止已绑定实例重新配置。 */
     public final synchronized void initializePrompts(Prompt defaults, Prompt security) {
@@ -39,13 +31,12 @@ public abstract class AbstractAgentExecutor extends ProjectAgentExecutor {
     /** 返回已初始化安全规则的新Prompt，隔离调用方修改；未初始化时抛配置不可用异常。 */
     @Override protected final Prompt getSecurityPrompt() { return prompt(requireRules().security()); }
 
-    /** 在受理前生成本次快照；项目追加规则只影响之后的调用。 */
-    public final String instructionsFor(Project project) {
+    /** 以指定角色快照和项目当前规则组合本次输入，不读取文件或调用模型。 */
+    public final String instructionsFor(AgentBean role) {
         Rules snapshot = requireRules();
-        synchronized (Objects.requireNonNull(project)) {
-            Prompt current = project.getProjectPrompt() == null ? getProjectPrompt() : project.getProjectPrompt();
+        synchronized (getProject()) {
             return instructions(prompt(snapshot.defaults()), prompt(snapshot.security()),
-                    getAgent().getRolePrompt(), getUserPrompt(), current);
+                    role.getRolePrompt(), getUserPrompt(), getProject().getProjectPrompt());
         }
     }
 
@@ -78,22 +69,24 @@ public abstract class AbstractAgentExecutor extends ProjectAgentExecutor {
     private static void section(StringBuilder text, String name, String value) {
         if (value != null && !value.isBlank()) text.append("【").append(name).append("】\n").append(value).append("\n");
     }
-    private static String value(Prompt prompt) { return prompt == null ? null : prompt.getPrompt(); }
+    /** 可选规则允许null，但非空附件必须在组装时明确拒绝。 */
+    private static String value(Prompt prompt) { if (prompt == null) return null; prompt.requireTextOnly(); return prompt.getPrompt(); }
     /** 将原文包裹为新Prompt，可保留null；必要规则的校验由使用入口完成。 */
-    public static Prompt prompt(String value) { var p = new Prompt(); p.setPrompt(value); return p; }
+    public static Prompt prompt(String value) { return new Prompt(value); }
     /**
-     * 复制提示词文本到独立Bean；null保持为null，不与调用方共享可变Prompt。
+     * 复制不可变提示词及防御复制的附件数组；null保持为null，不执行附件解码。
      */
-    public static Prompt copyPrompt(Prompt value) { return value == null ? null : prompt(value.getPrompt()); }
+    public static Prompt copyPrompt(Prompt value) { return value == null ? null : new Prompt(value.getPrompt(), value.getFile()); }
     /**
      * 复制当前绑定使用的模型三元组、角色提示词和 Skill 名称，隔离可变嵌套对象。
-     * 这是执行器绑定快照，不是 AgentBean 所有字段的通用克隆；当前不读取 think 字段。
+     * 这是执行器绑定快照，不是 AgentBean 所有字段的通用克隆；同时保留用户定义的 think 推理程度，不自行推断CLI参数。
      * @param value 非空模型实体
      * @return 用于绑定的新实体，未指定的可选对象保持 null
      */
     public static AgentBean copyAgent(AgentBean value) {
         Objects.requireNonNull(value, "Agent 不能为空。");
         var copy = new AgentBean();
+        copy.setThink(value.getThink());
         copy.setBrand(value.getBrand()); copy.setName(value.getName()); copy.setVer(value.getVer());
         copy.setRolePrompt(copyPrompt(value.getRolePrompt()));
         if (value.getSkill() != null) { var skill = new Skill(); skill.setSkillName(value.getSkill().getSkillName()); copy.setSkill(skill); }

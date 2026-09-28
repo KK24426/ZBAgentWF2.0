@@ -1,99 +1,44 @@
 /*
- * 创建日期：2026-09-27
- * 更新日期：2026-09-27
+ * 创建日期：2026-09-28
+ * 更新日期：2026-09-28
  * 做 成 者：zebiao
- * 版    本：v0.1
- * 功能概要：验证项目登记、角色选择、提示词追加及失败不发布。
+ * 版    本：v0.2
+ * 功能概要：验证数据库重载与canonical身份，防止把旧内存缓存当成事实来源。
  */
 package com.kk24426.zbagentwf.agent.project;
-
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
-import com.kk24426.zbagentwf.agent.codex.CodexFixtureSupport;
-import com.kk24426.zbagentwf.agent.registry.*;
-import com.kk24426.zbagentwf.common.agent.model.AgentBean;
-import com.kk24426.zbagentwf.common.memory.MemoryStore;
-import com.kk24426.zbagentwf.common.project.model.*;
-import com.kk24426.zbagentwf.common.project.config.ProjectSettings;
+import com.kk24426.zbagentwf.agent.registry.ProjectFixtureSupport;
+import com.kk24426.zbagentwf.agent.persistence.ProjectDao;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
-import com.kk24426.zbagentwf.user.agent.api.*;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Path;
+import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
+/** 旧内存项目测试已迁移为持久化重载/canonical身份测试。 */
 class ProjectMemoryTest {
     @TempDir Path temp;
-
-    @Test void createsDistinctBindingsRegistersOriginalAndAppendsProjectPrompt() {
-        var memory = new MemoryStore();
-        var received = new ArrayList<AgentBean>();
-        AgentExecutorFactory factory = bean -> { received.add(bean); return mock(ProjectAgentExecutor.class); };
-        var planner = mock(AgentRequirementPlanner.class);
-        when(planner.plan(any(), anyString())).thenReturn(List.of(new Requirement()));
-        var selection = new RoleAgentResolver.Selection("provider", "model", "default");
-        var roles = new RoleAgentResolver(Map.of("planning", selection, "development", selection, "review", selection),
-                CodexFixtureSupport.prompts(temp));
-        var service = new ProjectDomainImpl(new ProjectSettings(temp.resolve("projects")), factory, planner, memory, roles);
-        var first = service.newProject("第一项目");
-        assertSame(first, service.getProject(first.getProjectId()));
-        assertEquals(List.of("default", "default", "default"), received.stream().map(AgentBean::getVer).toList());
-        assertEquals(List.of("fixture-planning-规则", "fixture-development-规则", "fixture-review-规则"),
-                received.stream().map(a -> a.getRolePrompt().getPrompt()).toList());
-        assertNotSame(received.get(0), received.get(1));
-        var selected = new AgentBean(); selected.setBrand("provider"); selected.setName("model"); selected.setVer("selected");
-        var second = service.newProject("第二项目", selected, selected, selected);
-        assertNotSame(first.getPlanningAgent(), second.getPlanningAgent());
-        assertTrue(received.subList(3, 6).stream().allMatch(a -> a.getVer().equals("selected")));
-        assertNull(selected.getRolePrompt(), "不得给调用者的模型 Bean 偷偷写角色规则");
-        service.addProjectPrompt(first.getProjectId(), "规则一"); service.addProjectPrompt(first.getProjectId(), "规则二");
-        assertEquals("规则一\n规则二", first.getProjectPrompt().getPrompt());
-        assertNull(second.getProjectPrompt());
-        assertThrows(IllegalArgumentException.class, () -> service.getProject("missing"));
-        assertThrows(IllegalArgumentException.class, () -> service.getProject(" "));
-        assertThrows(IllegalArgumentException.class, () -> service.addProjectPrompt(first.getProjectId(), " "));
-    }
-
-    @Test void failedCreationNeverRegistersAndMissingDefaultsDoNotCreateDirectories() {
-        var memory = new MemoryStore(); var planner = mock(AgentRequirementPlanner.class);
-        var roles = new RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp));
-        var service = new ProjectDomainImpl(new ProjectSettings(temp.resolve("projects")),
-                ignored -> mock(ProjectAgentExecutor.class), planner, memory, roles);
-        assertThrows(AgentConfigurationUnavailableException.class, () -> service.newProject("任务"));
-        assertFalse(Files.exists(temp.resolve("projects")));
-        var captured = new Project[1];
-        when(planner.plan(any(), anyString())).thenAnswer(call -> {
-            captured[0] = call.getArgument(0); throw new IllegalStateException("fixture failure");
-        });
-        var model = new AgentBean();
-        assertThrows(IllegalStateException.class, () -> service.newProject("任务", model, model, model));
-        assertNotNull(captured[0]);
-        assertTrue(memory.get("project", captured[0].getProjectId(), Project.class).isEmpty());
-        assertFalse(Files.exists(captured[0].getWorkingDirectory()));
-    }
-
-    @Test void roleConfigurationStillRejectsUppercaseMixedCaseAndUnknownKeys() {
-        var selection = new RoleAgentResolver.Selection("provider", "model", "default");
-        var prompts = CodexFixtureSupport.prompts(temp);
-        for (String invalid : List.of("PLANNING", "DEVELOPMENT", "REVIEW", "Planning", " planning", "unknown")) {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new RoleAgentResolver(Map.of(invalid, selection), prompts), invalid);
+    /** 数据库替身快照覆盖未保存修改，并发查询保持同一协调器身份。 */
+    @Test void reloadUsesStoredSnapshotAndConcurrentLookupsShareIdentity() throws Exception {
+        try(var env=new ProjectFixtureSupport(temp.resolve("projects"),"success","success");var callers=Executors.newVirtualThreadPerTaskExecutor()) {
+            var p=env.single();p.setProjectName("尚未保存");var canonical=env.domain.getProject(p.getProjectId());assertNotSame(p,canonical);assertEquals("fixture",canonical.getProjectName());
+            var executor=env.factory.getExecutor(canonical);var work=new java.util.ArrayList<Future<?>>();
+            for(int i=0;i<16;i++)work.add(callers.submit(() -> {var found=env.domain.getProject(p.getProjectId());assertSame(canonical,found);assertSame(executor,env.factory.getExecutor(found));}));
+            for(var future:work)future.get(5,TimeUnit.SECONDS);
         }
     }
-    @Test void initialPlanningRejectionPreservesRetryableTypeAndDoesNotPublishProject() {
-        var memory = new MemoryStore(); var planner = mock(AgentRequirementPlanner.class);
-        var captured = new Project[1];
-        when(planner.plan(any(), anyString())).thenAnswer(call -> {
-            captured[0] = call.getArgument(0); throw new java.util.concurrent.RejectedExecutionException("fixture-full");
-        });
-        var service = new ProjectDomainImpl(new ProjectSettings(temp.resolve("projects")),
-                ignored -> mock(ProjectAgentExecutor.class), planner, memory,
-                new RoleAgentResolver(Map.of(), CodexFixtureSupport.prompts(temp)));
-        var model = new AgentBean();
-        assertThrows(java.util.concurrent.RejectedExecutionException.class, () -> service.newProject("任务", model, model, model));
-        assertFalse(Files.exists(captured[0].getWorkingDirectory()));
-        assertTrue(memory.get("project", captured[0].getProjectId(), Project.class).isEmpty());
+    /** 新领域实例首次并发查询同一已保存项目，只能发布一个运行时身份。 */
+    @Test void concurrentFirstLoadsPublishOneCanonicalObject() throws Exception {
+        try(var env=new ProjectFixtureSupport(temp.resolve("projects"),"success","success");var callers=Executors.newVirtualThreadPerTaskExecutor()) {
+            var p=env.single();var start=new CountDownLatch(1);
+            var work=new java.util.ArrayList<Future<com.kk24426.zbagentwf.common.project.model.Project>>();
+            for(int i=0;i<16;i++)work.add(callers.submit(()->{start.await();return env.domain.getProject(p.getProjectId());}));
+            start.countDown();var first=work.getFirst().get(5,TimeUnit.SECONDS);
+            for(var future:work)assertSame(first,future.get(5,TimeUnit.SECONDS));
+        }
     }
-
+    /** 无数据库配置时显式未就绪，不返回临时内存项目。 */
+    @Test void absentMysqlNeverFallsBackToVolatileProjectStorage() {
+        var dao=new ProjectDao(null,null);assertThrows(AgentConfigurationUnavailableException.class,dao::requireAvailable);
+        assertThrows(AgentConfigurationUnavailableException.class,() -> dao.findByProjectId("anything"));
+    }
 }

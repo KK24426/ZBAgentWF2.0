@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-27
- * 更新日期：2026-09-27
+ * 更新日期：2026-09-28
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：验证共享内存存储的类型、分类、引用和并发边界。
@@ -13,9 +13,11 @@ import java.util.ArrayList;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
 
+/** 验证通用临时引用容器的分类、类型和并发，不将其用作项目持久化。 */
 class MemoryStoreTest {
+    /** 验证分类隔离、类型检查和引用语义，并确认删除及新Store不影响其它分类或继承旧数据。 */
     @Test void namespacesTypesAndExplicitRemovalAreIndependent() {
-        var store = new MemoryStore(); var project = new Project();
+        var store = new MemoryStore(); var project = new Project(null,new java.util.ArrayList<>(),null,null,null);
         store.put("project", "same", project); store.put("draft", "same", "草稿");
         assertSame(project, store.get("project", "same", Project.class).orElseThrow());
         project.setProjectId("updated");

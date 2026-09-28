@@ -1,8 +1,8 @@
 /*
  * 创建日期：2026-09-27
- * 更新日期：2026-09-27
+ * 更新日期：2026-09-28
  * 做 成 者：zebiao
- * 版    本：v0.1
+ * 版    本：v0.2
  * 功能概要：验证项目 Controller、Service、精确路由及三语隐私边界。
  */
 package com.kk24426.zbagentwf.agent.project.controller;
@@ -13,7 +13,9 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.kk24426.zbagentwf.agent.web.*;
+import com.kk24426.zbagentwf.agent.registry.ProjectFixtureSupport;
 import com.kk24426.zbagentwf.common.agent.model.*;
+import com.kk24426.zbagentwf.common.project.dto.ProjectHttp;
 import com.kk24426.zbagentwf.common.project.model.*;
 import com.kk24426.zbagentwf.common.exception.AgentConfigurationUnavailableException;
 import com.kk24426.zbagentwf.common.msg.MsgCatalog;
@@ -24,7 +26,8 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.MediaType;
@@ -36,6 +39,7 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.OutputStreamAppender;
 
+/** 通过用户服务替身验证五项HTTP操作、安全快照和固定错误；不调用真实模型。 */
 class ProjectControllerTest {
     @TempDir Path temp;
     private final ProjectDomain domain = mock(ProjectDomain.class);
@@ -43,18 +47,19 @@ class ProjectControllerTest {
     private MsgCatalog messages;
     private Project project;
 
+    /** 为每个场景绑定三语MVC、用户服务及隔离的领域替身，并准备可断言的任务结果。 */
     @BeforeEach void prepare() throws Exception {
         messages = MsgCatalog.load(temp);
         var locales = new MsgLocaleResolver("auto");
         mvc = MockMvcBuilders.standaloneSetup(new ProjectController(new ProjectService(domain), messages))
                 .setLocaleResolver(locales).addFilters(new WebRequestFilter(messages, locales)).build();
-        project = new Project(); project.setProjectId("project-1"); project.setWorkingDirectory(temp.resolve("private-directory"));
-        var secret = new Prompt(); secret.setPrompt("private-rules"); project.setProjectPrompt(secret);
+        project = new Project(null, new java.util.ArrayList<>(), null, null, null); project.setProjectId("project-1");
+        var secret = new Prompt("private-rules"); project.setProjectPrompt(secret);
         var r = new Requirement(); r.setUserContent("需求");
-        var t = new RequirementTask(); t.setId("task-1"); t.setContent("实现"); r.getTasks().add(t);
+        var t = new RequirementTask(); t.setId(1L); t.setContent("实现"); r.getTasks().add(t);
         project.getRequirements().add(r);
-        when(domain.newProject(anyString())).thenReturn(project);
-        when(domain.newProject(anyString(), any(), any(), any())).thenReturn(project);
+        when(domain.newProject(anyString(), nullable(String.class))).thenReturn(project);
+        when(domain.newProject(anyString(), nullable(String.class), any(), any(), any())).thenReturn(project);
         when(domain.getProject("project-1")).thenReturn(project);
         when(domain.getProject("missing")).thenThrow(new IllegalArgumentException("internal-private-text"));
         when(domain.execTask(project)).thenAnswer(call -> {
@@ -63,6 +68,7 @@ class ProjectControllerTest {
         });
     }
 
+    /** 验证五项HTTP调用复用服务端对象，响应只含公开快照且不泄露规则或目录。 */
     @Test void allFiveOperationsUseServerProjectAndReturnOnlySnapshots() throws Exception {
         String created = mvc.perform(post("/api/projects").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"content\":\"原始需求\"}"))
@@ -71,7 +77,7 @@ class ProjectControllerTest {
                 .andExpect(jsonPath("$.planningAgent").doesNotExist())
                 .andExpect(jsonPath("$.projectPrompt").doesNotExist()).andReturn().getResponse().getContentAsString();
         assertFalse(created.contains("private-directory")); assertFalse(created.contains("private-rules"));
-        verify(domain).newProject("原始需求");
+        verify(domain).newProject("原始需求", null);
         mvc.perform(get("/api/projects/project-1")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.requirements[0].tasks[0].status").value("PENDING"));
         mvc.perform(post("/api/projects/project-1/prompts").contentType(MediaType.APPLICATION_JSON)
@@ -79,7 +85,7 @@ class ProjectControllerTest {
         verify(domain).addProjectPrompt("project-1", "新增规则");
         mvc.perform(post("/api/projects/project-1/requirements").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"content\":\"新增需求\"}")).andExpect(status().isOk());
-        verify(domain).createRequirements(same(project), eq("新增需求"));
+        verify(domain).createRequiremens(same(project), eq("新增需求"));
         mvc.perform(post("/api/projects/project-1/tasks/execute").contentType(MediaType.APPLICATION_JSON)
                 .content("{}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.requirements[0].tasks[0].status").value("SUCCEEDED"))
@@ -87,15 +93,59 @@ class ProjectControllerTest {
         verify(domain).execTask(same(project));
     }
 
+    /** 用闩锁固定查询与终态保存失败的交错，响应只能展示重载后的RUNNING而非未提交的成功结果。 */
+    @Test void concurrentFailedSaveCannotLeakUnpersistedSuccessIntoGetResponse() throws Exception {
+        try (var env = new ProjectFixtureSupport(temp.resolve("snapshot"), "success", "success")) {
+            var canonical = env.domain.getProject(env.single().getProjectId());
+            var service = spy(new ProjectService(env.domain));
+            var initialLookup = new CountDownLatch(1);
+            var allowResponse = new CountDownLatch(1);
+            var first = new AtomicBoolean(true);
+            doAnswer(call -> {
+                Project loaded = (Project) call.callRealMethod();
+                if (first.getAndSet(false)) {
+                    initialLookup.countDown();
+                    assertTrue(allowResponse.await(15, TimeUnit.SECONDS));
+                }
+                return loaded;
+            }).when(service).getProject(canonical.getProjectId());
+            var controller = new ProjectController(service, messages);
+            try (var workers = Executors.newVirtualThreadPerTaskExecutor()) {
+                var response = workers.submit(() -> controller.get(canonical.getProjectId(), Locale.CHINESE));
+                try {
+                    assertTrue(initialLookup.await(15, TimeUnit.SECONDS));
+                    env.store.failAt = env.store.saves + 2;
+                    assertThrows(IllegalStateException.class, () -> env.domain.execTask(canonical));
+                    assertThrows(IllegalStateException.class, () -> env.store.requireReliable(canonical));
+                    assertEquals(TaskStatus.SUCCEEDED, canonical.getRequirements().getFirst().getTasks().getFirst().getStatus());
+                } finally { allowResponse.countDown(); }
+                var result = response.get(15, TimeUnit.SECONDS);
+                assertEquals(200, result.getStatusCode().value());
+                var view = (ProjectHttp.ProjectResponse) result.getBody();
+                var task = view.requirements().getFirst().tasks().getFirst();
+                assertEquals(TaskStatus.RUNNING, task.status());
+                assertNull(task.result());
+            }
+        }
+    }
+
+    /** 查询后数据库失联时拒绝旧快照，不能以200误报缓存中的执行结果。 */
+    @Test void unavailableReloadBeforeSnapshotReturns503InsteadOfCachedSuccess() throws Exception {
+        when(domain.getProject("project-1")).thenReturn(project)
+                .thenThrow(new AgentConfigurationUnavailableException());
+        mvc.perform(get("/api/projects/project-1")).andExpect(status().isServiceUnavailable());
+    }
+
+    /** 完整角色选择原样传给服务；部分选择在领域调用前拒绝，不隐式使用默认模型。 */
     @Test void explicitModelsOverrideDefaultsAndPartialSelectionIsRejected() throws Exception {
         String model = "{\"brand\":\"p\",\"name\":\"m\",\"ver\":\"v\"}";
         mvc.perform(post("/api/projects").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"content\":\"任务\",\"planningAgent\":" + model + ",\"developmentAgent\":" + model
                         + ",\"reviewAgent\":" + model + "}"))
                 .andExpect(status().isCreated());
-        verify(domain, never()).newProject(anyString());
+        verify(domain, never()).newProject(anyString(), nullable(String.class));
         var captor = org.mockito.ArgumentCaptor.forClass(AgentBean.class);
-        verify(domain).newProject(eq("任务"), captor.capture(), captor.capture(), captor.capture());
+        verify(domain).newProject(eq("任务"), isNull(), captor.capture(), captor.capture(), captor.capture());
         assertTrue(captor.getAllValues().stream().allMatch(a -> a.getBrand().equals("p") && a.getVer().equals("v")));
         clearInvocations(domain);
         mvc.perform(post("/api/projects").contentType(MediaType.APPLICATION_JSON)
@@ -104,6 +154,7 @@ class ProjectControllerTest {
         verifyNoInteractions(domain);
     }
 
+    /** 验证输入、未知项目、配置和内部故障保留不同状态码及固定三语提示，不输出异常原文。 */
     @Test void invalidMissingUnavailableAndInternalErrorsKeepDistinctStatusAndLocalization() throws Exception {
         for (String language : MsgCatalog.LANGUAGES) {
             Locale locale = Locale.forLanguageTag(language);
@@ -114,12 +165,12 @@ class ProjectControllerTest {
             }
             mvc.perform(get("/api/projects/missing").header("Accept-Language", language))
                     .andExpect(status().isNotFound()).andExpect(content().string(messages.get("http.project.notFound", locale)));
-            doThrow(new AgentConfigurationUnavailableException()).when(domain).newProject("unavailable");
+            doThrow(new AgentConfigurationUnavailableException()).when(domain).newProject("unavailable", null);
             mvc.perform(post("/api/projects").header("Accept-Language", language)
                     .contentType(MediaType.APPLICATION_JSON).content("{\"content\":\"unavailable\"}"))
                     .andExpect(status().isServiceUnavailable()).andExpect(content().string(messages.get("http.project.unavailable", locale)));
         }
-        when(domain.newProject("internal")).thenThrow(new IllegalArgumentException("private-arbitrary-text"));
+        when(domain.newProject("internal", null)).thenThrow(new IllegalArgumentException("private-arbitrary-text"));
         mvc.perform(post("/api/projects").contentType(MediaType.APPLICATION_JSON).content("{\"content\":\"internal\"}"))
                 .andExpect(status().isInternalServerError()).andExpect(content().string(messages.get("http.internalError", Locale.CHINESE)));
         when(domain.execTask(project)).thenThrow(new RejectedExecutionException("private-resource-details"));
@@ -139,6 +190,7 @@ class ProjectControllerTest {
         verify(domain, never()).execTask(any());
     }
 
+    /** 项目错误日志隐藏输入和cause自由文本，但保留异常类型与调用栈；结束后恢复日志配置。 */
     @Test void projectExceptionLogsHideFreeTextButPreserveCauseAndStack() throws Exception {
         var bytes = new ByteArrayOutputStream();
         var context = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -151,7 +203,7 @@ class ProjectControllerTest {
         logger.setLevel(ch.qos.logback.classic.Level.WARN); logger.setAdditive(false); logger.addAppender(appender);
         try {
             doAnswer(call -> { throw new IllegalStateException("private-natural-input",
-                    new IllegalArgumentException("private-cause")); }).when(domain).newProject("private-natural-input");
+                    new IllegalArgumentException("private-cause")); }).when(domain).newProject("private-natural-input", null);
             mvc.perform(post("/api/projects").contentType(MediaType.APPLICATION_JSON)
                     .content("{\"content\":\"private-natural-input\"}")).andExpect(status().isInternalServerError());
         } finally { logger.detachAppender(appender); logger.setLevel(previousLevel); logger.setAdditive(previousAdditive); appender.stop(); encoder.stop(); }

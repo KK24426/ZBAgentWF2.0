@@ -30,6 +30,7 @@ const {chromium} = require("playwright");
     assert.ok(await page.locator("#project-create").isDisabled());
     await page.locator(".model-options summary").click();
     await page.locator("#explicit-models").check();
+    await page.locator("#project-name").fill("名称 <img src=x onerror=alert(1)>");
     await create("fixture:slow fixture:partial <img src=x onerror=alert(1)>");
     assert.equal((await stats()).length, 0, "Incomplete models must not submit");
     for (const role of ["planning", "development", "review"]) {
@@ -47,7 +48,9 @@ const {chromium} = require("playwright");
     let calls = await stats();
     assert.equal(calls.length, 1);
     assert.deepEqual(calls[0].body.planningAgent, {brand: "planning-brand", name: "planning-name", ver: "planning-ver"});
-    assert.deepEqual(Object.keys(calls[0].body).sort(), ["content", "developmentAgent", "planningAgent", "reviewAgent"]);
+    assert.deepEqual(Object.keys(calls[0].body).sort(), ["content", "developmentAgent", "planningAgent", "projectName", "reviewAgent"]);
+    assert.equal(calls[0].body.projectName, "名称 <img src=x onerror=alert(1)>");
+    assert.equal(await page.locator("#project-current-name").textContent(), calls[0].body.projectName);
     assert.equal(await page.locator("main img").count(), 0);
     assert.ok((await page.locator("#project-requirements").textContent()).includes("<img src=x"));
     checks.push("complete explicit models; duplicate suppression; pending language switch; text-only content");
@@ -111,7 +114,7 @@ const {chromium} = require("playwright");
 
     await page.locator("#explicit-models").uncheck();
     await create("fixture:failure");
-    assert.deepEqual(Object.keys((await stats()).filter(c => c.path === "/api/projects").at(-1).body), ["content"]);
+    assert.deepEqual(Object.keys((await stats()).filter(c => c.path === "/api/projects").at(-1).body), ["content", "projectName"]);
     await page.locator("#project-execute").click(); await finished();
     assert.equal(await page.locator("#metric-attention").textContent(), "1");
     assert.equal(await page.locator("#project-notice").getAttribute("data-state"), "error");

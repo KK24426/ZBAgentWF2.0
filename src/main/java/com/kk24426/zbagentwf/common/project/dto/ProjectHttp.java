@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-27
- * 更新日期：2026-09-27
+ * 更新日期：2026-09-28
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：定义项目 HTTP 输入及不含运行时引用的响应快照。
@@ -42,7 +42,7 @@ public final class ProjectHttp {
 	/**
 	 * 创建请求；三个角色必须全部省略或全部完整提供，不允许按缺失字段部分回退默认值。
 	 */
-	public record CreateProjectRequest(String content, Model planningAgent, Model developmentAgent, Model reviewAgent) {
+	public record CreateProjectRequest(String content, String projectName, Model planningAgent, Model developmentAgent, Model reviewAgent) {
 		/**
 		 * 只有三个模型对象全部为null才表示使用默认选择；部分缺失或空字段不算默认。
 		 */
@@ -69,7 +69,7 @@ public final class ProjectHttp {
 	/**
 	 * 面向HTTP的项目数据；通过view构造时使用不可变列表，不含目录、执行器或提示词引用。
 	 */
-	public record ProjectResponse(String projectId, List<RequirementView> requirements) {
+	public record ProjectResponse(String projectId, String projectName, List<RequirementView> requirements) {
 	}
 
 	/**
@@ -92,14 +92,14 @@ public final class ProjectHttp {
 			boolean confirmationRequired, String confirmationMessage) {
 	}
 
-	/** 与领域写入使用同一对象锁，一次复制状态和结果；之后序列化不读取可变业务对象。 */
+	/** 与领域写入使用同一对象锁复制状态和结果；调用方须先在同一锁内重载以保证持久化状态，本方法不访问数据库。 */
 	public static ProjectResponse view(Project project) {
 		synchronized (project) {
-			return new ProjectResponse(project.getProjectId(),
+			return new ProjectResponse(project.getProjectId(), project.getProjectName(),
 					project.getRequirements().stream()
 							.map(r -> new RequirementView(r.getUserContent(), r.getAgentUnderstanding(),
 									r.getAcceptanceCriteria(), r.getUserConfirmMsg(),
-									r.getTasks().stream().map(t -> new TaskView(t.getId(), t.getContent(),
+									r.getTasks().stream().map(t -> new TaskView(t.getId() == null ? null : t.getId().toString(), t.getContent(),
 											t.getAcceptanceCriteria(), t.getStatus(), result(t.getResult()))).toList()))
 							.toList());
 		}

@@ -42,7 +42,7 @@
   // 仅接受已有响应结构，解析失败不能把可能完成的写操作当作未执行。
   function snapshot(value, expectedId) {
     if (!value || !validId(value.projectId) || expectedId && value.projectId !== expectedId
-        || !Array.isArray(value.requirements)) throw new Error("Invalid project response");
+        || value.projectName !== undefined && !nullableText(value.projectName) || !Array.isArray(value.requirements)) throw new Error("Invalid project response");
     for (const r of value.requirements) {
       if (!r || !text(r.userContent) || !nullableText(r.agentUnderstanding) || !nullableText(r.acceptanceCriteria)
           || !nullableText(r.userConfirmMsg) || !Array.isArray(r.tasks)) throw new Error("Invalid requirement");
@@ -67,6 +67,7 @@
     byId("project-current").hidden = !current;
     if (!current) return;
     byId("project-current-id").textContent = current.projectId;
+    byId("project-current-name").textContent = current.projectName || "";
     byId("metric-requirements").textContent = current.requirements.length;
     byId("metric-pending").textContent = tasks().filter(t => t.status === "PENDING").length;
     byId("metric-completed").textContent = tasks().filter(t => t.status === "SUCCEEDED").length;
@@ -219,7 +220,7 @@
     event.preventDefault();
     if (busy) return;
     if (!goal.value.trim()) return notice("project.error.required");
-    const body = {content: goal.value};
+    const body = {content: goal.value, projectName: byId("project-name").value || null};
     if (byId("explicit-models").checked) {
       for (const [role] of roles) {
         const model = {};

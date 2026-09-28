@@ -1,6 +1,6 @@
 /*
  * 创建日期：2026-09-26
- * 更新日期：2026-09-26
+ * 更新日期：2026-09-28
  * 做 成 者：zebiao
  * 版    本：v0.1
  * 功能概要：验证外部模型配置绑定、覆盖、错误以及接口装配。
@@ -19,23 +19,27 @@ import org.springframework.boot.test.context.ConfigDataApplicationContextInitial
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.SystemEnvironmentPropertySource;
 
+/** 验证模型配置与无mysql时的Web装配；不创建项目或运行模型。 */
 class AgentConfigurationTest {
     @TempDir Path temp;
 
+    /** 验证文件配置被高优先级属性覆盖、同项目复用执行器及上下文关闭释放资源，全程不调用模型或创建目录。 */
     @Test
     void externalFileLoadsAndHigherPriorityPropertiesOverrideWithoutRunningCliOrCreatingProjects() throws Exception {
         Path file = temp.resolve("agents.properties");
         Properties values = properties();
         try (var out = Files.newOutputStream(file)) { values.store(out, "fixture"); }
         var holder = new AgentExecutorFactory[1];
-        var model = new com.kk24426.zbagentwf.common.agent.model.AgentBean[1];
+        var model = new com.kk24426.zbagentwf.common.project.model.Project[1];
         runner().withInitializer(new ConfigDataApplicationContextInitializer())
                 .withPropertyValues("spring.config.location=optional:file:" + temp.resolve("absent.properties").toUri(),
                         "spring.config.import=" + file.toUri(), "zb.agents[0].ver=overridden")
                 .run(context -> {
                     assertNull(context.getStartupFailure());
                     var catalog = context.getBean(AgentRegistry.class);
-                    model[0] = catalog.getActiveAgent("fixture-provider", "fixture-model", "overridden");
+                    var selected = catalog.getActiveAgent("fixture-provider", "fixture-model", "overridden");
+                    model[0] = new com.kk24426.zbagentwf.common.project.model.Project(null,new ArrayList<>(),selected,selected,selected);
+                    model[0].setProjectId(UUID.randomUUID().toString());
                     assertNotNull(context.getBean(ProjectDomain.class));
                     holder[0] = context.getBean(AgentExecutorFactory.class);
                     assertSame(holder[0].getExecutor(model[0]), holder[0].getExecutor(model[0]));

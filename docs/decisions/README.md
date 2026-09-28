@@ -26,3 +26,5 @@
 阅读历史 ADR 时先看顶部的当前适用范围；已被替代的正文只保留决策背景，不用于恢复旧架构。当前按包协作，不因历史“模块”措辞新建 Maven 子模块；用户权限仍以根 `AGENTS.md` 为准。
 
 新的长期技术选择使用 [TEMPLATE.md](./TEMPLATE.md) 记录。候选想法不写成 accepted；先标记 proposed 并由用户决定。
+
+- [0014：项目协调器、持久化与安全审核](./0014-project-persistence-safety.md)

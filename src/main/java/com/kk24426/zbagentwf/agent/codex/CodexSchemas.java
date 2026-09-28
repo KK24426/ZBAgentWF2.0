@@ -20,15 +20,23 @@ final class CodexSchemas {
              "required":["success","summary","errorMessage","confirmationRequired","confirmationMessage"]}
             """;
 
-    // 模型只规划内容和验收标准；Task 标识、初始状态及项目归属由 Java 侧建立。
+    // 审核独立于业务协议，Java还会严格核验字段和非空原因。
+    static final String SECURITY = """
+            {"type":"object","additionalProperties":false,"properties":{
+              "approved":{"type":"boolean"},"reason":{"type":"string"}},"required":["approved","reason"]}
+            """;
+    // 第一阶段只定义需求与待确认事项，不直接产生可执行Task。
     static final String PLANNING = """
             {"type":"object","additionalProperties":false,"properties":{"requirements":{"type":"array",
-             "items":{"type":"object","additionalProperties":false,
-              "properties":{"agentUnderstanding":{"type":"string"},"acceptanceCriteria":{"type":"string"},
-               "userConfirmMsg":{"type":["string","null"]},"tasks":{"type":"array","items":{
-                "type":"object","additionalProperties":false,"properties":{"content":{"type":"string"},
-                 "acceptanceCriteria":{"type":"string"}},"required":["content","acceptanceCriteria"]}}},
-              "required":["agentUnderstanding","acceptanceCriteria","userConfirmMsg","tasks"]}}},
-             "required":["requirements"]}
+              "items":{"type":"object","additionalProperties":false,"properties":{
+                "agentUnderstanding":{"type":"string"},"acceptanceCriteria":{"type":"string"},
+                "userConfirmMsg":{"type":["string","null"]}},
+                "required":["agentUnderstanding","acceptanceCriteria","userConfirmMsg"]}}},"required":["requirements"]}
+            """;
+    // 第二阶段仅为已明确的单条需求生成任务，数据库负责分配Long标识。
+    static final String TASKS = """
+            {"type":"object","additionalProperties":false,"properties":{"tasks":{"type":"array","items":{
+              "type":"object","additionalProperties":false,"properties":{"content":{"type":"string"},
+              "acceptanceCriteria":{"type":"string"}},"required":["content","acceptanceCriteria"]}}},"required":["tasks"]}
             """;
 }

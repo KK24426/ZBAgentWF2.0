@@ -1,12 +1,17 @@
+/*
+ * 创建日期：2026-09-28
+ * 更新日期：2026-09-28
+ * 做 成 者：zebiao
+ * 版    本：v0.1
+ * 功能概要：保存数据库主键、时间、逻辑删除及版本元数据。
+ */
 package com.kk24426.zbagentwf.common;
 
 import java.util.Date;
 
-/**
- * 数据模型的父类,包含通用字段
- */
+/** 公共持久化元数据；普通存取不触发数据库操作，生成值由DAO提交成功后发布。 */
 public class DataBean {
-	/** ID */
+	/** 数据库生成Long主键；插入提交前为null，不是业务UUID。 */
 	private Long id;
 	/** 创建时间 */
 	private Date creationData;
@@ -14,46 +19,46 @@ public class DataBean {
 	private Date lastupdateData;
 	/** 删除标识(默认不做物理删除,只做逻辑删除) */
 	private boolean delFlg;
-	/** 数据版本,每次更新时+1 */
+	/** 乐观锁版本；DAO成功更新提交后加1，普通setter不执行业务更新。 */
 	private int version;
 
-	private Long getId() {
+	public Long getId() {
 		return id;
 	}
 
-	private void setId(Long id) {
+	public void setId(Long id) {
 		this.id = id;
 	}
 
-	private Date getCreationData() {
+	public Date getCreationData() {
 		return creationData;
 	}
 
-	private void setCreationData(Date creationData) {
+	public void setCreationData(Date creationData) {
 		this.creationData = creationData;
 	}
 
-	private Date getLastupdateData() {
+	public Date getLastupdateData() {
 		return lastupdateData;
 	}
 
-	private void setLastupdateData(Date lastupdateData) {
+	public void setLastupdateData(Date lastupdateData) {
 		this.lastupdateData = lastupdateData;
 	}
 
-	private boolean isDelFlg() {
+	public boolean isDelFlg() {
 		return delFlg;
 	}
 
-	private void setDelFlg(boolean delFlg) {
+	public void setDelFlg(boolean delFlg) {
 		this.delFlg = delFlg;
 	}
 
-	private int getVersion() {
+	public int getVersion() {
 		return version;
 	}
 
-	private void setVersion(int version) {
+	public void setVersion(int version) {
 		this.version = version;
 	}
 }

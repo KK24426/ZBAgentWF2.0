@@ -31,7 +31,7 @@ ssh -N -i "PATH_TO_PRIVATE_KEY" -o StrictHostKeyChecking=yes -o ExitOnForwardFai
 MySQL测试使用`ZB_TEST_DB_URL=jdbc:mysql://127.0.0.1:13306/zbagentwf_test`及独立`ZB_TEST_DB_USERNAME/PASSWORD`。
 凭据由获授权的安全配置途径提供，不粘贴到仓库、命令参数或日志；测试后恢复/移除临时环境变量。
 运行`mvnw.cmd -Pmysql-it verify`，仅创建并删除随机测试表，验证CRUD、中文、事务提交和回滚。
-账号只具有此库SELECT/INSERT/UPDATE/DELETE/CREATE/DROP，无全局权限；不要在此技术测试库保存真实业务数据。
+账号只具有此库SELECT/INSERT/UPDATE/DELETE/CREATE/DROP/REFERENCES，无全局权限；REFERENCES已于2026-09-28经用户授权补充，仅用于四表外键创建。不要在此技术测试库保存真实业务数据。
 
 ## 查看状态与停止
 

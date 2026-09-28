@@ -14,6 +14,7 @@ import java.util.*;
 
 /** 只进入测试类路径；所有落盘数据均为测试生成的临时数据。 */
 public class FakeCodexFixture {
+    /** 按安全/需求/任务/执行schema返回可控事件；落盘标记仅用于协议测试，并非真正OS只读沙箱。 */
     public static void main(String[] args) throws Exception {
         String scenario = args[0];
         if (scenario.equals("child")) {
@@ -26,6 +27,21 @@ public class FakeCodexFixture {
         Path schema = Path.of(arguments.get(arguments.indexOf("--output-schema") + 1));
         Files.writeString(Path.of("started"), Long.toString(ProcessHandle.current().pid()));
         Files.writeString(Path.of("schema-path"), schema.toString());
+        String schemaText=Files.readString(schema);
+        if (schemaText.contains("\"approved\"")) {
+            if (!arguments.get(arguments.indexOf("--sandbox")+1).equals("read-only")) throw new AssertionError("audit sandbox");
+            String audit=new String(System.in.readAllBytes(),StandardCharsets.UTF_8);
+            Files.writeString(Path.of("audit-input.txt"),audit);
+            Files.writeString(Path.of("audit-count"),"1\n",StandardCharsets.UTF_8,java.nio.file.StandardOpenOption.CREATE,java.nio.file.StandardOpenOption.APPEND);
+            if (scenario.equals("audit-sleep")) new java.util.concurrent.CountDownLatch(1).await();
+            if (scenario.equals("audit-bad")) { System.out.println("not-json"); return; }
+            if (scenario.equals("audit-exit")) System.exit(7);
+            var verdict=CodexJson.JSON.createObjectNode().put("approved",!scenario.equals("audit-deny")).put("reason","fixture review");
+            if (scenario.equals("audit-field")) verdict.put("extra",true);
+            if (scenario.equals("audit-empty")) verdict.put("reason","");
+            emit(verdict); return;
+        }
+        Files.writeString(Path.of("business-count"),"1\n",StandardCharsets.UTF_8,java.nio.file.StandardOpenOption.CREATE,java.nio.file.StandardOpenOption.APPEND);
         if (scenario.equals("descendant")) {
             String javaExecutable = Path.of(System.getProperty("java.home"), "bin",
                     System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java").toString();
@@ -58,12 +74,13 @@ public class FakeCodexFixture {
                 var requirement = response.withArray("requirements").addObject();
                 requirement.put("agentUnderstanding", "理解" + r).put("acceptanceCriteria", "需求验收" + r)
                         .putNull("userConfirmMsg");
-                for (int t = 0; t < 2; t++) requirement.withArray("tasks").addObject()
-                        .put("content", "执行" + r + "-" + t).put("acceptanceCriteria", "Task验收");
             }
             if (scenario.equals("bad-plan")) {
-                ((tools.jackson.databind.node.ObjectNode) response.get("requirements").get(1)).put("tasks", "not-array");
+                ((tools.jackson.databind.node.ObjectNode) response.get("requirements").get(1)).put("agentUnderstanding", "");
             }
+        } else if (schemaText.contains("\"tasks\"")) {
+            for (int t=0;t<2;t++) response.withArray("tasks").addObject().put("content","执行任务"+t).put("acceptanceCriteria","Task验收");
+            if (scenario.equals("bad-tasks")) response.put("tasks","invalid");
         } else {
             boolean confirmation = scenario.equals("confirmation");
             boolean success = !confirmation && !scenario.equals("failure");
@@ -85,4 +102,12 @@ public class FakeCodexFixture {
         if (scenario.equals("duplicate-completion")) System.out.println(end);
         if (scenario.equals("exit-failure")) System.exit(7);
     }
+    /** 输出与真实CLI一致的终态事件；仅用于本地fixture。 */
+    private static void emit(tools.jackson.databind.JsonNode response) {
+        var event=CodexJson.JSON.createObjectNode().put("type","item.completed");
+        event.putObject("item").put("type","agent_message").put("text",CodexJson.JSON.writeValueAsString(response));
+        System.out.println(CodexJson.JSON.writeValueAsString(event));
+        System.out.println("{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":11,\"output_tokens\":7}}");
+    }
+
 }
