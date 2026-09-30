@@ -1,5 +1,11 @@
 # 接口与配置
 
+2026-09-30新增供用户审阅的[项目结构、需求变更计划与履历骨架](./project-structure.md)：
+common.project.model保存六个实体、操作/层级枚举、强类型不可变快照与提交候选；
+user.project.api新增ProjectStructureDomain、RequirementChangeDomain、ProjectChangeDomain三个抽象类。
+新projectId为Project.id的Long外键，所有外键采用完整实体类名加Id；既有业务UUID及ProjectDomain不变。
+本轮仅定义字段和未来实现约束，没有新持久化表、业务实现、HTTP入口或Agent上下文接入。
+
 已提供[单次聊天骨架](./chat.md)，该聊天入口的真实 Agent 与持久化 schema 尚未接入；原空父接口及数据骨架见[用户骨架契约](./user-ports.md)。根包启动入口为 com.kk24426.zbagentwf.ZbAgentWfApplication。
 项目包含需求、需求包含 Task 的实体及执行行为见[项目与执行契约](./project-agent.md)。已有配置驱动的模型注册、执行器工厂与项目三角色装配；已完成当前本机Codex与gpt-6-astra的有限项目功能验收，见[验收记录](../operations/codex-live-validation.md)。
 聊天调用的共享技术异常为 common.exception.AgentUnavailableException，供实现层与调用层共同引用。

@@ -5,6 +5,7 @@
 | --- | --- | --- |
 | 用户接口、编排 | user | 目标测试、调用方、verify |
 | 项目/需求/Task、异步执行声明 | common.project.model、common.agent.model、user.project.api、user.agent.api | ProjectModelTest、AgentExecutionContractTest、verify；替身不代表真实执行 |
+| 项目应用/模块/功能、变更计划与履历骨架 | common.project.model、user.project.api | ProjectElementSnapshotTest、test-compile、verify；仅类型和抽象契约，业务与持久化尚未实现 |
 | Codex 进程与异步执行、只读规划 | agent.codex | CodexAgentExecutorTest、CodexRequirementPlannerTest；真实 Java 子进程 fixture，不等于真实模型验收 |
 | 持久化项目、两阶段需求、串行 Task | agent.project | ProjectDomainImplTest、AgentRegistryTest；三角色绑定与隔离 |
 | 模型配置、工厂与资源 | 根包AgentConfiguration、agent.registry、agent.runtime、config/agents.properties | AgentConfigurationTest、AgentRegistryTest、ExecutionResourcesTest |

@@ -149,3 +149,25 @@ agent.persistence负责可选MySQL配置与无参数SQL诊断；common.logging�
 | src/test/java/com/kk24426/zbagentwf/agent/registry/ProjectFixtureSupport.java | 测试专用深拷贝Store和Java模型进程，不进入正式JAR |
 
 原ProjectMemoryTest迁移为数据库重载和canonical身份测试，CodexAgentExecutorTest/PlannerTest及直接调用者适配新接口。Prompt、CodexClient、ProjectDomainImpl、ProjectSettings及工厂仍在原职责包；没有新增模块。
+
+## 项目结构与变更履历骨架
+
+2026-09-30仅新增类型和抽象Domain；[字段与契约](../contracts/project-structure.md)区分当前态、规划意图和实际履历。
+尚未接入数据库、页面或Agent规划/执行；既有ProjectDomain和DataBeanDao不变。
+
+| 文件 | 职责 |
+| --- | --- |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/ProjectApplication.java` | 项目中应用端的当前名称和说明；无业务持久化实现 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/ProjectModule.java` | 一个应用内单层模块的当前名称和说明；无业务持久化实现 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/ProjectFunction.java` | 一个模块内具体功能的当前摘要、详细行为和实现引用；无业务持久化实现 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/RequirementChangePlanItem.java` | 需求预计修改的对象、归属路径与修改边界；无业务持久化实现 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/TaskChangePlanLink.java` | 需求任务与负责计划项的关联；无业务持久化实现 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/ProjectChangeRecord.java` | 需求/任务/计划项对应的实际修改与前后快照；无业务持久化实现 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/ProjectElementType.java` | 应用、模块和具体功能三种对象层级；无业务持久化实现 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/ProjectChangeOperation.java` | 创建与修改两种操作；无业务持久化实现 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/ProjectElementSnapshot.java` | 应用/模块/功能三种不可变强类型快照；无业务持久化实现 |
+| `src/main/java/com/kk24426/zbagentwf/common/project/model/ProjectChangeSubmission.java` | 待发布的单项实际修改候选；无业务持久化实现 |
+| `src/main/java/com/kk24426/zbagentwf/user/project/api/ProjectStructureDomain.java` | 按项目查询当前应用、模块和功能，仅抽象契约 |
+| `src/main/java/com/kk24426/zbagentwf/user/project/api/RequirementChangeDomain.java` | 新增需求计划、配置与查询任务修改范围，仅抽象契约 |
+| `src/main/java/com/kk24426/zbagentwf/user/project/api/ProjectChangeDomain.java` | 发布实际修改和按对象/需求/任务查询履历，仅抽象契约 |
+| `src/test/java/com/kk24426/zbagentwf/common/project/model/ProjectElementSnapshotTest.java` | 快照隔离、不可修改及引用列表边界测试，不进入 JAR |

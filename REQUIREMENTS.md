@@ -22,6 +22,21 @@ Project包含需求和任务，均继承DataBean，保存Long数据库主键、c
 AgentExecutorFactory.getExecutor(Project)提供唯一项目协调器。execAllTasks(callback)返回批次UUID并最终回调一次，各Task独立执行UUID；execTasks(Long taskId,callback)执行特定本项目PENDING任务。按顺序执行，跳过SUCCEEDED，遇到失败/待确认/RUNNING停止，无自动重试。受理失败同步拒绝且不回调，受理后最终回调；成功、失败、确认字段保持既有语义。
 完整Prompt构造后、清旧结果前快照上下文；保存RUNNING成功才审核和调用业务模型，保存终态成功才进入下一任务。模型副作用不在SQL事务内，保存不确定需重载并人工核对，不得自动重跑。详见[项目契约](docs/contracts/project-agent.md)。
 
+## 项目当前结构与变更履历骨架
+
+2026-09-30用户批准先提供实体和抽象Domain供审阅：Project → ProjectApplication → ProjectModule → ProjectFunction；
+应用区分后台、前台、App、API服务，同名跨端功能独立，模块只设一层，功能细化到新增/修改订单等行为。
+当前态与需求计划分离；RequirementChangePlanItem描述修改范围、不变行为和验收，
+TaskChangePlanLink关联任务，ProjectChangeRecord关联实际修改及强类型前后快照。
+新外键统一完整类名加Id，均为Long数据库主键；新projectId指Project.id，现有Project.projectId字符串UUID保持原义。
+
+已提供ProjectStructureDomain、RequirementChangeDomain、ProjectChangeDomain三个独立抽象类；
+单任务不能跨模块/应用，应用级变更用专用任务。CREATE/UPDATE、父级规划键解析、
+实际首次创建绑定、版本校验和幂等发布均仅声明后续实现约束。
+本轮没有新DAO、表、SQL、具体实现、Spring装配、HTTP、页面或规划/执行接入；当前系统不会自动维护功能或履历。
+验收仅覆盖快照引用列表防御复制/不可修改/可空边界及编译、现有全仓回归。
+完整字段与契约见[项目结构骨架](docs/contracts/project-structure.md)，具体实现待用户审阅。
+
 ## 模型注册、工厂与项目角色
 
 角色AgentRole.PLANNING/DEVELOPMENT/REVIEW与配置planning/development/review精确映射。config/agents.properties中的zb.agents条目仍显式配置brand/name/ver/type/executable/model/timeout/enabled，当前仅codex；模型三元组精确匹配、重复拒绝，不按品牌推断或静默回退。初始化只检查原生文件，Windows要求.exe，不代表实际模型验证；刷新只重查文件，修改配置需重启。标准属性覆盖JVM > 环境变量 > 文件。
