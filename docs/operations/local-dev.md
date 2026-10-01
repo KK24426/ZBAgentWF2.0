@@ -3,6 +3,34 @@
 需要JDK26；Windows用mvnw.cmd，macOS/Linux用./mvnw（首次下载需要unzip和sha256sum或shasum）。
 Wrapper固定Maven3.9.16。依赖缓存不进入仓库。本地使用Windows，远程测试使用Linux容器。
 
+## 本地与 Codex 云端协作
+
+本地提交与云端实现通过当前分支的 Git upstream 交接：
+
+1. 本地开始修改前先更新；完成 `user` 接口或业务修改后，检查文件范围，再 commit、push 到该分支 upstream。
+2. 在 Codex 云端发起实现任务。Codex 先检查工作区并 fetch，仅在干净、无领先或分叉时快进到你的提交；同步后重读规则及最新接口，再做方案与独立 Plan Review。
+3. Plan 通过后在云端实现，使用 JDK 26 和 Maven Wrapper 编译、运行适用测试，独立 Result Review 通过后提交并推送。提交前远端已变化则停止重新评估，不把变化直接混入已审结果。
+4. Codex 实际能访问本地执行环境时，可在推送成功后检查并快进本地；当前云端会话不能仅凭本地路径操作你的电脑。未更新时会明确报告，你可以下次本地修改前手动更新。
+
+这套流程使用 Codex 任务，不需要 API key、GitHub Actions 或本地后台同步程序；本地 push 后仍需发起 Codex 任务。同步只允许 fast-forward，不自动 stash、reset、rebase、创建 merge commit 或合并分叉；有未提交修改且远端前进时保留文件并停止。
+
+手动更新时，在本地仓库根目录先执行 `git status --short --branch`，确认没有 staged、unstaged、untracked 修改，也没有进行中的 Git 操作，并核实当前分支 upstream。然后 fetch 并检查领先/落后（Windows PowerShell）：
+
+```powershell
+git fetch # 使用已核实的当前分支 upstream remote
+$upstreamSha = git rev-parse '@{upstream}'
+git rev-list --left-right --count "HEAD...$upstreamSha"
+```
+
+命令成功且领先数（左列）为 0 时，才执行以下快进；两列均为 0 表示已是最新，无需更新。没有 upstream、存在领先或分叉时停止并核对；快进被本地文件阻挡时不要删除文件来继续。
+
+```powershell
+git -c merge.autoStash=false merge --ff-only --no-overwrite-ignore $upstreamSha
+git status --short --branch
+```
+
+该命令禁用自动暂存，并保护被 Git 忽略的本地配置。完成后核实 `git rev-parse HEAD` 等于记录的 `$upstreamSha`，再开始本地编辑。Codex 自动同步遵守同样条件，详见 [Git 流程](../../.agents/skills/zb-development/references/git-workflow.md)。
+
 ## 构建与启动
 
 ```powershell

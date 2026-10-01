@@ -38,6 +38,8 @@ common 中 Bean 不必全部注册成 Spring Bean，普通数据对象可以直�
 
 ## 开发入口
 
+本地修改 `user` 包后先 commit、push，再在 Codex 云端发起开发任务。Codex 开发前同步当前 upstream，按最新接口实现并在云端编译、验证、独立评审，通过后自动 commit、push。能访问本地执行环境时可快进更新本地；否则下次本地修改前手动更新。具体步骤与冲突停止条件见[本地与 Codex 云端协作](./docs/operations/local-dev.md#本地与-codex-云端协作)；不需要 API key 或 GitHub Actions，push 本身不会自动发起任务。
+
 - [协作规则](./AGENTS.md)、[当前需求](./REQUIREMENTS.md)
 - [本地开发、Eclipse、日志和 MySQL 配置](./docs/operations/local-dev.md)
 - [最小注入示例](./docs/operations/spring-example.md)

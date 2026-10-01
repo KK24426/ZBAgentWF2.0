@@ -6,6 +6,12 @@
 启动入口初始化日志、读取必填项目根目录配置并启动 Spring Web，扫描 user/agent/common，持续运行。
 当前有简单首页及单次聊天调用骨架；配置驱动的模型注册、执行器工厂与项目三角色绑定已由 Spring 装配。已补充项目 HTTP 操作、项目工作台、角色默认选择和提示词配置；2026-09-28按用户确认接入项目四表持久化与独立只读安全预审；网页聊天仍未接入，原应用 CLI 已移除。
 
+## Codex 开发协作
+
+2026-10-01 用户要求本地与 Codex 云端协作：用户在本地修改后 commit、push；Codex 写任务开始时检查工作区并同步当前 upstream，再按最新 `user` 接口在云端实现、编译验证及双阶段独立评审，通过后自动 commit、push。同步仅允许工作区干净、无领先或分叉时受保护的 fast-forward；不得覆盖用户文件。提交前远端变化须停止重新评估评审，不强推。
+
+本地自动更新是可选项，仅在实际可访问的本地执行环境中安全快进；不可访问或存在本地修改、领先或分叉时明确未同步，由用户下次修改前手动更新。此需求不增加后台同步程序、API 调用或 GitHub Actions，不由 push 自动发起 Codex 任务，也不扩展业务接口或持久化范围。验收及手动步骤见[本地与 Codex 云端协作](docs/operations/local-dev.md#本地与-codex-云端协作)。
+
 ## 用户骨架与最小补充
 
 用户已提供 AgentBean、UserInterface、AgentRegistry、UserService 及项目/执行契约；实现进度见下文，已于2026-09-27完成当前本机Codex与gpt-6-astra的有限项目功能验收，见[验收记录](docs/operations/codex-live-validation.md)。

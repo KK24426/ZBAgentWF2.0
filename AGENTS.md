@@ -1,8 +1,8 @@
 <!--
  * 创建日期：2026-08-09
- * 更新日期：2026-09-26
+ * 更新日期：2026-10-01
  * 做 成 者：zebiao
- * 版    本：v0.7
+ * 版    本：v0.8
  * 功能概要：定义 ZBAgentWF2.0 中用户主导架构、AI 受控实现的仓库级协作规则。
  -->
 
@@ -67,7 +67,7 @@ ZBAgentWF2.0 是一个由用户亲自掌握架构和公共接口、由 AI 在已
 - 资料按任务选读：架构看 architecture、code-map 和相关 ADR；契约看 contracts 与公开源码；构建看 POM、Wrapper 和 local-dev；数据及外部副作用看 asset-policy、相关契约和目标包规则。开发 skill 提供详细路由。
 - skill 未自动发现时直接读取上述文件；必需文件缺失时停止，不得跳过门禁。任务边界无法确定时请用户裁决，不以新增抽象、包或模块掩盖。
 
-主 Agent 负责协调、返工及全部 Git 写操作。顺序为：理解用户修改 → 用户 checkpoint（存在时）→ Plan Review → 实现与分层验证 → 最终 staged snapshot → Result Review → commit/push 与交接。
+主 Agent 负责协调、返工及全部 Git 写操作。顺序为：检查工作区与同步 upstream → 重读最新规则和用户接口 → 用户 checkpoint（存在时）→ Plan Review → 云端实现与分层验证 → 最终 staged snapshot → Result Review → commit/push → 可访问时更新本地与交接。
 
 所有程序修改均须双阶段评审，包括 Java、POM、构建/CI/脚本、配置、schema、migration、公开契约、工程流程、质量门禁、权限规则及包职责边界。至少一个真实独立 reviewer，不得由实施者切换 skill 冒充独立审核；多个指定 reviewer 必须全部 Accept。Plan 的 `Acceptance: Accept` 且 `Can Implement: Yes` 才能修改项目文件；Result 的 `Acceptance: Accept` 且 `Can Commit/Push: Yes` 才能提交推送。
 
@@ -76,9 +76,12 @@ ZBAgentWF2.0 是一个由用户亲自掌握架构和公共接口、由 AI 在已
 ## 用户修改优先与版本追溯
 
 - 每个 AI 写任务开始时，必须读取 unstaged、staged、untracked、rename 和 delete 状态，重点理解用户对接口、DTO、状态、错误语义、构建和契约文档的修改。
+- 用户已于 2026-10-01 授权本地与 Codex 云端协作：开发前先 fetch 当前分支已确认的 upstream；工作区干净、没有进行中的 Git 操作、没有领先提交且仅落后时，按 [Git 流程](.agents/skills/zb-development/references/git-workflow.md) 禁用 autostash 并保护忽略文件，仅作 fast-forward 更新。同步后重读最新规则、需求和接口，记录同步基准 SHA，再开始方案和实现。此流程在 Codex 写任务启动时执行，不自动由 push 触发新任务。
 - 不得格式化、回退、覆盖或夹带修改用户文件。无法安全区分归属时停止并请用户确认。
-- 存在用户修改时，先按 [Git 流程](.agents/skills/zb-development/references/git-workflow.md) 完成敏感信息检查、独立 checkpoint commit 和 push；没有用户修改时不得制造空提交。
+- 有用户修改且远端前进、存在未核实的领先提交、分叉或同步会覆盖本地文件时停止；不得自动 stash、reset、rebase 或合并分叉。存在用户修改且 HEAD 与 upstream 一致时，再按 [Git 流程](.agents/skills/zb-development/references/git-workflow.md) 完成敏感信息检查、独立 checkpoint commit 和 push；没有用户修改时不得制造空提交。
 - AI 修改与用户 checkpoint 必须使用不同 commit。AI 修改仅在验证和 Result Review 通过后提交、推送。
+- 提交前再次 fetch，核对 upstream 仍为本次同步或 checkpoint 基准；远端前进时停止，重新评估并评审，不把新提交直接混入已审快照。普通 push 被拒绝时停止，不强推。
+- 云端推送核实成功后，仅在实际可访问本地执行环境、已核实仓库与 branch/upstream、工作区干净且无领先或分叉时，可按相同保护条件快进更新本地。本地更新为可选项；不可访问或不能安全更新时如实报告未同步并提供手动更新方法，不影响已完成的云端提交。
 
 ## 环境和关键副作用
 
@@ -87,7 +90,7 @@ ZBAgentWF2.0 是一个由用户亲自掌握架构和公共接口、由 AI 在已
 - migration、写库、远程调用、真实 Agent 执行、文件写入、进程启动、commit、push 和部署必须显式说明目标。
 - 不得把 token、API key、password、证书、私钥、账号或隐私材料写入仓库、日志、测试快照或文档。
 - 外部进程必须使用结构化 `command + args + stdin`，不得暴露任意 shell 字符串入口。
-- 本仓库已获用户授权：满足 [Git 流程](.agents/skills/zb-development/references/git-workflow.md) 的 checkpoint 或已评审实现条件时，自动 commit 并 push 当前分支 upstream；不得自动创建 PR、force push、改写历史、merge 或 rebase。
+- 本仓库已获用户授权：满足 [Git 流程](.agents/skills/zb-development/references/git-workflow.md) 的 checkpoint 或已评审实现条件时，自动 commit 并 push 当前分支 upstream；允许上述受保护的 fast-forward 同步，不得自动创建 PR、force push、改写历史、创建 merge commit、合并分叉或 rebase。
 
 ## 执行规范与交接
 

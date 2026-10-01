@@ -11,6 +11,8 @@ description: 在 ZBAgentWF2.0 中实现、修复、测试或调整工程流程�
 
 先区分只读与授权写任务。读取根 REQUIREMENTS、用户原始需求和验收标准，检查 branch/upstream/HEAD/远端、完整 status（含 unstaged、staged、untracked、rename、delete）、两类 diff 及未跟踪文件内容。重点理解用户的接口、DTO、状态、错误、构建、配置和契约修改，形成影响摘要。边界或归属不明按根规则停止。
 
+授权写任务由主 Agent 先按 [Git 流程](references/git-workflow.md#开发前同步云端) 检查并 fetch 当前 upstream；满足保护条件时快进到已核对的 SHA。同步后重读根与就近规则、REQUIREMENTS、本技能及任务相关源码，按最新 user 接口分析影响；记录同步 SHA，以及存在时的用户 checkpoint SHA，作为 Plan 和后续评审基准。只读任务不更新工作区。
+
 按任务读取下表对应资料，不默认读取所有文档：
 
 | 任务 | 资料及检查 |
@@ -23,7 +25,7 @@ description: 在 ZBAgentWF2.0 中实现、修复、测试或调整工程流程�
 | 构建、环境 | pom.xml、.mvn/wrapper/maven-wrapper.properties、docs/operations/local-dev.md；核对实际版本和目标环境 |
 | 数据、外部副作用 | docs/operations/asset-policy.md、相关契约和目标包规则；远程任务另读 docs/operations/remote-test.md；核对环境、配置来源、权限、脱敏和停止条件 |
 
-说明修改范围、不涉及范围、用户已定义或批准的接口、验收标准、副作用目标和最小分层验证方案。只读任务到分析与报告结束。写任务由主 Agent 先按 [Git 流程](references/git-workflow.md) 处理用户 checkpoint，再把方案交独立 reviewer 使用审核技能；Plan 通过前不写项目文件，包括审核记录。
+说明修改范围、不涉及范围、用户已定义或批准的接口、验收标准、副作用目标和最小分层验证方案。只读任务到分析与报告结束。写任务完成同步检查后，仅在 HEAD 与 upstream 一致时按 [Git 流程](references/git-workflow.md) 处理存在的用户 checkpoint，再把方案交独立 reviewer 使用审核技能；Plan 通过前不写项目文件，包括审核记录。云端功能修改使用云端 JDK/Maven 完成适用的编译与验证；纯流程文档任务说明 Java/POM 未变及不运行构建的原因。
 
 ## 实现与验证
 
@@ -71,7 +73,7 @@ MySQL 是显式环境验收：仅用已批准专用库，URL 限定回环，远�
 - 源码新增、移动、删除：更新 docs/code-map/files.md；职责或验证入口变化更新 docs/code-map/modules.md。
 - 构建、环境、验证命令变化更新 docs/operations/；长期技术决定记 ADR。根 REQUIREMENTS 的当前范围、验收、待确认项与事实一致；未决定内容写“待用户确认”。
 
-主 Agent 按 Git 流程建立最终候选快照，交审核技能进行 Result Review 后核验并提交推送。高风险或跨职责报告包含：结果、影响范围、用户决策依据、验证命令与结果、两阶段审核、风险、未覆盖、偏离、commit/branch/remote/upstream/push 状态。普通交接可简短，仍报告验证、审核、commit、push、剩余风险；未执行项说明原因。
+主 Agent 按 Git 流程建立最终候选快照，交审核技能进行 Result Review 后复查远端与快照并提交推送。推送成功后，实际可访问本地执行环境时才按保护条件尝试可选本地快进；不能执行时提供手动更新方法，不声称已更新本地。高风险或跨职责报告包含：结果、影响范围、用户决策依据、验证命令与结果、两阶段审核、风险、未覆盖、偏离、同步基准 SHA、commit/branch/remote/upstream/push 和本地同步状态。普通交接可简短，仍报告验证、审核、commit、push、本地同步状态和剩余风险；未执行项说明原因。
 
 ## 适用时采用的实践
 
