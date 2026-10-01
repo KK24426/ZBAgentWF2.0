@@ -3,6 +3,8 @@
 需要JDK26；Windows用mvnw.cmd，macOS/Linux用./mvnw（首次下载需要unzip和sha256sum或shasum）。
 Wrapper固定Maven3.9.16。依赖缓存不进入仓库。本地使用Windows，远程测试使用Linux容器。
 
+用户本地改 `user` 包后可 push 到 `main`，由[GitHub Actions 协作流程](./cloud-collaboration.md)独立规划、评审、实现、验证并回推。工作流需要单独配置 `OPENAI_API_KEY`，不会复用 Codex 云登录；回到本地前先保存当前工作，再 `git pull --ff-only` 取回实现。
+
 ## 构建与启动
 
 ```powershell

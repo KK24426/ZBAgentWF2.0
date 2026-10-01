@@ -40,6 +40,7 @@ common 中 Bean 不必全部注册成 Spring Bean，普通数据对象可以直�
 
 - [协作规则](./AGENTS.md)、[当前需求](./REQUIREMENTS.md)
 - [本地开发、Eclipse、日志和 MySQL 配置](./docs/operations/local-dev.md)
+- [本地 push user 包后由 GitHub Actions 自动实现](./docs/operations/cloud-collaboration.md)（须配置模型 API key）
 - [最小注入示例](./docs/operations/spring-example.md)
 - [Mapper 注解与 XML 对应示例](./src/main/resources/mapper/README.md)
 - [包边界](./docs/architecture/module-boundaries.md)、[文件索引](./docs/code-map/files.md)

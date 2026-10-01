@@ -6,6 +6,15 @@
 启动入口初始化日志、读取必填项目根目录配置并启动 Spring Web，扫描 user/agent/common，持续运行。
 当前有简单首页及单次聊天调用骨架；配置驱动的模型注册、执行器工厂与项目三角色绑定已由 Spring 装配。已补充项目 HTTP 操作、项目工作台、角色默认选择和提示词配置；2026-09-28按用户确认接入项目四表持久化与独立只读安全预审；网页聊天仍未接入，原应用 CLI 已移除。
 
+## 本地与云端开发协作
+
+2026-10-01用户选择本地 push 后通过 GitHub Actions 自动适配 user 包改动。
+仅 main 上 user 路径变化自动触发，读取上次成功实现以来的累计 user 净差异；支持手动指定基准处理已批准的既有接口。
+五阶段独立 runner：只读规划、独立 Plan Review、受限实现与 Maven clean verify、独立 Result Review、精确快照复核后独立 AI commit 常规回推；禁止依赖未入候选 tree 的忽略配置。
+保留 user 原样；不自动变更治理、构建、生产配置/schema 或用户业务决定。审核拒绝、需求不足、越权、验证失败或远端前进即停止，无空提交、无 force/rebase/自动 PR/部署。
+工作流和隔离行为验证不等于真实模型/GitHub验收；OPENAI_API_KEY 需由用户在仓库 Actions Secrets 配置，Codex 托管云环境登录不会复用。
+详见[协作启用与恢复](docs/operations/cloud-collaboration.md)。
+
 ## 用户骨架与最小补充
 
 用户已提供 AgentBean、UserInterface、AgentRegistry、UserService 及项目/执行契约；实现进度见下文，已于2026-09-27完成当前本机Codex与gpt-6-astra的有限项目功能验收，见[验收记录](docs/operations/codex-live-validation.md)。

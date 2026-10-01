@@ -2,6 +2,16 @@
 
 单工程：根pom负责构建，根REQUIREMENTS记录验收。以下列出Java源码及本地化相关资源。
 
+## 本地与 Actions 自动开发
+
+| 文件 | 职责 |
+| --- | --- |
+| `.github/workflows/codex-user-implementation.yml` | main 的 user push 触发五阶段独立模型/审核、构建和无模型写回 |
+| `.github/scripts/codex_automation.py` | 累计差异材料、候选边界、结构化审核门禁、完整 staged 快照及 fast-forward 发布 |
+| `.github/codex/*.md`、`*.schema.json` | 四阶段中文提示词及实现/审核结构化结果格式，不改变根治理权限 |
+| `.github/tests/test_codex_automation.py` | 隔离 Git 仓库验证权限、评审、快照、累计差异和回推竞争，无真实模型调用 |
+| `docs/operations/cloud-collaboration.md` | Actions 模型密钥启用、开发步骤、边界和失败恢复 |
+
 | 文件 | 类型 |
 | --- | --- |
 | `src/main/java/com/kk24426/zbagentwf/MsgConfiguration.java` | 显式加载消息/模板并装配语言解析 |

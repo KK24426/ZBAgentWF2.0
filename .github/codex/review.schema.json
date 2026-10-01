@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "phase": {"type": "string", "enum": ["plan", "result"]},
+    "acceptance": {"type": "string", "enum": ["Accept", "Revise"]},
+    "can_implement": {"type": "boolean"},
+    "can_commit_push": {"type": "boolean"},
+    "p0": {"type": "integer", "minimum": 0},
+    "p1": {"type": "integer", "minimum": 0},
+    "snapshot_sha256": {"type": "string"},
+    "summary": {"type": "string"},
+    "file_coverage": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["phase", "acceptance", "can_implement", "can_commit_push", "p0", "p1", "snapshot_sha256", "summary", "file_coverage"]
+}
